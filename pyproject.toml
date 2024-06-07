@@ -1,7 +1,7 @@
 [project]
 name = "kasumi-next"
 version = "0.1.0"
-description = "Default template for PDM package"
+description = "一个「キラキラドキドキ」的 BanGDream! 小游戏机器人"
 authors = [
     {name = "Kasumi-Games", email = "2667292003@qq.com"},
 ]
