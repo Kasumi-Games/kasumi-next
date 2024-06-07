@@ -55,3 +55,7 @@ Kasumi Bot 的新一代版本
 插件开发请参考 [NoneBot2 官方文档](https://nonebot.dev/docs/next/tutorial/matcher)。
 
 完成插件开发后，将插件放入 `plugins` 目录中，Bot 会自动加载该插件。
+
+### 插件测试
+
+推荐在插件测试时，将 `.env.dev` 文件中的 `COMMAND_START` 配置为 `["!"]`，以避免与线上环境冲突。
