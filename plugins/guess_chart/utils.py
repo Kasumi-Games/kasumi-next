@@ -98,6 +98,8 @@ def fuzzy_match(query: str, dictionary: dict):
     for key, value in dictionary.items():
         if query in value:
             return key
+        if not is_valid_query(query):
+            continue
         _, ratio = process.extractOne(query, value) or (0, 0)
         if ratio > max_ratio:
             max_ratio = ratio
@@ -125,10 +127,14 @@ def render_to_slices(chart: list, game_difficulty: str) -> Image.Image:
 
     height = chart_img.height
     # 每个切片展示 n s 的谱面
-    slice_height = int(rate * render_config.pps * game_difficulty_to_seconds[game_difficulty])
+    slice_height = int(
+        rate * render_config.pps * game_difficulty_to_seconds[game_difficulty]
+    )
 
     # 随机抽取三段不重复的部分进行切片
-    slices = Image.new("RGB", (chart_img.width * 3, slice_height), render_config.bg_color)
+    slices = Image.new(
+        "RGB", (chart_img.width * 3, slice_height), render_config.bg_color
+    )
     for i in range(3):
         start = random.randint(0, height - slice_height)
         cropped = chart_img.crop((0, start, chart_img.width, start + slice_height))
@@ -184,6 +190,11 @@ def pil_image_to_bytes(image: Image.Image):
     image.save(img_byte_arr, format="PNG")
     img_byte_arr = img_byte_arr.getvalue()
     return img_byte_arr
+
+
+def is_valid_query(query: str):
+    # 去除空白后非空，且含有至少一个字母数字字符
+    return bool(query.strip()) and any(char.isalnum() for char in query)
 
 
 def _get_song_server(song_info: Dict[str, Any]) -> str:

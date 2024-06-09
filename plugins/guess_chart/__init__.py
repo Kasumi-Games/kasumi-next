@@ -15,6 +15,7 @@ require("nonebot_plugin_apscheduler")
 
 from nonebot_plugin_apscheduler import scheduler
 
+from .. import monetary
 from .store import SongStore, BandStore
 from .utils import (
     diff_num,
@@ -31,6 +32,14 @@ from .utils import (
 
 
 nickname_song = read_csv_to_dict(Path(__file__).parent / "nickname_song.csv")
+
+
+diff_to_amount = {
+    "easy": (1, 2),
+    "normal": (2, 3),
+    "hard": (3, 6),
+    "expert": (6, 12),
+}
 
 
 song_store = SongStore()
@@ -55,6 +64,7 @@ async def handle_start(
     song_data: dict = Depends(song_store.get),
     band_data: dict = Depends(band_store.get),
     game_difficulty: str = Depends(get_difficulty),
+    song_raw_data: dict = Depends(song_store.get_raw),
 ):
     await game_start.send("正在加载谱面...")
 
@@ -168,11 +178,16 @@ async def handle_start(
 
             guessed_chart_id = fuzzy_match(resp, nickname_song)
             if guessed_chart_id is None:
-                guessed_chart_id = compare_origin_songname(resp, song_data)
+                guessed_chart_id = compare_origin_songname(resp.strip(), song_raw_data)
 
         if guessed_chart_id == correct_chart_id:
+            amount = random.randint(*diff_to_amount[game_difficulty])
+            user_id = event.get_user_id()
+            monetary.add(user_id, amount)
             await game_start.send(
-                "回答正确！" f"谱面：{song_name} " f"{diff.upper()} LV.{level}"
+                f"回答正确！奖励你 {amount} 个星之碎片"
+                f"谱面：{song_name} "
+                f"{diff.upper()} LV.{level}"
             )
             await game_start.send(
                 MessageSegment.image(raw=jacket_image, mime="image/png")

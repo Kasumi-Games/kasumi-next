@@ -21,9 +21,12 @@ class SongStore(DataStore):
         super().__init__()
 
     async def update(self) -> None:
-        self.set("songs", filter_song_data(await songs.get_all_async()))
+        self.set("songs", await songs.get_all_async())
 
     def get(self) -> Dict[str, Dict[str, Any]]:
+        return filter_song_data(self.data.get("songs", {}))
+
+    def get_raw(self) -> Dict[str, Dict[str, Any]]:
         return self.data.get("songs", {})
 
 
