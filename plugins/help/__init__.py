@@ -20,6 +20,14 @@ plugin_data = {
             "help 插件名": "显示特定插件的用法",
         },
     },
+    "星之碎片": {
+        "description": "Kasumi 的货币系统",
+        "usage": {
+            "余额|balance": "查看余额",
+            "转账|transfer <@用户> <数量>": "转账",
+            "签到|daily": "每日签到",
+        }
+    },
     "猜谱面": {
         "description": "猜谱面小游戏",
         "usage": {

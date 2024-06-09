@@ -64,7 +64,8 @@ def transfer(from_user_id: str, to_user_id: str, amount: int):
 
 def daily(user_id: str) -> bool:
     user = get_user(user_id)
-    if user.last_daily_time + 86400 < time.time():
+    # 如果上次签到在今日 0 点之前
+    if time.localtime(user.last_daily_time).tm_mday != time.localtime().tm_mday:
         user.last_daily_time = time.time()
         session.commit()
         return True
