@@ -65,16 +65,24 @@ async def handle_cck(event: MessageEvent):
     await start_cck.send(image + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜猜看")
 
     @waiter(waits=["message"], matcher=start_cck)
-    async def check(event_: MessageEvent) -> Union[Optional[str], bool]:
+    async def check(event_: MessageEvent) -> Union[Tuple[str, str], bool, None]:
         if event_.channel.id != event.channel.id:
             return False
-        return str(event_.get_message())
+        return str(event_.get_message()), event_.get_user_id()
 
-    count = 0
+    player_counts: Dict[str, int] = {}
 
     async for resp in check(timeout=300):
         if resp is False:
             continue
+
+        if resp is None:
+            gamers_store.remove(event.channel.id)
+            await start_cck.send(f"时间到！答案是———{character_name}card_id: {card_id}")
+            await start_cck.send(full_image)
+            break
+
+        resp, user_id = resp
 
         if resp == "bzd":
             gamers_store.remove(event.channel.id)
@@ -89,12 +97,15 @@ async def handle_cck(event: MessageEvent):
         if not found_characters:
             continue
 
-        if count >= 2:
+        if user_id not in player_counts.keys():
+            player_counts[user_id] = 0
+
+        if player_counts[user_id] >= 2:
             await start_cck.send(f"你已经回答三次啦，可以回复 bzd 查看答案～")
             continue
 
         if found_characters[0] != character_id:
-            count += 1
+            player_counts[user_id] += 1
             continue
 
         gamers_store.remove(event.channel.id)
