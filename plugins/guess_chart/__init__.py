@@ -2,10 +2,10 @@ import random
 from pathlib import Path
 from bestdori import songs
 from nonebot.log import logger
-from typing import Optional, List
 from bestdori.charts import Chart
 from bestdori.render import render
 from nonebot.params import Depends
+from typing import Optional, List, Union
 from nonebot_plugin_waiter import waiter
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageSegment, MessageEvent
@@ -149,7 +149,7 @@ async def handle_start(
     logger.debug(f"谱面：{song_name} " f"{diff.upper()} LV.{level}")
 
     @waiter(waits=["message"], matcher=game_start)
-    async def check(event_: MessageEvent) -> Optional[str] | bool:
+    async def check(event_: MessageEvent) -> Union[Optional[str], bool]:
         if event_.channel.id != event.channel.id:
             return False
         return str(event_.get_message())
