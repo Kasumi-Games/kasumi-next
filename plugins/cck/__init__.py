@@ -5,8 +5,8 @@ from .. import monetary
 from pathlib import Path
 from nonebot_plugin_waiter import waiter
 from typing import Any, Dict, List, Union
-from nonebot.adapters.satori import MessageEvent
 from nonebot import on_command, get_driver, require
+from nonebot.adapters.satori import MessageEvent, MessageSegment
 
 require("nonebot_plugin_localstore")
 
@@ -116,7 +116,7 @@ async def handle_cck(event: MessageEvent):
             player_counts[user_id] = 0
 
         if player_counts[user_id] >= 2:
-            await start_cck.send(f"你已经回答三次啦，可以回复 bzd 查看答案～")
+            await start_cck.send(MessageSegment.at(user_id) + f"你已经回答三次啦，可以回复 bzd 查看答案～")
             continue
 
         if found_characters[0] != character_id:
@@ -126,6 +126,6 @@ async def handle_cck(event: MessageEvent):
         gamers_store.remove(event.channel.id)
         amount = random.randint(*cut_name_to_amount[image_cut_setting["cut_name"]])
         monetary.add(user_id, amount)
-        await start_cck.send(f"正确！奖励你 {amount} 个星之碎片！答案是———{character_name} card_id: {card_id}")
+        await start_cck.send(MessageSegment.at(user_id) + f"正确！奖励你 {amount} 个星之碎片！答案是———{character_name} card_id: {card_id}")
         await start_cck.send(full_image)
         break
