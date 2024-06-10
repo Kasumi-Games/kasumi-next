@@ -1,0 +1,170 @@
+[
+    {
+        "cut_counts": 3,
+        "cut_width": 300,
+        "cut_length": 100,
+        "is_black": 0,
+        "cut_name": "[easy]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 300,
+        "cut_length": 100,
+        "is_black": 0,
+        "cut_name": "[easy]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 300,
+        "cut_length": 100,
+        "is_black": 0,
+        "cut_name": "[easy]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 250,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[normal]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 250,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[normal]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 250,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[normal]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 250,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[normal]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 250,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[normal]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 250,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[normal]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 200,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[hard]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 200,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[hard]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 200,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[hard]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 200,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[hard]"
+    },
+    {
+        "cut_counts": 3,
+        "cut_width": 200,
+        "cut_length": 80,
+        "is_black": 0,
+        "cut_name": "[hard]"
+    },
+    {
+        "cut_counts": 2,
+        "cut_width": 160,
+        "cut_length": 70,
+        "is_black": 0,
+        "cut_name": "[expert]"
+    },
+    {
+        "cut_counts": 2,
+        "cut_width": 160,
+        "cut_length": 70,
+        "is_black": 0,
+        "cut_name": "[expert]"
+    },
+    {
+        "cut_counts": 4,
+        "cut_width": 250,
+        "cut_length": 90,
+        "is_black": 1,
+        "cut_name": "[hard++]"
+    },
+    {
+        "cut_counts": 4,
+        "cut_width": 250,
+        "cut_length": 90,
+        "is_black": 1,
+        "cut_name": "[expert++]"
+    },
+    {
+        "cut_counts": 4,
+        "cut_width": 600,
+        "cut_length": 80,
+        "is_black": 1,
+        "cut_name": "[黑白木筏]"
+    },
+    {
+        "cut_counts": 1,
+        "cut_width": 800,
+        "cut_length": 600,
+        "is_black": 2,
+        "cut_name": "[高闪大图]"
+    },
+    {
+        "cut_counts": 5,
+        "cut_width": 130,
+        "cut_length": 130,
+        "is_black": 0,
+        "cut_name": "[五只小猫]"
+    },
+    {
+        "cut_counts": 1,
+        "cut_width": 150,
+        "cut_length": 150,
+        "is_black": 0,
+        "cut_name": "[超级猫猫]"
+    },
+    {
+        "cut_counts": 1,
+        "cut_width": 1334,
+        "cut_length": 300,
+        "is_black": 3,
+        "cut_name": "[寻找记忆]"
+    },
+    {
+        "cut_counts": 6,
+        "cut_width": 1200,
+        "cut_length": 40,
+        "is_black": 0,
+        "cut_name": "[6块床板]"
+    }
+]

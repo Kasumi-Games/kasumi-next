@@ -19,6 +19,7 @@ dependencies = [
     "python-Levenshtein>=0.25.1",
     "sqlalchemy>=2.0.30",
     "nonebot-plugin-localstore>=0.6.0",
+    "aiofiles>=23.2.1",
 ]
 requires-python = ">=3.9"
 readme = "README.md"
