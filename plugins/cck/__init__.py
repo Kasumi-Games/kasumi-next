@@ -1,6 +1,7 @@
 import json
 import random
 from PIL import Image
+from .. import monetary
 from pathlib import Path
 from nonebot_plugin_waiter import waiter
 from typing import Any, Dict, List, Union
@@ -16,9 +17,23 @@ from .store import GamersStore
 from .draw import random_crop_image, image_to_message
 
 
+cut_name_to_amount = {
+    "[easy]": (1, 2),
+    "[normal]": (2, 3),
+    "[hard]": (3, 4),
+    "[expert]": (4, 6),
+    "[hard++]": (4, 5),
+    "[expert++]": (5, 6),
+    "[黑白木筏]": (6, 12),
+    "[高闪大图]": (7, 12),
+    "[五只小猫]": (7, 12),
+    "[超级猫猫]": (8, 12),
+    "[寻找记忆]": (5, 10),
+    "[6块床板]": (5, 10),
+}
+
 data_path = localstore.get_data_dir("cck")
 cache_path = localstore.get_cache_dir("cck")
-
 
 card_manager = Card()
 gamers_store = GamersStore()
@@ -109,6 +124,8 @@ async def handle_cck(event: MessageEvent):
             continue
 
         gamers_store.remove(event.channel.id)
-        await start_cck.send(f"正确！答案是———{character_name} card_id: {card_id}")
+        amount = random.randint(*cut_name_to_amount[image_cut_setting["cut_name"]])
+        monetary.add(user_id, amount)
+        await start_cck.send(f"正确！奖励你 {amount} 个星之碎片！答案是———{character_name} card_id: {card_id}")
         await start_cck.send(full_image)
         break
