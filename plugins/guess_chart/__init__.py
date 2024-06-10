@@ -5,8 +5,8 @@ from nonebot.log import logger
 from bestdori.charts import Chart
 from bestdori.render import render
 from nonebot.params import Depends
-from typing import Optional, List, Union
 from nonebot_plugin_waiter import waiter
+from typing import Optional, List, Union, Tuple
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageSegment, MessageEvent
 
@@ -149,10 +149,10 @@ async def handle_start(
     logger.debug(f"谱面：{song_name} " f"{diff.upper()} LV.{level}")
 
     @waiter(waits=["message"], matcher=game_start)
-    async def check(event_: MessageEvent) -> Union[Optional[str], bool]:
+    async def check(event_: MessageEvent) -> Union[Optional[Tuple[str, str]], bool]:
         if event_.channel.id != event.channel.id:
             return False
-        return str(event_.get_message())
+        return str(event_.get_message()), event_.get_user_id()
 
     async for resp in check(timeout=300):
         if resp is False:
@@ -166,6 +166,7 @@ async def handle_start(
                 MessageSegment.image(raw=jacket_image, mime="image/png")
             )
             break
+        resp, user_id = resp
         if resp.isdigit():
             guessed_chart_id = resp
         else:
@@ -195,9 +196,9 @@ async def handle_start(
         if guessed_chart_id == correct_chart_id:
             gamers_store.remove(event.channel.id)
             amount = random.randint(*diff_to_amount[game_difficulty])
-            user_id = event.get_user_id()
             monetary.add(user_id, amount)
             await game_start.send(
+                MessageSegment.at(user_id) +
                 f"回答正确！奖励你 {amount} 个星之碎片"
                 f"谱面：{song_name} "
                 f"{diff.upper()} LV.{level}"
