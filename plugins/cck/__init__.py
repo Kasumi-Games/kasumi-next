@@ -3,9 +3,9 @@ import random
 from PIL import Image
 from pathlib import Path
 from nonebot_plugin_waiter import waiter
+from typing import Any, Dict, List, Union
 from nonebot.adapters.satori import MessageEvent
 from nonebot import on_command, get_driver, require
-from typing import Any, Dict, List, Optional, Union
 
 require("nonebot_plugin_localstore")
 
