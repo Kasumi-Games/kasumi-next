@@ -16,7 +16,7 @@ require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
 
 from .. import monetary
-from .store import SongStore, BandStore
+from .store import SongStore, BandStore, GamersStore
 from .utils import (
     diff_num,
     fuzzy_match,
@@ -44,6 +44,11 @@ diff_to_amount = {
 
 song_store = SongStore()
 band_store = BandStore()
+gamers_store = GamersStore()
+
+
+async def is_gaming(event: MessageEvent) -> bool:
+    return event.channel.id in gamers_store.get()
 
 
 game_start = on_command(
@@ -66,6 +71,11 @@ async def handle_start(
     game_difficulty: str = Depends(get_difficulty),
     song_raw_data: dict = Depends(song_store.get_raw),
 ):
+    if await is_gaming(event):
+        await game_start.finish("已经在猜谱面了哦")
+
+    gamers_store.add(event.channel.id)
+
     await game_start.send("正在加载谱面...")
 
     if game_difficulty == "easy":
@@ -148,6 +158,7 @@ async def handle_start(
         if resp is False:
             continue
         if resp is None:
+            gamers_store.remove(event.channel.id)
             await game_start.send(
                 f"时间到了哦\n谱面：{song_name} " f"{diff.upper()} LV.{level}"
             )
@@ -166,6 +177,7 @@ async def handle_start(
                     tips.pop(0)
                 continue
             elif resp == "bzd":
+                gamers_store.remove(event.channel.id)
                 await game_start.send(
                     "要再试一次吗？\n"
                     f"谱面：{song_name} "
@@ -181,6 +193,7 @@ async def handle_start(
                 guessed_chart_id = compare_origin_songname(resp.strip(), song_raw_data)
 
         if guessed_chart_id == correct_chart_id:
+            gamers_store.remove(event.channel.id)
             amount = random.randint(*diff_to_amount[game_difficulty])
             user_id = event.get_user_id()
             monetary.add(user_id, amount)

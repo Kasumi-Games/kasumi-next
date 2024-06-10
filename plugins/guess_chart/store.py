@@ -1,5 +1,5 @@
-from typing import Any, Dict
 import bestdori.songs as songs
+from typing import Any, Dict, List
 from bestdori.utils import get_bands_all_async
 
 from .utils import filter_song_data
@@ -39,3 +39,21 @@ class BandStore(DataStore):
 
     def get(self) -> Dict[str, Dict[str, Any]]:
         return self.data.get("bands", {})
+
+
+class GamersStore(DataStore):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def get(self) -> List[str]:
+        return self.data.get("gamers", [])
+
+    def add(self, gamer: str) -> None:
+        gamers = self.get()
+        gamers.append(gamer)
+        self.set("gamers", gamers)
+
+    def remove(self, gamer: str) -> None:
+        gamers = self.get()
+        gamers.remove(gamer)
+        self.set("gamers", gamers)
