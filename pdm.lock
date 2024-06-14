@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:67949ecde18e53ea01e045c3200c360b006cf8252fe128148bf668f1a03af995"
+content_hash = "sha256:b19c341932a545b19e8a3b90f7fae3da2529d671a8f6d640faaf017745605d2c"
 
 [[package]]
 name = "aiodns"
@@ -894,7 +894,7 @@ files = [
 
 [[package]]
 name = "nonebot-plugin-waiter"
-version = "0.6.1"
+version = "0.6.2"
 requires_python = ">=3.9"
 summary = "An alternative for got-and-reject in Nonebot"
 groups = ["default"]
@@ -902,8 +902,8 @@ dependencies = [
     "nonebot2>=2.3.0",
 ]
 files = [
-    {file = "nonebot_plugin_waiter-0.6.1-py3-none-any.whl", hash = "sha256:0abd678ff7671a2f5cee53b8c96fdbb700a78bbff921e8f37ab1e9388bdc8649"},
-    {file = "nonebot_plugin_waiter-0.6.1.tar.gz", hash = "sha256:ba4da15694ef4eeb23329e7ecde7e9e56df5cbf8e0dc03b8f98747658bbc138f"},
+    {file = "nonebot_plugin_waiter-0.6.2-py3-none-any.whl", hash = "sha256:599251f02d074ab7142e2144f68d63f41104bddcd359051f63979a8163538eac"},
+    {file = "nonebot_plugin_waiter-0.6.2.tar.gz", hash = "sha256:02017a1613d1273be3535b28a4d8e823f2dbaba26fab524bc8207f50a25ec8e4"},
 ]
 
 [[package]]

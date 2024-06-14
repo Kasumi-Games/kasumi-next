@@ -83,7 +83,7 @@ async def handle_cck(event: MessageEvent):
 
     await start_cck.send(image + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜猜看")
 
-    @waiter(waits=["message"], matcher=start_cck)
+    @waiter(waits=["message"], matcher=start_cck, block=False)
     async def check(event_: MessageEvent) -> Union[Tuple[str, str], bool, None]:
         if event_.channel.id != event.channel.id:
             return False

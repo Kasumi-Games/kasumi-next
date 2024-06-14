@@ -153,7 +153,7 @@ async def handle_start(
 
     logger.debug(f"谱面：{song_name} " f"{diff.upper()} LV.{level}")
 
-    @waiter(waits=["message"], matcher=game_start)
+    @waiter(waits=["message"], matcher=game_start, block=False)
     async def check(event_: MessageEvent) -> Union[Optional[Tuple[str, str]], bool]:
         if event_.channel.id != event.channel.id:
             return False
