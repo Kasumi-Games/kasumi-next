@@ -2,6 +2,7 @@ import json
 import random
 from PIL import Image
 from pathlib import Path
+from nonebot.log import logger
 from nonebot_plugin_waiter import waiter
 from typing import Any, Dict, List, Union, Tuple
 from nonebot import on_command, get_driver, require
@@ -22,14 +23,14 @@ cut_name_to_amount = {
     "[easy]": (1, 2),
     "[normal]": (2, 3),
     "[hard]": (3, 4),
-    "[expert]": (4, 6),
+    "[expert]": (6, 8),
     "[hard++]": (4, 5),
-    "[expert++]": (5, 6),
-    "[黑白木筏]": (6, 12),
-    "[高闪大图]": (7, 12),
+    "[expert++]": (6, 8),
+    "[黑白木筏]": (9, 12),
+    "[高闪大图]": (2, 4),
     "[五只小猫]": (7, 12),
     "[超级猫猫]": (8, 12),
-    "[寻找记忆]": (5, 10),
+    "[寻找记忆]": (5, 7),
     "[6块床板]": (5, 10),
 }
 
@@ -67,6 +68,8 @@ async def handle_cck(event: MessageEvent):
     image_cut_setting = random.choice(image_cut_settings)
 
     character_name = character_data[character_id][0]
+
+    logger.info(f"character_name: {character_name}, character_id: {character_id}, card_id: {card_id}")
 
     pil_full_image = Image.open(image_path)
     full_image = image_to_message(pil_full_image)
@@ -116,7 +119,7 @@ async def handle_cck(event: MessageEvent):
         if user_id not in player_counts.keys():
             player_counts[user_id] = 0
 
-        if player_counts[user_id] >= 2:
+        if player_counts[user_id] >= 3:
             await start_cck.send(MessageSegment.at(user_id) + f"你已经回答三次啦，可以回复 bzd 查看答案～")
             continue
 
