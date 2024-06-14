@@ -129,7 +129,7 @@ async def handle_cck(event: MessageEvent):
 
         gamers_store.remove(event.channel.id)
         amount = random.randint(*cut_name_to_amount[image_cut_setting["cut_name"]])
-        monetary.add(user_id, amount)
+        monetary.add(user_id, amount, "cck")
         await start_cck.send(MessageSegment.at(user_id) + f"正确！奖励你 {amount} 个星之碎片！答案是———{character_name} card_id: {card_id}")
         await start_cck.send(full_image)
         break

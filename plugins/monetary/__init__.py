@@ -15,14 +15,22 @@ require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store
 
 from .utils import is_number
-from .data_source import Base, User
+from .transaction import Transaction
+from .data_source import Base, TransactionBase, User, TransactionCategory
 
 
 database_path = store.get_data_file("monetary", "data.db")
+transaction_path = store.get_data_file("monetary", "transaction.db")
 
 engine = create_engine(f"sqlite:///{database_path.resolve()}")
 Base.metadata.create_all(engine)
 session = sessionmaker(bind=engine)()
+
+transaction_engine = create_engine(f"sqlite:///{transaction_path.resolve()}")
+TransactionBase.metadata.create_all(transaction_engine)
+transaction_session = sessionmaker(bind=transaction_engine)()
+
+transaction = Transaction(transaction_session)
 
 
 def get_user(user_id: str) -> User:
@@ -34,32 +42,40 @@ def get_user(user_id: str) -> User:
     return user
 
 
-def add(user_id: str, amount: int):
+def add(user_id: str, amount: int, description: str):
     user = get_user(user_id)
     user.balance += amount
     session.commit()
 
+    transaction.add(user_id, TransactionCategory.INCOME, amount, description)
 
-def cost(user_id: str, amount: int):
+
+def cost(user_id: str, amount: int, description: str):
     user = get_user(user_id)
     user.balance -= amount
     session.commit()
 
+    transaction.add(user_id, TransactionCategory.EXPENSE, amount, description)
 
-def set(user_id: str, amount: int):
+
+def set(user_id: str, amount: int, description: str):
     user = get_user(user_id)
     user.balance = amount
     session.commit()
+
+    transaction.add(user_id, TransactionCategory.SET, amount, description)
 
 
 def get(user_id: str) -> int:
     return get_user(user_id).balance
 
 
-def transfer(from_user_id: str, to_user_id: str, amount: int):
+def transfer(from_user_id: str, to_user_id: str, amount: int, description: str):
     cost(from_user_id, amount)
     add(to_user_id, amount)
     session.commit()
+
+    transaction.add(to_user_id, TransactionCategory.TRANSFER, amount, description)
 
 
 def daily(user_id: str) -> bool:
@@ -86,7 +102,7 @@ async def handle_daily(matcher: Matcher, event: Event):
     user_id = event.get_user_id()
     if daily(user_id):
         amount = random.randint(1, 10)
-        add(user_id, amount)
+        add(user_id, amount, "daily")
         await matcher.send(f"签到成功，获得 {amount} 个星之碎片")
     else:
         await matcher.send("今天已经签到过了")
@@ -123,7 +139,7 @@ async def handle_transfer(
     if get(user_id) < amount:
         await matcher.finish("余额不足！")
 
-    transfer(user_id, to_user_id, amount)
+    transfer(user_id, to_user_id, amount, "transfer_by_command")
 
     await matcher.finish(
         f"转账成功，已转账 {amount} 个星之碎片给 {MessageSegment.at(to_user_id) if to_user_name is None else to_user_name}"
