@@ -54,7 +54,7 @@ async def init_card():
     await card_manager.initialize(data_path, cache_path)
 
 
-start_cck = on_command("cck", aliases={"猜卡面", "cck", "gbc"}, priority=10, block=True)
+start_cck = on_command("cck", aliases={"猜猜看"}, priority=10, block=True)
 
 
 @start_cck.handle()
