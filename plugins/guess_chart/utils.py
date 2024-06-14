@@ -182,6 +182,7 @@ def filter_song_data(song_data):
         and v["musicTitle"]
         and v["musicTitle"][0]
         and "[FULL]" not in v["musicTitle"][0]
+        and "超高難易度" not in v["musicTitle"][0]
     }
 
 
