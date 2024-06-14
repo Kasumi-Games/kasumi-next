@@ -2,7 +2,7 @@
 Kasumi Bot 的新一代版本
 
 ## 介绍
-**Kasumi Next** 是一个基于 [NoneBot2](https://github.com/nonebot/nonebot2) 的跨平台机器人项目，采用 [Satori](https://satori.js.org/) 协议与客户端通信，旨在提供一个「キラキラドキドキ」的 BanGDream! 小游戏机器人。
+**Kasumi Next** 是一个基于 [NoneBot2](https://github.com/nonebot/nonebot2) 的跨平台机器人项目，采用 [Satori](https://satori.js.org/zh-CN/) 协议与客户端通信，旨在提供一个「キラキラドキドキ」的 BanGDream! 小游戏机器人。
 
 ## 功能
 目前正在开发中，敬请期待。
