@@ -1,21 +1,23 @@
 import random
 from pathlib import Path
 from bestdori import songs
+from bestdori import settings
 from nonebot.log import logger
 from bestdori.charts import Chart
 from bestdori.render import render
 from nonebot.params import Depends
+from nonebot import get_plugin_config
 from nonebot_plugin_waiter import waiter
 from typing import Optional, List, Union, Tuple
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageSegment, MessageEvent
-
 
 require("nonebot_plugin_apscheduler")
 
 from nonebot_plugin_apscheduler import scheduler
 
 from .. import monetary
+from .config import Config
 from .store import SongStore, BandStore, GamersStore
 from .utils import (
     diff_num,
@@ -30,6 +32,9 @@ from .utils import (
     compare_origin_songname,
 )
 
+
+plugin_config = get_plugin_config(Config)
+settings.proxy = plugin_config.bestdori_proxy
 
 nickname_song = read_csv_to_dict(Path(__file__).parent / "nickname_song.csv")
 
@@ -198,8 +203,7 @@ async def handle_start(
             amount = random.randint(*diff_to_amount[game_difficulty])
             monetary.add(user_id, amount, "guess_chart")
             await game_start.send(
-                MessageSegment.at(user_id) +
-                f"回答正确！奖励你 {amount} 个星之碎片"
+                MessageSegment.at(user_id) + f"回答正确！奖励你 {amount} 个星之碎片"
                 f"谱面：{song_name} "
                 f"{diff.upper()} LV.{level}"
             )
