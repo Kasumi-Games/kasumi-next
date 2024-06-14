@@ -23,15 +23,15 @@ cut_name_to_amount = {
     "[easy]": (1, 2),
     "[normal]": (2, 3),
     "[hard]": (3, 4),
-    "[expert]": (6, 8),
+    "[expert]": (4, 6),
     "[hard++]": (4, 5),
-    "[expert++]": (6, 8),
-    "[黑白木筏]": (9, 12),
+    "[expert++]": (5, 7),
+    "[黑白木筏]": (5, 7),
     "[高闪大图]": (2, 4),
-    "[五只小猫]": (7, 12),
+    "[五只小猫]": (6, 9),
     "[超级猫猫]": (8, 12),
     "[寻找记忆]": (5, 7),
-    "[6块床板]": (5, 10),
+    "[6块床板]": (5, 8),
 }
 
 data_path = localstore.get_data_dir("cck")
@@ -60,7 +60,7 @@ start_cck = on_command("cck", aliases={"猜猜看"}, priority=10, block=True)
 @start_cck.handle()
 async def handle_cck(event: MessageEvent):
     if event.channel.id in gamers_store.get():
-        await start_cck.finish("你已经在猜卡面咯")
+        await start_cck.finish("你已经在猜猜看咯")
 
     gamers_store.add(event.channel.id)
 
