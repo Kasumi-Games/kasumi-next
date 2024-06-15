@@ -5,7 +5,66 @@ Kasumi Bot 的新一代版本
 **Kasumi Next** 是一个基于 [NoneBot2](https://github.com/nonebot/nonebot2) 的跨平台机器人项目，采用 [Satori](https://satori.js.org/zh-CN/) 协议与客户端通信，旨在提供一个「キラキラドキドキ」的 BanGDream! 小游戏机器人。
 
 ## 功能
-目前正在开发中，敬请期待。
+Kasumi Next 提供了以下功能：
+
+### 帮助(help)
+显示帮助信息。
+
+#### 使用方法
+- `help`：显示帮助信息。
+- `help 插件名`：显示特定插件的用法。
+
+### 信息(info)
+显示 Kasumi 信息。
+
+#### 使用方法
+- `关于|info`：显示 Kasumi 信息。
+
+### 星之碎片(monetary)
+Kasumi 的货币系统。
+
+#### 使用方法
+- `余额|balance`：查看余额。
+- `转账|transfer <@用户> <数量>`：转账。
+- `签到|daily`：每日签到。
+
+### 猜猜看(cck)
+猜猜看小游戏。
+
+#### 使用方法
+- `猜猜看|cck`：开始猜猜看。
+- `bzd`：猜不出来的时候就发这个吧。
+
+### 猜谱面(cpm)
+猜谱面小游戏。
+
+#### 使用方法
+- `猜谱面|cpm`：开始猜谱面。
+- `猜谱面|cpm <难度>`：开始猜谱面，难度可选为 easy, normal, hard, expert, special，支持缩写为 ez, nm, hd, ex, sp。
+- `<歌曲名称|ID>`：猜指定歌曲的谱面。
+- `提示`：在猜谱面时获取提示。
+- `bzd`：猜不出来的时候就发这个吧。
+
+### 说明
+- **`|`** 表示可以使用的多个命令的选项。 
+- **`<@用户>`** 表示需要指定用户。
+- **`<数量>`** 表示需要指定数量。
+- **`<难度>`** 表示需要选择游戏难度。
+- **`<歌曲名称|ID>`** 表示可以通过歌曲名称或ID进行猜谱面。
+
+## 配置项
+| 配置项 | 说明 | 默认值 |
+| --- | --- | --- |
+| `SATORI_CLIENTS` | Satori 客户端配置 | 见 `.env` 文件 |
+| `LOCALSTORE_CACHE_DIR` | 本地缓存目录 | `.\.cache` |
+| `LOCALSTORE_CONFIG_DIR` | 本地配置目录 | `.\.config` |
+| `LOCALSTORE_DATA_DIR` | 本地数据目录 | `.\.data` |
+| `WHITELIST` | 白名单, 类型为 `List[str]` | `[]` |
+| `BESTDORI_PROXY` | bestdori-api 代理地址, 类型为 `str` | `null` |  
+| `ENABLE_GUESS_CHART` | 是否启用 猜谱面 功能, 关闭可缩短初始化时间 | `true` |
+| `ENABLE_CCK` | 是否启用 猜猜看 功能, 关闭可缩短初始化时间 | `true` |
+
+> 默认值包含了 `.env` 文件中的默认配置项
 
 ## 开发指南
 
