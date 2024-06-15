@@ -119,7 +119,7 @@ def get_difficulty(args: Message = CommandArg()) -> str:
     elif arg in ["ex", "expert", "专家"]:
         return "expert"
     else:
-        return "easy"
+        return None
 
 
 def render_to_slices(chart: list, game_difficulty: str) -> Image.Image:
