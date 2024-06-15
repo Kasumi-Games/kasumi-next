@@ -9,7 +9,6 @@ from nonebot import require, on_command
 from sqlalchemy.orm import sessionmaker
 from nonebot.adapters.satori import MessageEvent, Message, MessageSegment
 
-
 require("nonebot_plugin_localstore")
 
 import nonebot_plugin_localstore as store
