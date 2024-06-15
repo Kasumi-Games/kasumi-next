@@ -13,6 +13,8 @@ require("nonebot_plugin_localstore")
 
 import nonebot_plugin_localstore as store
 
+from utils import has_no_argument
+
 from .utils import is_number
 from .transaction import Transaction
 from .data_source import Base, TransactionBase, User, TransactionCategory
@@ -90,13 +92,17 @@ def daily(user_id: str) -> bool:
 __all__ = ["add", "cost", "set", "get", "transfer", "daily"]
 
 
-@on_command("balance", aliases={"余额"}, priority=10, block=True).handle()
+@on_command(
+    "balance", aliases={"余额"}, priority=10, block=True, rule=has_no_argument
+).handle()
 async def balance(matcher: Matcher, event: Event):
     user_id = event.get_user_id()
     await matcher.send(f"你还有 {get(user_id)} 个星之碎片")
 
 
-@on_command("daily", aliases={"签到"}, priority=10, block=True).handle()
+@on_command(
+    "daily", aliases={"签到"}, priority=10, block=True, rule=has_no_argument
+).handle()
 async def handle_daily(matcher: Matcher, event: Event):
     user_id = event.get_user_id()
     if daily(user_id):

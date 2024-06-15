@@ -13,6 +13,7 @@ require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as localstore
 
 from .. import monetary
+from utils import has_no_argument
 
 from .card import Card
 from .store import GamersStore
@@ -54,7 +55,7 @@ async def init_card():
     await card_manager.initialize(data_path, cache_path)
 
 
-start_cck = on_command("cck", aliases={"猜猜看"}, priority=10, block=True)
+start_cck = on_command("cck", aliases={"猜猜看"}, priority=10, block=True, rule=has_no_argument)
 
 
 @start_cck.handle()
