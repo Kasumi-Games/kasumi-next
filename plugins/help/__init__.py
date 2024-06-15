@@ -20,6 +20,12 @@ plugin_data = {
             "help 插件名": "显示特定插件的用法",
         },
     },
+    "info": {
+        "description": "显示 Kasumi 信息",
+        "usage": {
+            "关于|info": "显示 Kasumi 信息",
+        },
+    },
     "星之碎片": {
         "description": "Kasumi 的货币系统",
         "usage": {
