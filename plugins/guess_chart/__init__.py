@@ -57,15 +57,21 @@ async def is_gaming(event: MessageEvent) -> bool:
 
 
 game_start = on_command(
-    "猜谱面", aliases={"猜谱", "cpm", "谱面挑战"}, priority=10, block=True
+    "猜谱面",
+    aliases={"猜谱", "cpm", "谱面挑战"},
+    priority=10,
+    block=True,
+    rule=lambda: plugin_config.enable_guess_chart,
 )
 
 
-@get_driver().on_startup
-@scheduler.scheduled_job("cron", hour=0, minute=0)
-async def refresh_data():
-    await song_store.update()
-    await band_store.update()
+if plugin_config.enable_guess_chart:
+
+    @get_driver().on_startup
+    @scheduler.scheduled_job("cron", hour=0, minute=0)
+    async def refresh_data():
+        await song_store.update()
+        await band_store.update()
 
 
 @game_start.handle()

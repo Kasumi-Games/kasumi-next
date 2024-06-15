@@ -2,7 +2,9 @@ import json
 import random
 from PIL import Image
 from pathlib import Path
+from nonebot.rule import Rule
 from nonebot.log import logger
+from nonebot import get_plugin_config
 from nonebot_plugin_waiter import waiter
 from typing import Any, Dict, List, Union, Tuple
 from nonebot import on_command, get_driver, require
@@ -16,9 +18,12 @@ from .. import monetary
 from utils import has_no_argument
 
 from .card import Card
+from .config import Config
 from .store import GamersStore
 from .draw import random_crop_image, image_to_message
 
+
+plugin_config = get_plugin_config(Config)
 
 cut_name_to_amount = {
     "[easy]": (1, 2),
@@ -49,13 +54,20 @@ character_data: Dict[str, List[str]] = json.loads(
     (Path(__file__).parent / "character_data.json").read_text("utf-8")
 )
 
+if plugin_config.enable_cck:
 
-@get_driver().on_startup
-async def init_card():
-    await card_manager.initialize(data_path, cache_path)
+    @get_driver().on_startup
+    async def init_card():
+        await card_manager.initialize(data_path, cache_path)
 
 
-start_cck = on_command("cck", aliases={"猜猜看"}, priority=10, block=True, rule=has_no_argument)
+start_cck = on_command(
+    "cck",
+    aliases={"猜猜看"},
+    priority=10,
+    block=True,
+    rule=Rule(has_no_argument) & (lambda: plugin_config.enable_cck),
+)
 
 
 @start_cck.handle()
@@ -70,7 +82,9 @@ async def handle_cck(event: MessageEvent):
 
     character_name = character_data[character_id][0]
 
-    logger.info(f"character_name: {character_name}, character_id: {character_id}, card_id: {card_id}")
+    logger.info(
+        f"character_name: {character_name}, character_id: {character_id}, card_id: {card_id}"
+    )
 
     pil_full_image = Image.open(image_path)
     full_image = image_to_message(pil_full_image)
@@ -82,7 +96,9 @@ async def handle_cck(event: MessageEvent):
         image_cut_setting["cut_counts"],
     )
 
-    await start_cck.send(image + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜猜看")
+    await start_cck.send(
+        image + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜猜看"
+    )
 
     @waiter(waits=["message"], matcher=start_cck, block=False)
     async def check(event_: MessageEvent) -> Union[Tuple[str, str], bool, None]:
@@ -121,7 +137,10 @@ async def handle_cck(event: MessageEvent):
             player_counts[user_id] = 0
 
         if player_counts[user_id] >= 3:
-            await start_cck.send(MessageSegment.at(user_id) + f"你已经回答三次啦，可以回复 bzd 查看答案～")
+            await start_cck.send(
+                MessageSegment.at(user_id)
+                + f"你已经回答三次啦，可以回复 bzd 查看答案～"
+            )
             continue
 
         if found_characters[0] != character_id:
@@ -131,6 +150,9 @@ async def handle_cck(event: MessageEvent):
         gamers_store.remove(event.channel.id)
         amount = random.randint(*cut_name_to_amount[image_cut_setting["cut_name"]])
         monetary.add(user_id, amount, "cck")
-        await start_cck.send(MessageSegment.at(user_id) + f"正确！奖励你 {amount} 个星之碎片！答案是———{character_name} card_id: {card_id}")
+        await start_cck.send(
+            MessageSegment.at(user_id)
+            + f"正确！奖励你 {amount} 个星之碎片！答案是———{character_name} card_id: {card_id}"
+        )
         await start_cck.send(full_image)
         break
