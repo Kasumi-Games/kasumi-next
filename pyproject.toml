@@ -6,7 +6,6 @@ authors = [
     {name = "Kasumi-Games", email = "2667292003@qq.com"},
 ]
 dependencies = [
-    "nonebot2[aiohttp]>=2.3.1",
     "nonebot-adapter-satori>=0.11.5",
     "nonebot-plugin-waiter>=0.6.2",
     "bestdori-api>=1.1.2",
@@ -20,6 +19,7 @@ dependencies = [
     "sqlalchemy>=2.0.30",
     "nonebot-plugin-localstore>=0.6.0",
     "aiofiles>=23.2.1",
+    "nonebot2[httpx,websockets]>=2.3.1",
 ]
 requires-python = ">=3.9"
 readme = "README.md"
