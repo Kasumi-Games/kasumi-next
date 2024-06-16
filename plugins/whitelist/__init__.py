@@ -13,6 +13,10 @@ plugin_config = get_plugin_config(Config)
 async def check_blocked(event: MessageEvent):
     whitelist = plugin_config.whitelist
 
+    if event.platform in ["qq", "qqguild"]:
+        # 官方 Bot，直接放行
+        return None
+
     if whitelist is None:
         return None
 
@@ -22,7 +26,11 @@ async def check_blocked(event: MessageEvent):
     if event.channel.id in whitelist:
         return None
 
-    elif event.member is not None and event.member.user is not None and event.member.user.id in whitelist:
+    elif (
+        event.member is not None
+        and event.member.user is not None
+        and event.member.user.id in whitelist
+    ):
         return None
 
     elif event.guild is not None and event.guild.id in whitelist:
