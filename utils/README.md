@@ -30,3 +30,16 @@ matcher = on_command("command", rule=has_no_argument)
 ```
 
 此函数适合在需要使用 `on_command` 时阻止用户输入参数。例如：期望处理 `cck`，而不希望处理 `cck真好玩吧`。
+
+#### is_qq_bot
+
+用于 `on` 规则，检查消息是否来自 QQ 官方机器人。
+
+```python
+from nonebot import on
+from utils import is_qq_bot
+
+matcher = on(rule=is_qq_bot)
+```
+
+此函数适合在需要特殊处理 QQ 官方机器人消息时使用。
