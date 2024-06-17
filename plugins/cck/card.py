@@ -14,8 +14,9 @@ class Card:
     卡牌信息获取
     """
 
-    def __init__(self):
+    def __init__(self, proxy: str = None):
         self.initialized = False
+        self._proxy = proxy
 
     async def initialize(self, base_path: Path, cache_path: Path):
         logger.info("Card: 正在初始化")
@@ -36,7 +37,7 @@ class Card:
     async def _get_data(self):
         summary_url = "https://bestdori.com/api/cards/all.5.json"
         async with aiohttp.ClientSession() as session:
-            async with session.get(summary_url) as response:
+            async with session.get(summary_url, proxy=self._proxy) as response:
                 self.__summary_data__: dict = await response.json()
         logger.success("Card: 成功获取卡牌简略数据")
 

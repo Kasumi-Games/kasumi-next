@@ -6,7 +6,7 @@ from nonebot.rule import Rule
 from nonebot.log import logger
 from nonebot import get_plugin_config
 from nonebot_plugin_waiter import waiter
-from typing import Any, Dict, List, Union, Tuple
+from typing import Any, Dict, List, Union
 from nonebot import on_command, get_driver, require
 from nonebot.adapters.satori import MessageEvent, MessageSegment
 
@@ -16,6 +16,8 @@ import nonebot_plugin_localstore as localstore
 
 from .. import monetary
 from utils import has_no_argument
+from utils.passive_generator import generators as gens
+from utils.passive_generator import PassiveGenerator as PG
 
 from .card import Card
 from .config import Config
@@ -43,7 +45,7 @@ cut_name_to_amount = {
 data_path = localstore.get_data_dir("cck")
 cache_path = localstore.get_cache_dir("cck")
 
-card_manager = Card()
+card_manager = Card(plugin_config.bestdori_proxy)
 gamers_store = GamersStore()
 
 
@@ -63,7 +65,7 @@ if plugin_config.enable_cck:
 
 start_cck = on_command(
     "cck",
-    aliases={"猜猜看"},
+    aliases={"猜猜看", "猜卡面"},
     priority=10,
     block=True,
     rule=Rule(has_no_argument) & (lambda: plugin_config.enable_cck),
@@ -96,15 +98,19 @@ async def handle_cck(event: MessageEvent):
         image_cut_setting["cut_counts"],
     )
 
+    gens[event.message.id] = PG(event)
+
     await start_cck.send(
-        image + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜猜看"
+        image
+        + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜猜看"
+        + gens[event.message.id].element
     )
 
     @waiter(waits=["message"], matcher=start_cck, block=False)
-    async def check(event_: MessageEvent) -> Union[Tuple[str, str], bool, None]:
+    async def check(event_: MessageEvent) -> Union[MessageEvent, bool, bool]:
         if event_.channel.id != event.channel.id:
             return False
-        return str(event_.get_message()), event_.get_user_id()
+        return event_
 
     player_counts: Dict[str, int] = {}
 
@@ -112,22 +118,33 @@ async def handle_cck(event: MessageEvent):
         if resp is False:
             continue
 
+        if resp is True:
+            raise Exception("Unexpected response")
+
         if resp is None:
             gamers_store.remove(event.channel.id)
             await start_cck.send(f"时间到！答案是———{character_name}card_id: {card_id}")
             await start_cck.send(full_image)
             break
 
-        resp, user_id = resp
+        msg, user_id, msg_id = (
+            str(resp.get_message()),
+            resp.get_user_id(),
+            resp.message.id,
+        )
+        gens[msg_id] = PG(resp)
 
-        if resp == "bzd":
+        if msg == "bzd":
             gamers_store.remove(event.channel.id)
-            await start_cck.send(f"答案是———{character_name}card_id: {card_id}")
-            await start_cck.send(full_image)
+            await start_cck.send(
+                f"答案是———{character_name}card_id: {card_id}"
+                + gens[msg_id].element
+            )
+            await start_cck.send(full_image + gens[msg_id].element)
             break
 
         found_characters = [
-            key for key, values in character_data.items() if resp in values
+            key for key, values in character_data.items() if msg in values
         ]
 
         if not found_characters:
@@ -140,6 +157,7 @@ async def handle_cck(event: MessageEvent):
             await start_cck.send(
                 MessageSegment.at(user_id)
                 + f"你已经回答三次啦，可以回复 bzd 查看答案～"
+                + gens[msg_id].element
             )
             continue
 
@@ -153,6 +171,7 @@ async def handle_cck(event: MessageEvent):
         await start_cck.send(
             MessageSegment.at(user_id)
             + f"正确！奖励你 {amount} 个星之碎片！答案是———{character_name} card_id: {card_id}"
+            + gens[msg_id].element
         )
-        await start_cck.send(full_image)
+        await start_cck.send(full_image + gens[msg_id].element)
         break

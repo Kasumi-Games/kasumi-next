@@ -43,3 +43,20 @@ matcher = on(rule=is_qq_bot)
 ```
 
 此函数适合在需要特殊处理 QQ 官方机器人消息时使用。
+
+#### PassiveGenerator
+
+用于生成被动回复消息。
+
+```python
+from utils import PassiveGenerator
+from nonebot.adapter.satori import MessageEvent
+
+assert event, MessageEvent
+passive_generator = PassiveGenerator(event)
+
+matcher.send("something" + passive_generator.element)
+```
+
+此类适合在需要生成被动回复消息时使用。
+如果还是不会用，推荐查看 `plugins/cck/__init__.py` 中的使用方法。

@@ -8,7 +8,7 @@ from bestdori.render import render
 from nonebot.params import Depends
 from nonebot import get_plugin_config
 from nonebot_plugin_waiter import waiter
-from typing import Optional, List, Union, Tuple
+from typing import Optional, List, Union, Dict
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageSegment, MessageEvent
 
@@ -17,6 +17,9 @@ require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
 
 from .. import monetary
+from utils.passive_generator import generators as gens
+from utils.passive_generator import PassiveGenerator as PG
+
 from .config import Config
 from .store import SongStore, BandStore, GamersStore
 from .utils import (
@@ -82,12 +85,14 @@ async def handle_start(
     game_difficulty: str = Depends(get_difficulty),
     song_raw_data: dict = Depends(song_store.get_raw),
 ):
+    gens[event.message.id] = PG(event)
+
     if await is_gaming(event):
-        await game_start.finish("已经在猜谱面了哦")
+        await game_start.finish("已经在猜谱面了哦" + gens[event.message.id].element)
 
     gamers_store.add(event.channel.id)
 
-    await game_start.send("正在加载谱面...")
+    await game_start.send("正在加载谱面..." + gens[event.message.id].element)
 
     if game_difficulty == "easy":
         # 在 28 级及以上的歌曲中抽取
@@ -130,11 +135,14 @@ async def handle_start(
         else:
             img = render_to_slices(chart, game_difficulty)
     except MemoryError:
-        await game_start.finish("发生谱面渲染错误！重新开一把吧")
+        await game_start.finish(
+            "发生谱面渲染错误！重新开一把吧" + gens[event.message.id].element
+        )
 
     await game_start.send(
         MessageSegment.image(raw=pil_image_to_bytes(img), mime="image/png")
         + "获取帮助: @Kasumi /help 猜谱面"
+        + gens[event.message.id].element
     )
 
     correct_chart_id: str = song_id
@@ -160,14 +168,18 @@ async def handle_start(
     logger.debug(f"谱面：{song_name} " f"{diff.upper()} LV.{level}")
 
     @waiter(waits=["message"], matcher=game_start, block=False)
-    async def check(event_: MessageEvent) -> Union[Optional[Tuple[str, str]], bool]:
+    async def check(event_: MessageEvent) -> Union[Optional[MessageEvent], bool]:
         if event_.channel.id != event.channel.id:
             return False
-        return str(event_.get_message()), event_.get_user_id()
+        return event_  # str(event_.get_message()), event_.get_user_id()
 
     async for resp in check(timeout=300):
         if resp is False:
             continue
+
+        if resp is True:
+            raise Exception("Unexpected response")
+
         if resp is None:
             gamers_store.remove(event.channel.id)
             await game_start.send(
@@ -177,32 +189,40 @@ async def handle_start(
                 MessageSegment.image(raw=jacket_image, mime="image/png")
             )
             break
-        resp, user_id = resp
-        if resp.isdigit():
-            guessed_chart_id = resp
+
+        msg, user_id, message_id = (
+            str(resp.get_message()),
+            resp.get_user_id(),
+            resp.message.id,
+        )
+        gens[message_id] = PG(resp)
+
+        if msg.isdigit():
+            guessed_chart_id = msg
         else:
-            if resp == "提示":
+            if msg == "提示":
                 if not tips:
-                    await game_start.send("没有更多提示了哦")
+                    await game_start.send("没有更多提示了哦" + gens[message_id].element)
                 else:
-                    await game_start.send(tips[0])
+                    await game_start.send(tips[0] + gens[message_id].element)
                     tips.pop(0)
                 continue
-            elif resp == "bzd":
+            elif msg == "bzd":
                 gamers_store.remove(event.channel.id)
                 await game_start.send(
                     "要再试一次吗？\n"
                     f"谱面：{song_name} "
-                    f"{diff.upper()} LV.{level}"
+                    f"{diff.upper()} LV.{level}" + gens[message_id].element
                 )
                 await game_start.send(
                     MessageSegment.image(raw=jacket_image, mime="image/png")
+                    + gens[message_id].element
                 )
                 break
 
-            guessed_chart_id = fuzzy_match(resp, nickname_song)
+            guessed_chart_id = fuzzy_match(msg, nickname_song)
             if guessed_chart_id is None:
-                guessed_chart_id = compare_origin_songname(resp.strip(), song_raw_data)
+                guessed_chart_id = compare_origin_songname(msg.strip(), song_raw_data)
 
         if guessed_chart_id == correct_chart_id:
             gamers_store.remove(event.channel.id)
@@ -211,9 +231,10 @@ async def handle_start(
             await game_start.send(
                 MessageSegment.at(user_id) + f"回答正确！奖励你 {amount} 个星之碎片"
                 f"谱面：{song_name} "
-                f"{diff.upper()} LV.{level}"
+                f"{diff.upper()} LV.{level}" + gens[message_id].element
             )
             await game_start.send(
                 MessageSegment.image(raw=jacket_image, mime="image/png")
+                + gens[message_id].element
             )
             break

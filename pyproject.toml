@@ -6,7 +6,7 @@ authors = [
     {name = "Kasumi-Games", email = "2667292003@qq.com"},
 ]
 dependencies = [
-    "nonebot-adapter-satori>=0.11.5",
+    "nonebot-adapter-satori>=0.12.2",
     "nonebot-plugin-waiter>=0.6.2",
     "bestdori-api>=1.1.2",
     "bestdori-render>=0.1.1",
