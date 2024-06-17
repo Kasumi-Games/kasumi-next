@@ -10,6 +10,6 @@ from utils import has_no_argument
 async def handle_info(matcher: Matcher):
     await matcher.finish(
         "「キラキラドキドキ」的小游戏合集机器人 Kasumi!\n"
-        "项目地址: https://github.com/Kasumi-Games/kasumi-next\n"
-        "联系我们: 666808414"
+        "项目地址: Kasumi-Games/kasumi-next\n"
+        "联系我们: 908979461"
     )
