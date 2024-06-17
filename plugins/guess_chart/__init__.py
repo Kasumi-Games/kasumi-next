@@ -139,12 +139,6 @@ async def handle_start(
             "发生谱面渲染错误！重新开一把吧" + gens[event.message.id].element
         )
 
-    await game_start.send(
-        MessageSegment.image(raw=pil_image_to_bytes(img), mime="image/png")
-        + "获取帮助: @Kasumi /help 猜谱面"
-        + gens[event.message.id].element
-    )
-
     correct_chart_id: str = song_id
     diff: str = chart_difficulty
     song_info = await song_detail.get_info_async()
@@ -166,6 +160,12 @@ async def handle_start(
     ]
 
     logger.debug(f"谱面：{song_name} " f"{diff.upper()} LV.{level}")
+
+    await game_start.send(
+        MessageSegment.image(raw=pil_image_to_bytes(img), mime="image/png")
+        + "获取帮助: @Kasumi /help 猜谱面"
+        + gens[event.message.id].element
+    )
 
     @waiter(waits=["message"], matcher=game_start, block=False)
     async def check(event_: MessageEvent) -> Union[Optional[MessageEvent], bool]:
