@@ -16,8 +16,6 @@ class PassiveManager:
         self._data: List[PassiveData] = []
 
     async def add_event(self, event: MessageEvent) -> None:
-        # go-kyutorin 给的 timestamp 是秒级的，但是 nonebot-adapter-satori 认为是毫秒级的
-        event.timestamp = datetime.fromtimestamp(event.timestamp.timestamp() * 1000)
         self._data.append(PassiveData(event=event, message_id=event.message.id, seq=0))
 
     def get_available_data(
