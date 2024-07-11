@@ -57,7 +57,7 @@ plugin_data = {
         "examples": ["/猜谱面", "/猜谱面 ex", "六兆年", "提示", "bzd"],
     },
     "tts": {
-        "description": "文本转BanG Dream! & 少女歌剧角色语音",
+        "description": "文本转BanG Dream! & 少女歌剧角色语音(trained by Bilibili@Mahiroshi)",
         "usage": {
             "/tts <角色> <文本>": "将文本转换为角色语音。角色和文本都可以省略，省略时会出现更多提示",
         },
