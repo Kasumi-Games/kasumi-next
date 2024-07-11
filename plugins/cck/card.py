@@ -4,7 +4,6 @@ import aiohttp
 from typing import Tuple
 from pathlib import Path
 from nonebot import logger
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .downloader import AsyncDownloader
 
