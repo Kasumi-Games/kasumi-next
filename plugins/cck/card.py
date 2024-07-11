@@ -27,10 +27,6 @@ class Card:
 
         await self._get_data()
 
-        self._scheduler = AsyncIOScheduler()
-        self._scheduler.add_job(self._get_data, "cron", hour=0, minute=0, second=0)
-        self._scheduler.start()
-
         logger.success("Card: 成功初始化")
         self.initialized = True
 

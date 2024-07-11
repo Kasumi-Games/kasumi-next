@@ -11,8 +11,10 @@ from nonebot import on_command, get_driver, require
 from nonebot.adapters.satori import MessageEvent, MessageSegment
 
 require("nonebot_plugin_localstore")
+require("nonebot_plugin_apscheduler")
 
 import nonebot_plugin_localstore as localstore
+from nonebot_plugin_apscheduler import scheduler
 
 from .. import monetary
 from utils import has_no_argument
@@ -61,6 +63,8 @@ if plugin_config.enable_cck:
     @get_driver().on_startup
     async def init_card():
         await card_manager.initialize(data_path, cache_path)
+
+    scheduler.scheduled_job("cron", hour=0, minute=0)(card_manager._get_data)
 
 
 start_cck = on_command(
@@ -137,8 +141,7 @@ async def handle_cck(event: MessageEvent):
         if msg == "bzd":
             gamers_store.remove(event.channel.id)
             await start_cck.send(
-                f"答案是———{character_name}card_id: {card_id}"
-                + gens[msg_id].element
+                f"答案是———{character_name}card_id: {card_id}" + gens[msg_id].element
             )
             await start_cck.send(full_image + gens[msg_id].element)
             break
