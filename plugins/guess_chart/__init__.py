@@ -8,7 +8,7 @@ from bestdori.render import render
 from nonebot.params import Depends
 from nonebot import get_plugin_config
 from nonebot_plugin_waiter import waiter
-from typing import Optional, List, Union, Dict
+from typing import Optional, List, Union
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageSegment, MessageEvent
 
@@ -173,7 +173,7 @@ async def handle_start(
             return False
         return event_  # str(event_.get_message()), event_.get_user_id()
 
-    async for resp in check(timeout=300):
+    async for resp in check(timeout=180):
         if resp is False:
             continue
 
