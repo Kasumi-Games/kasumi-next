@@ -31,7 +31,7 @@ class Card:
 
     async def _get_data(self):
         summary_url = "https://bestdori.com/api/cards/all.5.json"
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=30) as session:
             async with session.get(summary_url, proxy=self._proxy) as response:
                 self.__summary_data__: dict = await response.json()
         logger.success("Card: 成功获取卡牌简略数据")
