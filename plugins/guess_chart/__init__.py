@@ -172,7 +172,6 @@ async def handle_start(
     async def check(event_: MessageEvent) -> Union[Optional[MessageEvent], bool]:
         if event_.channel.id != event.channel.id:
             return False
-        latest_message_id = event_.message.id
         return event_
 
     async for resp in check(timeout=180):
@@ -198,6 +197,7 @@ async def handle_start(
             resp.message.id,
         )
         gens[message_id] = PG(resp)
+        latest_message_id = message_id
 
         if msg.isdigit():
             guessed_chart_id = msg
