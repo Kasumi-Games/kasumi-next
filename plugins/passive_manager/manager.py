@@ -53,3 +53,12 @@ class PassiveManager:
                 break
 
         return passive_data[-1]
+
+    def clear_timeout_data(self) -> None:
+        current_time = datetime.now()
+
+        self._data = [
+            data
+            for data in self._data
+            if data.event.timestamp + timedelta(minutes=5) > current_time
+        ]

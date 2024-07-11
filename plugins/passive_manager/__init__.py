@@ -2,8 +2,12 @@ import re
 import contextlib
 from typing import Dict, Any
 from nonebot.log import logger
-from nonebot import on_message
+from nonebot import on_message, require
 from nonebot.adapters.satori import MessageEvent, Bot
+
+require("nonebot_plugin_apscheduler")
+
+from nonebot_plugin_apscheduler import scheduler
 
 from utils import is_qq_bot
 
@@ -11,6 +15,8 @@ from .manager import PassiveManager
 
 
 passive_manager = PassiveManager()
+
+scheduler.add_job(passive_manager.clear_timeout_data, "interval", minutes=1)
 
 
 @on_message(rule=is_qq_bot, priority=-1, block=False).handle()
