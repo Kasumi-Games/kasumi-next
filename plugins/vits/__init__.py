@@ -11,7 +11,7 @@ from utils.passive_generator import PassiveGenerator as PG
 from .. import monetary
 
 from .config import Config
-from .utils import call_speaker_api, call_synthesize_api, match_character
+from .utils import call_speaker_api, call_synthesize_api, match_character, speaker_dict
 
 
 plugin_config = get_plugin_config(Config)
@@ -73,8 +73,9 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
             + passive_generator.element
         )
 
+        # 使用 speaker_list 作为角色列表
         await vits.send(
-            "角色列表：\n" + ", ".join(speakers.values()) + passive_generator.element
+            "角色列表：\n" + "\n".join([f"{k}: {', '.join(v)}" for k, v in speaker_dict.items()]) + passive_generator.element
         )
 
         resp = await check.wait(timeout=60)
