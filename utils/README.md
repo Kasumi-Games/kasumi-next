@@ -44,6 +44,21 @@ matcher = on(rule=is_qq_bot)
 
 此函数适合在需要特殊处理 QQ 官方机器人消息时使用。
 
+#### encode_to_silk
+
+用于将音频文件编码为 Silk 格式。
+
+```python
+from utils import encode_to_silk
+
+with open("example.wav", "rb") as f:
+    audio = f.read()
+
+silk_audio: bytes = encode_to_silk(audio, "wav")
+```
+
+此函数适合在需要将音频文件编码为 Silk 格式时使用。
+
 #### PassiveGenerator
 
 用于生成被动回复消息。
