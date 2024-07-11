@@ -86,6 +86,7 @@ async def handle_start(
     song_raw_data: dict = Depends(song_store.get_raw),
 ):
     gens[event.message.id] = PG(event)
+    latest_message_id = event.message.id
 
     if await is_gaming(event):
         await game_start.finish("已经在猜谱面了哦" + gens[event.message.id].element)
@@ -171,7 +172,8 @@ async def handle_start(
     async def check(event_: MessageEvent) -> Union[Optional[MessageEvent], bool]:
         if event_.channel.id != event.channel.id:
             return False
-        return event_  # str(event_.get_message()), event_.get_user_id()
+        latest_message_id = event_.message.id
+        return event_
 
     async for resp in check(timeout=180):
         if resp is False:
@@ -183,10 +185,10 @@ async def handle_start(
         if resp is None:
             gamers_store.remove(event.channel.id)
             await game_start.send(
-                f"时间到了哦\n谱面：{song_name} " f"{diff.upper()} LV.{level}"
+                f"时间到了哦\n谱面：{song_name} " f"{diff.upper()} LV.{level}" + gens[latest_message_id].element
             )
             await game_start.send(
-                MessageSegment.image(raw=jacket_image, mime="image/png")
+                MessageSegment.image(raw=jacket_image, mime="image/png") + gens[latest_message_id].element
             )
             break
 

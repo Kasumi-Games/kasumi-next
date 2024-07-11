@@ -103,6 +103,7 @@ async def handle_cck(event: MessageEvent):
     )
 
     gens[event.message.id] = PG(event)
+    latest_message_id = event.message.id
 
     await start_cck.send(
         image
@@ -118,7 +119,7 @@ async def handle_cck(event: MessageEvent):
 
     player_counts: Dict[str, int] = {}
 
-    async for resp in check(timeout=300):
+    async for resp in check(timeout=180):
         if resp is False:
             continue
 
@@ -127,8 +128,8 @@ async def handle_cck(event: MessageEvent):
 
         if resp is None:
             gamers_store.remove(event.channel.id)
-            await start_cck.send(f"时间到！答案是———{character_name}card_id: {card_id}")
-            await start_cck.send(full_image)
+            await start_cck.send(f"时间到！答案是———{character_name}card_id: {card_id}" + gens[latest_message_id].element)
+            await start_cck.send(full_image + gens[latest_message_id].element)
             break
 
         msg, user_id, msg_id = (
@@ -137,6 +138,7 @@ async def handle_cck(event: MessageEvent):
             resp.message.id,
         )
         gens[msg_id] = PG(resp)
+        latest_message_id = msg_id
 
         if msg == "bzd":
             gamers_store.remove(event.channel.id)
