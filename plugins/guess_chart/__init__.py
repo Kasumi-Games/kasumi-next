@@ -231,7 +231,7 @@ async def handle_start(
             amount = random.randint(*diff_to_amount[game_difficulty])
             monetary.add(user_id, amount, "guess_chart")
             await game_start.send(
-                MessageSegment.at(user_id) + f"回答正确！奖励你 {amount} 个星之碎片"
+                MessageSegment.at(user_id) + f"回答正确！奖励你 {amount} 个星之碎片\n"
                 f"谱面：{song_name} "
                 f"{diff.upper()} LV.{level}" + gens[message_id].element
             )
