@@ -89,12 +89,17 @@ async def _(bot: Bot, plugin: Message = CommandArg()):
 
         await help.finish(msg)
     elif plugin in plugin_data:
-        msg = f"插件 {plugin} 的使用方法：\n" + "\n".join(
-            [
-                f"    {command} -{usage}"
-                for command, usage in plugin_data[plugin]["usage"].items()
-            ]
-        ) + "\n示例：\n    " + "\n    ".join(plugin_data[plugin]["examples"])
+        msg = (
+            f"插件 {plugin} 的使用方法：\n"
+            + "\n".join(
+                [
+                    f"    {command} -{usage}"
+                    for command, usage in plugin_data[plugin]["usage"].items()
+                ]
+            )
+            + "\n示例：\n    "
+            + "\n    ".join(plugin_data[plugin]["examples"])
+        )
 
         if bot.adapter.get_name() == "Satori":
             msg = escape_text(msg)
