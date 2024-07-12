@@ -102,7 +102,7 @@ async def handle_start(
             for k, v in song_data.items()
             if v.get("difficulty", {}).get(diff_num["expert"], {}).get("playLevel", 0)
             >= 28
-            or v.get("difficulty", {}).get(diff_num["special"], {}).get("playLevel", 0)
+            and v.get("difficulty", {}).get(diff_num["special"], {}).get("playLevel", 0)
             >= 28
         }
     elif game_difficulty == "normal":
@@ -112,7 +112,7 @@ async def handle_start(
             for k, v in song_data.items()
             if v.get("difficulty", {}).get(diff_num["expert"], {}).get("playLevel", 0)
             >= 27
-            or v.get("difficulty", {}).get(diff_num["special"], {}).get("playLevel", 0)
+            and v.get("difficulty", {}).get(diff_num["special"], {}).get("playLevel", 0)
             >= 27
         }
     else:
