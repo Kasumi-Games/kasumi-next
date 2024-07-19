@@ -120,15 +120,22 @@ async def handle_start(
 
     song_id, song_basic_info = random.choice(list(filtered_song_data.items()))
 
-    song_detail = songs.Song(song_id)
+    try:
+        song_detail = songs.Song(song_id)
 
-    if song_data[song_id]["difficulty"].get(diff_num["special"]):
-        chart_difficulty = random.choice(["expert", "special"])
-    else:
-        chart_difficulty = "expert"
+        if song_data[song_id]["difficulty"].get(diff_num["special"]):
+            chart_difficulty = random.choice(["expert", "special"])
+        else:
+            chart_difficulty = "expert"
 
-    chart = await Chart.get_chart_async(song_id, chart_difficulty)
-    chart_statistics = chart.count()
+        chart = await Chart.get_chart_async(song_id, chart_difficulty)
+        chart_statistics = chart.count()
+    except Exception as e:
+        logger.error(f"猜谱面：{e}", exc_info=True)
+        gamers_store.remove(event.channel.id)
+        await game_start.finish(
+            "发生错误！重新开一把吧" + gens[event.message.id].element
+        )
 
     try:
         if game_difficulty in ["easy", "normal"]:
@@ -136,6 +143,7 @@ async def handle_start(
         else:
             img = render_to_slices(chart, game_difficulty)
     except MemoryError:
+        gamers_store.remove(event.channel.id)
         await game_start.finish(
             "发生谱面渲染错误！重新开一把吧" + gens[event.message.id].element
         )
