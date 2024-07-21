@@ -5,12 +5,12 @@ from bestdori import settings
 from nonebot.log import logger
 from bestdori.charts import Chart
 from bestdori.render import render
-from nonebot.params import Depends
 from nonebot import get_plugin_config
 from nonebot_plugin_waiter import waiter
 from typing import Optional, List, Union
+from nonebot.params import Depends, CommandArg
 from nonebot import on_command, require, get_driver
-from nonebot.adapters.satori import MessageSegment, MessageEvent
+from nonebot.adapters.satori import MessageSegment, MessageEvent, Message
 
 require("nonebot_plugin_apscheduler")
 
@@ -80,6 +80,7 @@ if plugin_config.enable_guess_chart:
 @game_start.handle()
 async def handle_start(
     event: MessageEvent,
+    arg: Optional[Message] = CommandArg(),
     song_data: dict = Depends(song_store.get),
     band_data: dict = Depends(band_store.get),
     game_difficulty: str = Depends(get_difficulty),
@@ -87,6 +88,17 @@ async def handle_start(
 ):
     gens[event.message.id] = PG(event)
     latest_message_id = event.message.id
+
+    if (
+        arg is not None
+        and arg.extract_plain_text().strip() == "-f"
+        and await is_gaming(event)
+    ):
+        gamers_store.remove(event.channel.id)
+        await game_start.finish("已强制退出猜谱面" + gens[event.message.id].element)
+
+    if arg is not None and arg.extract_plain_text().strip() == "-f":
+        await game_start.finish("没有正在进行的猜谱面" + gens[event.message.id].element)
 
     if await is_gaming(event):
         await game_start.finish("已经在猜谱面了哦" + gens[event.message.id].element)
@@ -192,10 +204,12 @@ async def handle_start(
         if resp is None:
             gamers_store.remove(event.channel.id)
             await game_start.send(
-                f"时间到了哦\n谱面：{song_name} " f"{diff.upper()} LV.{level}" + gens[latest_message_id].element
+                f"时间到了哦\n谱面：{song_name} "
+                f"{diff.upper()} LV.{level}" + gens[latest_message_id].element
             )
             await game_start.send(
-                MessageSegment.image(raw=jacket_image, mime="image/png") + gens[latest_message_id].element
+                MessageSegment.image(raw=jacket_image, mime="image/png")
+                + gens[latest_message_id].element
             )
             break
 
