@@ -50,11 +50,12 @@ plugin_data = {
         "usage": {
             "/猜谱面|cpm": "开始猜谱面",
             "/猜谱面|cpm <难度>": "开始猜谱面，难度可选为 easy, normal, hard, expert，支持缩写为 ez, nm, hd, ex",
+            "/猜谱面|cpm -f": "强制退出猜谱面",
             "<歌曲名称|ID>": "猜指定歌曲的谱面",
             "提示": "在猜谱面时获取提示",
             "bzd": "猜不出来的时候就发这个吧",
         },
-        "examples": ["/猜谱面", "/猜谱面 ex", "六兆年", "提示", "bzd"],
+        "examples": ["/猜谱面", "/猜谱面 ex", "/猜谱面 -f", "六兆年", "提示", "bzd"],
     },
     "tts": {
         "description": "文本转BanG Dream! & 少女歌剧角色语音(trained by Bilibili@Mahiroshi)",
