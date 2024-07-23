@@ -30,6 +30,8 @@ from .utils import (
     read_csv_to_dict,
     get_jacket_image,
     render_to_slices,
+    flatten_song_data,
+    sort_by_difficulty,
     pil_image_to_bytes,
     get_value_from_list,
     compare_origin_songname,
@@ -107,39 +109,44 @@ async def handle_start(
 
     await game_start.send("正在加载谱面..." + gens[event.message.id].element)
 
-    if game_difficulty == "easy":
+    flat_song_data: list = flatten_song_data(song_data)
+    sorted_song_data = sort_by_difficulty(flat_song_data)
+
+    if arg.extract_plain_text().strip().isdigit():
+        # 指定特定难度的谱面
+        game_type = "given_play_level"
+        song_difficulty = int(arg.extract_plain_text().strip())
+        filtered_song_data = [
+            song for song in flat_song_data if song["play_level"] == song_difficulty
+        ]
+    elif game_difficulty == "easy":
         # 在 28 级及以上的歌曲中抽取
-        filtered_song_data = {
-            k: v
-            for k, v in song_data.items()
-            if v.get("difficulty", {}).get(diff_num["expert"], {}).get("playLevel", 0)
-            >= 28
-            and v.get("difficulty", {}).get(diff_num["special"], {}).get("playLevel", 0)
-            >= 28
-        }
+        game_type = "given_game_difficulty"
+        filtered_song_data = [
+            song for song in flat_song_data if song["play_level"] >= 28
+        ]
     elif game_difficulty == "normal":
         # 在 27 级及以上的歌曲中抽取
-        filtered_song_data = {
-            k: v
-            for k, v in song_data.items()
-            if v.get("difficulty", {}).get(diff_num["expert"], {}).get("playLevel", 0)
-            >= 27
-            and v.get("difficulty", {}).get(diff_num["special"], {}).get("playLevel", 0)
-            >= 27
-        }
+        game_type = "given_game_difficulty"
+        filtered_song_data = [
+            song for song in flat_song_data if song["play_level"] >= 27
+        ]
     else:
-        filtered_song_data = song_data
+        game_type = "given_game_difficulty"
+        filtered_song_data = flat_song_data
 
-    song_id, song_basic_info = random.choice(list(filtered_song_data.items()))
+    if not filtered_song_data:
+        gamers_store.remove(event.channel.id)
+        await game_start.finish("没有符合条件的谱面" + gens[event.message.id].element)
+
+    song = random.choice(filtered_song_data)
+
+    song_id = int(song["song_id"])
 
     try:
         song_detail = songs.Song(song_id)
 
-        if song_data[song_id]["difficulty"].get(diff_num["special"]):
-            chart_difficulty = random.choice(["expert", "special"])
-        else:
-            chart_difficulty = "expert"
-
+        chart_difficulty = song["difficulty"]
         chart = await Chart.get_chart_async(song_id, chart_difficulty)
         chart_statistics = chart.count()
     except Exception as e:
@@ -160,11 +167,11 @@ async def handle_start(
             "发生谱面渲染错误！重新开一把吧" + gens[event.message.id].element
         )
 
-    correct_chart_id: str = song_id
+    correct_chart_id: str = str(song_id)
     diff: str = chart_difficulty
     song_info = await song_detail.get_info_async()
     level = song_info.get("difficulty", {}).get(diff_num[diff], {}).get("playLevel")
-    song_name = get_value_from_list(song_basic_info.get("musicTitle", []))
+    song_name = song["song_name"]
 
     note_num = chart_statistics.notes
     note_num_range = num_to_range(note_num)
@@ -250,7 +257,19 @@ async def handle_start(
 
         if guessed_chart_id == correct_chart_id:
             gamers_store.remove(event.channel.id)
-            amount = random.randint(*diff_to_amount[game_difficulty])
+            if game_type == "given_game_difficulty":
+                amount = random.randint(*diff_to_amount[game_difficulty])
+            elif game_type == "given_play_level":
+                max_song_num = max(
+                    [len(v) for v in sorted_song_data.values()]
+                )  # about 271
+                max_amount = 12
+                amount = (
+                    (max_amount / max_song_num) * len(sorted_song_data[song_difficulty])
+                ).__ceil__()
+            else:
+                await game_start.finish("未知游戏类型！" + gens[message_id].element)
+
             monetary.add(user_id, amount, "guess_chart")
             await game_start.send(
                 MessageSegment.at(user_id) + f"回答正确！奖励你 {amount} 个星之碎片\n"
@@ -262,3 +281,7 @@ async def handle_start(
                 + gens[message_id].element
             )
             break
+        else:
+            logger.debug(
+                f"用户猜了 {msg} -> {guessed_chart_id}, 正确答案是 {correct_chart_id}"
+            )

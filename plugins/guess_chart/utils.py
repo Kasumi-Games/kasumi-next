@@ -20,6 +20,14 @@ diff_num = {
     "special": "4",
 }
 
+num_to_diff = {
+    "0": "easy",
+    "1": "normal",
+    "2": "hard",
+    "3": "expert",
+    "4": "special",
+}
+
 game_difficulty_to_seconds = {
     "easy": 10,
     "normal": 8,
@@ -118,8 +126,6 @@ def get_difficulty(args: Message = CommandArg()) -> str:
         return "hard"
     elif arg in ["ex", "expert", "专家"]:
         return "expert"
-    # elif arg == "":
-    #     return "normal"
     else:
         return "normal"
 
@@ -237,3 +243,33 @@ async def get_jacket_image(song_id: int, song_info: Dict[str, Any]) -> bytes:
     async with aiohttp.ClientSession() as session:
         async with session.get(jacket_url) as resp:
             return await resp.read()
+
+
+def flatten_song_data(song_data: Dict[str, Dict[str, Any]]):
+    result = []
+    for song_id, song_info in song_data.items():
+        for diff_number, play_level_dict in song_info["difficulty"].items():
+            play_level = play_level_dict.get("playLevel", 0)
+            result.append(
+                {
+                    "song_id": song_id,
+                    "song_name": get_value_from_list(song_info["musicTitle"]),
+                    "play_level": play_level,  # 1-30+
+                    "difficulty": num_to_diff[
+                        diff_number
+                    ],  # easy, normal, hard, expert, special
+                }
+            )
+    return result
+
+
+def sort_by_difficulty(
+    flattened_song_data: List[Dict[str, Any]]
+) -> Dict[int, Dict[str, Any]]:
+    result = {}
+    for song in flattened_song_data:
+        difficulty = song["play_level"]
+        if difficulty not in result:
+            result[difficulty] = []
+        result[difficulty].append(song)
+    return result
