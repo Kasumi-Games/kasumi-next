@@ -103,7 +103,10 @@ async def handle_start(
         await game_start.finish("没有正在进行的猜谱面" + gens[event.message.id].element)
 
     if await is_gaming(event):
-        await game_start.finish("已经在猜谱面了哦" + gens[event.message.id].element)
+        await game_start.finish(
+            "已经在猜谱面了哦，如果有异常，请使用 @Kasumi /猜谱面 -f 以强制结束游戏"
+            + gens[event.message.id].element
+        )
 
     gamers_store.add(event.channel.id)
 
