@@ -89,6 +89,9 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             "没有正在进行的猜猜看，你可以直接使用 @Kasumi /猜卡面 来开始"
         )
 
+    if arg.extract_plain_text().strip() != "":
+        return None
+
     if event.channel.id in gamers_store.get():
         await start_cck.finish("你已经在猜猜看咯")
 
