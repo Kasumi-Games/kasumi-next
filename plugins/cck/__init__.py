@@ -2,7 +2,6 @@ import json
 import random
 from PIL import Image
 from pathlib import Path
-from nonebot.rule import Rule
 from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot import get_plugin_config
@@ -15,10 +14,8 @@ require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
 
 import nonebot_plugin_localstore as localstore
-from nonebot_plugin_apscheduler import scheduler
 
 from .. import monetary
-from utils import has_no_argument
 from utils.passive_generator import generators as gens
 from utils.passive_generator import PassiveGenerator as PG
 
@@ -74,7 +71,7 @@ start_cck = on_command(
     aliases={"猜猜看", "猜卡面"},
     priority=10,
     block=True,
-    rule=Rule(has_no_argument) & (lambda: plugin_config.enable_cck),
+    rule=lambda: plugin_config.enable_cck,
 )
 
 
