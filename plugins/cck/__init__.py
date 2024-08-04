@@ -65,7 +65,8 @@ if plugin_config.enable_cck:
     async def init_card():
         await card_manager.initialize(data_path, cache_path)
 
-    scheduler.scheduled_job("cron", hour=0, minute=0)(card_manager._get_data)
+    # scheduler.scheduled_job("cron", hour=0, minute=0)(card_manager._get_data)
+    # 运行 _get_data 后会阻塞，不清楚为什么，所以暂时注释掉，有空重启 Kasumi 就能更新
 
 
 start_cck = on_command(
