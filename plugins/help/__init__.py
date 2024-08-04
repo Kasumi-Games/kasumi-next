@@ -19,7 +19,7 @@ plugin_data = {
             "/help": "显示帮助信息",
             "/help 插件名": "显示特定插件的用法",
         },
-        "examples": ["/help 星之碎片"],
+        "examples": ["/help", "/help 星之碎片"],
     },
     "info": {
         "description": "显示 Kasumi 信息",
@@ -41,9 +41,10 @@ plugin_data = {
         "description": "猜猜看小游戏",
         "usage": {
             "/猜猜看|cck": "开始猜猜看",
+            "/猜猜看|cck -f": "强制退出猜猜看",
             "bzd": "猜不出来的时候就发这个吧",
         },
-        "examples": ["/猜猜看", "bzd", "ksm"],
+        "examples": ["/猜猜看", "/猜猜看 -f", "bzd", "ksm"],
     },
     "猜谱面": {
         "description": "猜谱面小游戏",
@@ -56,7 +57,15 @@ plugin_data = {
             "提示": "在猜谱面时获取提示",
             "bzd": "猜不出来的时候就发这个吧",
         },
-        "examples": ["/猜谱面", "/猜谱面 ex", "/猜谱面 28", "/猜谱面 -f", "六兆年", "提示", "bzd"],
+        "examples": [
+            "/猜谱面",
+            "/猜谱面 ex",
+            "/猜谱面 28",
+            "/猜谱面 -f",
+            "六兆年",
+            "提示",
+            "bzd",
+        ],
     },
     "tts": {
         "description": "文本转BanG Dream! & 少女歌剧角色语音(trained by Bilibili@Mahiroshi)",
