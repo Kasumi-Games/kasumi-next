@@ -49,7 +49,7 @@ class AsyncDownloader:
 
                         data: bytes = await response.read()
 
-                        if len(data) == 14559:
+                        if len(data) == 14559 or len(data) == 14084:
                             logger.warning(f"Downloader: Bestdori image missing {url}")
                             async with aiofiles.open(
                                 self.cache_dir / "bad_url.txt", "a"
