@@ -4,11 +4,12 @@ from PIL import Image
 from pathlib import Path
 from nonebot.rule import Rule
 from nonebot.log import logger
+from nonebot.params import CommandArg
 from nonebot import get_plugin_config
 from nonebot_plugin_waiter import waiter
 from typing import Any, Dict, List, Union
 from nonebot import on_command, get_driver, require
-from nonebot.adapters.satori import MessageEvent, MessageSegment
+from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
 
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
@@ -77,7 +78,19 @@ start_cck = on_command(
 
 
 @start_cck.handle()
-async def handle_cck(event: MessageEvent):
+async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
+    if (
+        arg.extract_plain_text().strip() == "-f"
+        and event.channel.id in gamers_store.get()
+    ):
+        gamers_store.remove(event.channel.id)
+        await start_cck.finish("已强制结束猜猜看")
+
+    if arg.extract_plain_text().strip() == "-f":
+        await start_cck.finish(
+            "没有正在进行的猜猜看，你可以直接使用 @Kasumi /猜卡面 来开始"
+        )
+
     if event.channel.id in gamers_store.get():
         await start_cck.finish("你已经在猜猜看咯")
 
@@ -128,7 +141,10 @@ async def handle_cck(event: MessageEvent):
 
         if resp is None:
             gamers_store.remove(event.channel.id)
-            await start_cck.send(f"时间到！答案是———{character_name}card_id: {card_id}" + gens[latest_message_id].element)
+            await start_cck.send(
+                f"时间到！答案是———{character_name}card_id: {card_id}"
+                + gens[latest_message_id].element
+            )
             await start_cck.send(full_image + gens[latest_message_id].element)
             break
 
