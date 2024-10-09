@@ -65,7 +65,7 @@ silk_audio: bytes = encode_to_silk(audio, "wav")
 
 ```python
 from utils import PassiveGenerator
-from nonebot.adapter.satori import MessageEvent
+from nonebot.adapters.satori import MessageEvent
 
 assert event, MessageEvent
 passive_generator = PassiveGenerator(event)
