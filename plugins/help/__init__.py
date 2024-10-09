@@ -77,7 +77,7 @@ plugin_data = {
 }
 
 
-help = on_command("help", priority=1)
+help = on_command("help", priority=1, aliases={"帮助", "帮助信息"})
 
 
 @help.handle()
