@@ -162,3 +162,22 @@ async def handle_transfer(
         f"转账成功，已转账 {amount} 个星之碎片给{to_user_nick}"
         + passive_generator.element
     )
+
+
+@on_command(
+    "balancerank", aliases={"余额排行", "余额排行榜"}, priority=10, block=True
+).handle()
+async def handle_balancerank(matcher: Matcher, event: Event):
+    users = session.query(User).order_by(User.balance.desc()).limit(10).all()
+    user_id = event.get_user_id()
+    user = get_user(user_id)
+    rank = session.query(User).filter(User.balance > user.balance).count() + 1
+    await matcher.send(
+        "\n".join(
+            [
+                f"{i+1}. {nickname.get(user.user_id) or "Unknown"}: {user.balance} 个星之碎片"
+                for i, user in enumerate(users)
+            ]
+        )
+        + f"\n你当前的排名是第 {rank} 名"
+    )
