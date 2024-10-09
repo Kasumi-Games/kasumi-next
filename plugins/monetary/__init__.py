@@ -13,7 +13,7 @@ require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store
 
 from ..nickname import nickname
-from utils import has_no_argument
+from utils import has_no_argument, PassiveGenerator
 
 from .utils import is_number
 from .transaction import Transaction
@@ -120,9 +120,13 @@ async def handle_transfer(
     user_id = event.get_user_id()
     text = arg.extract_plain_text().strip()
 
+    passive_generator = PassiveGenerator(event)
+
     to_user_segs = text.split(" ")
     if len(to_user_segs) != 2:
-        await matcher.finish("转账格式错误！示例：转账 &lt;昵称&gt; 10")
+        await matcher.finish(
+            "转账格式错误！示例：转账 &lt;昵称&gt; 10" + passive_generator.element
+        )
 
     to_user_nick = (
         to_user_segs[0] if not is_number(to_user_segs[0]) else to_user_segs[1]
@@ -132,22 +136,29 @@ async def handle_transfer(
             int(to_user_segs[0]) if is_number(to_user_segs[0]) else int(to_user_segs[1])
         )
     except ValueError:
-        await matcher.finish("格式错误！示例：转账 &lt;昵称&gt; 10")
+        await matcher.finish(
+            "格式错误！示例：转账 &lt;昵称&gt; 10" + passive_generator.element
+        )
 
     to_user_id = nickname.get_id(to_user_nick)
 
     if to_user_id is None:
-        await matcher.finish(f"Kasumi 不认识{to_user_nick}呢...")
+        await matcher.finish(
+            f"Kasumi 不认识{to_user_nick}呢..." + passive_generator.element
+        )
 
     if to_user_id == user_id:
-        await matcher.finish("不能给自己转账哦！")
+        await matcher.finish("不能给自己转账哦！" + passive_generator.element)
 
     if amount <= 0:
-        await matcher.finish("转账金额必须大于 0")
+        await matcher.finish("转账金额必须大于 0" + passive_generator.element)
 
     if get(user_id) < amount:
-        await matcher.finish("余额不足！")
+        await matcher.finish("余额不足！" + passive_generator.element)
 
     transfer(user_id, to_user_id, amount, "transfer_by_command")
 
-    await matcher.finish(f"转账成功，已转账 {amount} 个星之碎片给{to_user_nick}")
+    await matcher.finish(
+        f"转账成功，已转账 {amount} 个星之碎片给{to_user_nick}"
+        + passive_generator.element
+    )
