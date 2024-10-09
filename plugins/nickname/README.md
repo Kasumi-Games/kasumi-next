@@ -22,7 +22,7 @@ from .. import nickname
 
 #### 获取昵称
 
-获取指定用户的昵称：
+获取指定用户的昵称
 
 ```python
 nickname.get(user_id: str) -> Optional[str]
@@ -30,3 +30,14 @@ nickname.get(user_id: str) -> Optional[str]
 
 - `user_id` (str)：用户的唯一标识，推荐使用 `event.get_user_id()` 获取
 - 返回值是该用户的当前昵称，如果用户没有设置昵称，返回 `None`
+
+#### 获取用户ID
+
+获取指定昵称的用户ID，因为昵称是唯一的，所以返回值是单个字符串
+
+```python
+nickname.get_id(nickname: str) -> Optional[str]
+```
+
+- `nickname` (str)：用户的昵称
+- 返回值是该昵称对应的用户ID，如果没有找到对应的用户，返回 `None`

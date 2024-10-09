@@ -118,4 +118,19 @@ def get(user_id: str) -> Optional[str]:
     return nickname.nickname
 
 
+def get_id(nickname: str) -> Optional[str]:
+    """根据昵称获取用户 ID
+
+    Args:
+        nickname (str): 用户昵称
+
+    Returns:
+        str: 用户 ID，如果没有找到用户则返回 `None`
+    """
+    user = session.query(Nickname).filter(Nickname.nickname == nickname).first()
+    if user is None:
+        return None
+    return user.user_id
+
+
 __all__ = ["get"]
