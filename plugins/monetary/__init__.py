@@ -1,6 +1,7 @@
 import time
 import random
 from typing import List
+from nonebot.log import logger
 from nonebot.adapters import Event
 from nonebot.matcher import Matcher
 from sqlalchemy import create_engine
@@ -13,6 +14,7 @@ require("nonebot_plugin_localstore")
 
 import nonebot_plugin_localstore as store
 
+from ..nickname import nickname
 from utils import has_no_argument
 
 from .utils import is_number
@@ -118,22 +120,43 @@ async def handle_transfer(
     matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()
 ):
     user_id = event.get_user_id()
+    user_nick = nickname.get(user_id)
     to_user_segs: List[MessageSegment] = []
 
     for message_seg in arg:
-        if message_seg.type == "at":
+        if message_seg.type == "at" or (
+            message_seg.is_text() and not is_number(message_seg.data["text"].strip())
+        ):
             to_user_segs.append(message_seg)
         elif message_seg.is_text() and is_number(message_seg.data["text"].strip()):
             amount = int(message_seg.data["text"].strip())
 
     if not to_user_segs:
-        await matcher.finish("使用 @ 指定要转账的对象哦！示例：转账 @xxx 10")
+        await matcher.finish("使用昵称指定要转账的对象哦！示例：转账 &lt;昵称&gt; 10")
 
     if len(to_user_segs) > 1:
         await matcher.finish("一次只能转账给一个人哦！")
 
-    to_user_id = to_user_segs[0].data["id"]
-    to_user_name = to_user_segs[0].data["name"]
+    to_user_id = to_user_segs[0].data["id"] if to_user_segs[0].type == "at" else None
+    to_user_nick = (
+        to_user_segs[0].data["text"] if to_user_segs[0].type == "text" else None
+    )
+
+    if to_user_id is None and to_user_nick is None:
+        await matcher.finish("使用昵称指定要转账的对象哦！示例：转账 &lt;昵称&gt; 10")
+
+    if to_user_id is None and to_user_nick is not None:
+        to_user_id = nickname.get_id(to_user_nick)
+        if to_user_id is None:
+            await matcher.finish(f"Kasumi 不认识{to_user_nick}呢...")
+
+    if to_user_id is not None and to_user_nick is None:
+        to_user_nick = nickname.get(to_user_id)
+
+    if to_user_id is None:
+        logger.debug(to_user_segs)
+        logger.debug(f"to_user_id: {to_user_id}, to_user_nick: {to_user_nick}")
+        await matcher.finish("解析失败，对不起QwQ")
 
     if to_user_id == user_id:
         await matcher.finish("不能给自己转账哦！")
@@ -146,6 +169,4 @@ async def handle_transfer(
 
     transfer(user_id, to_user_id, amount, "transfer_by_command")
 
-    await matcher.finish(
-        f"转账成功，已转账 {amount} 个星之碎片给 {MessageSegment.at(to_user_id) if to_user_name is None else to_user_name}"
-    )
+    await matcher.finish(f"转账成功，已转账 {amount} 个星之碎片给{to_user_nick}")
