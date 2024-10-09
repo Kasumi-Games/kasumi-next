@@ -5,6 +5,8 @@ from nonebot.adapters import Message
 from nonebot.params import CommandArg
 from nonebot.adapters.satori import MessageEvent
 
+from .passive_generator import PassiveGenerator as PassiveGenerator
+
 
 async def has_no_argument(arg: Message = CommandArg()):
     if arg.extract_plain_text().strip() == "":
