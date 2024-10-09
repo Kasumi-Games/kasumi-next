@@ -35,7 +35,7 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
 
     if text == "":
         await set_nickname.finish(
-            "格式错误！正确使用方法：/设置昵称 <昵称>" + passive_generator.element
+            "格式错误！正确使用方法：/设置昵称 &lt;昵称&gt;" + passive_generator.element
         )
 
     nickname = (
