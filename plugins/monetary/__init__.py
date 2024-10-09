@@ -172,6 +172,14 @@ async def handle_balancerank(matcher: Matcher, event: Event):
     user_id = event.get_user_id()
     user = get_user(user_id)
     rank = session.query(User).filter(User.balance > user.balance).count() + 1
+    # 离上一名的距离
+    previous_user = (
+        session.query(User)
+        .filter(User.balance > user.balance)
+        .order_by(User.balance.asc())
+        .first()
+    )
+    distance = previous_user.balance - user.balance if previous_user is not None else 0
     await matcher.send(
         "\n".join(
             [
@@ -180,4 +188,5 @@ async def handle_balancerank(matcher: Matcher, event: Event):
             ]
         )
         + f"\n你当前的排名是第 {rank} 名"
+        + (f"，离上一名还差 {distance} 个星之碎片" if rank != 1 else "")
     )
