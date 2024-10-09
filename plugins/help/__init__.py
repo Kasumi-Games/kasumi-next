@@ -32,7 +32,7 @@ plugin_data = {
         "description": "Kasumi 的货币系统",
         "usage": {
             "/余额|balance": "查看余额",
-            "(维修中)/转账|transfer <@用户> <数量>": "转账",
+            "/转账|transfer <昵称> <数量>": "转账",
             "/签到|daily": "每日签到",
         },
         "examples": ["/余额", "/转账 @Arisa 10", "/签到"],
