@@ -120,43 +120,33 @@ async def handle_transfer(
     matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()
 ):
     user_id = event.get_user_id()
-    user_nick = nickname.get(user_id)
-    to_user_segs: List[MessageSegment] = []
+    text = arg.extract_plain_text().strip()
 
-    for message_seg in arg:
-        if message_seg.type == "at" or (
-            message_seg.is_text() and not is_number(message_seg.data["text"].strip())
-        ):
-            to_user_segs.append(message_seg)
-        elif message_seg.is_text() and is_number(message_seg.data["text"].strip()):
-            amount = int(message_seg.data["text"].strip())
+    to_user_segs = text.split(" ")
+    if len(to_user_segs) != 2:
+        await matcher.finish("转账格式错误！示例：转账 &lt;昵称&gt; 10")
 
-    if not to_user_segs:
-        await matcher.finish("使用昵称指定要转账的对象哦！示例：转账 &lt;昵称&gt; 10")
+    def is_number(s: str) -> bool:
+        try:
+            int(s)
+            return True
+        except ValueError:
+            return False
 
-    if len(to_user_segs) > 1:
-        await matcher.finish("一次只能转账给一个人哦！")
-
-    to_user_id = to_user_segs[0].data["id"] if to_user_segs[0].type == "at" else None
     to_user_nick = (
-        to_user_segs[0].data["text"] if to_user_segs[0].type == "text" else None
+        to_user_segs[0] if not is_number(to_user_segs[0]) else to_user_segs[1]
     )
+    try:
+        amount = (
+            int(to_user_segs[0]) if is_number(to_user_segs[0]) else int(to_user_segs[1])
+        )
+    except ValueError:
+        await matcher.finish("格式错误！示例：转账 &lt;昵称&gt; 10")
 
-    if to_user_id is None and to_user_nick is None:
-        await matcher.finish("使用昵称指定要转账的对象哦！示例：转账 &lt;昵称&gt; 10")
-
-    if to_user_id is None and to_user_nick is not None:
-        to_user_id = nickname.get_id(to_user_nick)
-        if to_user_id is None:
-            await matcher.finish(f"Kasumi 不认识{to_user_nick}呢...")
-
-    if to_user_id is not None and to_user_nick is None:
-        to_user_nick = nickname.get(to_user_id)
+    to_user_id = nickname.get_user_id(to_user_nick)
 
     if to_user_id is None:
-        logger.debug(to_user_segs)
-        logger.debug(f"to_user_id: {to_user_id}, to_user_nick: {to_user_nick}")
-        await matcher.finish("解析失败，对不起QwQ")
+        await matcher.finish(f"Kasumi 不认识{to_user_nick}呢...")
 
     if to_user_id == user_id:
         await matcher.finish("不能给自己转账哦！")
