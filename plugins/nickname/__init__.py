@@ -24,6 +24,14 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
             "格式错误！正确使用方法：/设置昵称 &lt;昵称&gt;" + passive_generator.element
         )
 
+    if len(text) > 20:
+        await set_nickname.finish(
+            "昵称长度不能超过 20 个字符" + passive_generator.element
+        )
+
+    if "\n" in text:
+        await set_nickname.finish("昵称不能包含换行符" + passive_generator.element)
+
     nickname = (
         session.query(Nickname).filter(Nickname.user_id == event.get_user_id()).first()
     )
