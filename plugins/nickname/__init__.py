@@ -63,7 +63,7 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
         nickname = Nickname(user_id=event.get_user_id(), nickname=text)
         session.add(nickname)
         await set_nickname.send(
-            f"设置成功！以后 Kasumi 就会叫你 {text} 啦~" + passive_generator.element
+            f"设置成功！以后 Kasumi 就会叫你{text}啦~" + passive_generator.element
         )
         await set_nickname.send(
             "首次设置昵称免费，下次修改需要 30 个星之碎片哦" + passive_generator.element
@@ -81,7 +81,7 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
         nickname.nickname = text
 
         await set_nickname.send(
-            f"修改成功！以后 Kasumi 就会叫你 {text} 啦~" + passive_generator.element
+            f"修改成功！以后 Kasumi 就会叫你{text}啦~" + passive_generator.element
         )
 
     session.commit()
@@ -99,7 +99,7 @@ async def handle_get_nickname(event: MessageEvent):
         await get_nickname.finish("你还没有设置昵称哦！" + passive_generator.element)
 
     await get_nickname.finish(
-        f"你的昵称是 {nickname.nickname}~" + passive_generator.element
+        f"你的昵称是{nickname.nickname}~" + passive_generator.element
     )
 
 
