@@ -143,7 +143,7 @@ async def handle_transfer(
     except ValueError:
         await matcher.finish("格式错误！示例：转账 &lt;昵称&gt; 10")
 
-    to_user_id = nickname.get_user_id(to_user_nick)
+    to_user_id = nickname.get_id(to_user_nick)
 
     if to_user_id is None:
         await matcher.finish(f"Kasumi 不认识{to_user_nick}呢...")
