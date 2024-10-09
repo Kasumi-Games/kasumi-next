@@ -175,7 +175,7 @@ async def handle_balancerank(matcher: Matcher, event: Event):
     await matcher.send(
         "\n".join(
             [
-                f"{i+1}. {nickname.get(user.user_id) or "Unknown"}: {user.balance} 个星之碎片"
+                f"{i+1}. {nickname.get(user.user_id) or 'Unknown'}: {user.balance} 个星之碎片"
                 for i, user in enumerate(users)
             ]
         )

@@ -34,6 +34,7 @@ plugin_data = {
             "/余额|balance": "查看余额",
             "/转账|transfer <昵称> <数量>": "转账",
             "/签到|daily": "每日签到",
+            "/余额排行榜|balancerank": "查看余额排行榜",
         },
         "examples": ["/余额", "/转账 @Arisa 10", "/签到"],
     },
