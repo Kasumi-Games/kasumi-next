@@ -1,14 +1,12 @@
 import time
 import random
-from typing import List
-from nonebot.log import logger
 from nonebot.adapters import Event
 from nonebot.matcher import Matcher
 from sqlalchemy import create_engine
 from nonebot.params import CommandArg
 from nonebot import require, on_command
 from sqlalchemy.orm import sessionmaker
-from nonebot.adapters.satori import MessageEvent, Message, MessageSegment
+from nonebot.adapters.satori import MessageEvent, Message
 
 require("nonebot_plugin_localstore")
 
@@ -125,13 +123,6 @@ async def handle_transfer(
     to_user_segs = text.split(" ")
     if len(to_user_segs) != 2:
         await matcher.finish("转账格式错误！示例：转账 &lt;昵称&gt; 10")
-
-    def is_number(s: str) -> bool:
-        try:
-            int(s)
-            return True
-        except ValueError:
-            return False
 
     to_user_nick = (
         to_user_segs[0] if not is_number(to_user_segs[0]) else to_user_segs[1]
