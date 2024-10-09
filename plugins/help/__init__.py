@@ -37,6 +37,13 @@ plugin_data = {
         },
         "examples": ["/余额", "/转账 @Arisa 10", "/签到"],
     },
+    "昵称": {
+        "description": "设置 Kasumi 对你的称呼",
+        "usage": {
+            "/设置昵称|setnick <昵称>": "设置昵称。首次免费，之后修改需要 30 个星之碎片",
+            "/我的昵称|getnick": "查看昵称",
+        },
+    },
     "猜猜看": {
         "description": "猜猜看小游戏",
         "usage": {
