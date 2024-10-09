@@ -36,7 +36,7 @@ plugin_data = {
             "/签到|daily": "每日签到",
             "/余额排行榜|balancerank": "查看余额排行榜",
         },
-        "examples": ["/余额", "/转账 @Arisa 10", "/签到"],
+        "examples": ["/余额", "/转账 @Arisa 10", "/签到", "/余额排行榜"],
     },
     "昵称": {
         "description": "设置 Kasumi 对你的称呼",
