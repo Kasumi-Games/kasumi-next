@@ -1,26 +1,12 @@
-from typing import Optional
+from nonebot import on_command
 from nonebot.adapters import Message
-from sqlalchemy import create_engine
 from nonebot.params import CommandArg
-from sqlalchemy.orm import sessionmaker
-from nonebot import on_command, require
 from nonebot.adapters.satori import MessageEvent
-
-require("nonebot_plugin_localstore")
-
-import nonebot_plugin_localstore as store
 
 from .. import monetary
 from utils import PassiveGenerator
 
-from .data_source import Base, Nickname
-
-
-nickname_path = store.get_data_file("nickname", "data.db")
-
-engine = create_engine(f"sqlite:///{nickname_path.resolve()}")
-Base.metadata.create_all(engine)
-session = sessionmaker(bind=engine)()
+from .data_source import Nickname, session
 
 
 set_nickname = on_command("setnick", priority=30, aliases={"叫我", "设置昵称"})
@@ -101,36 +87,6 @@ async def handle_get_nickname(event: MessageEvent):
     await get_nickname.finish(
         f"你的昵称是{nickname.nickname}~" + passive_generator.element
     )
-
-
-def get(user_id: str) -> Optional[str]:
-    """获取用户昵称
-
-    Args:
-        user_id (str): 用户 ID，推荐使用 `event.get_user_id()` 获取
-
-    Returns:
-        str: 用户昵称，如果用户没有设置昵称则返回 `None`
-    """
-    nickname = session.query(Nickname).filter(Nickname.user_id == user_id).first()
-    if nickname is None:
-        return None
-    return nickname.nickname
-
-
-def get_id(nickname: str) -> Optional[str]:
-    """根据昵称获取用户 ID
-
-    Args:
-        nickname (str): 用户昵称
-
-    Returns:
-        str: 用户 ID，如果没有找到用户则返回 `None`
-    """
-    user = session.query(Nickname).filter(Nickname.nickname == nickname).first()
-    if user is None:
-        return None
-    return user.user_id
 
 
 __all__ = ["get"]

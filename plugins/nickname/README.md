@@ -13,7 +13,7 @@ Nickname 是用于管理 Kasumi Next 昵称系统的插件，提供了获取用�
 在您的项目中导入昵称系统插件：
 
 ```python
-from .. import nickname
+from ..nickname import nickname
 ```
 
 ### 功能说明
