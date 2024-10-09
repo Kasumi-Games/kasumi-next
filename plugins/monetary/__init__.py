@@ -72,8 +72,8 @@ def get(user_id: str) -> int:
 
 
 def transfer(from_user_id: str, to_user_id: str, amount: int, description: str):
-    cost(from_user_id, amount)
-    add(to_user_id, amount)
+    cost(from_user_id, amount, f"transfer_to_{to_user_id}")
+    add(to_user_id, amount, f"transfer_from_{from_user_id}")
     session.commit()
 
     transaction.add(to_user_id, TransactionCategory.TRANSFER, amount, description)
