@@ -24,7 +24,7 @@ manager = ChannelMemberManager(database_url)
 
 @on_message(rule=is_qq_bot, priority=1, block=False).handle()
 async def handle_message(event: MessageCreatedEvent):
-    await manager.add_member_to_channel(
+    manager.add_member_to_channel(
         event.channel.id, event.get_user_id(), event.user.avatar
     )
 
@@ -33,7 +33,7 @@ async def handle_message(event: MessageCreatedEvent):
 async def handle_notice(event: GuildMemberAddedEvent):
     if event.platform not in ["qq", "qqguild"]:
         return None
-    await manager.add_member_to_channel(
+    manager.add_member_to_channel(
         event.channel.id, event.get_user_id(), event.user.avatar
     )
 
@@ -42,14 +42,14 @@ async def handle_notice(event: GuildMemberAddedEvent):
 async def handle_notice(event: GuildMemberRemovedEvent):
     if event.platform not in ["qq", "qqguild"]:
         return None
-    await manager.remove_member_from_channel(event.channel.id, event.get_user_id())
+    manager.remove_member_from_channel(event.channel.id, event.get_user_id())
 
 
 @on_notice(priority=1, block=False).handle()
 async def handle_notice(event: GuildRemovedEvent):
     if event.platform not in ["qq", "qqguild"]:
         return None
-    await manager.remove_channel(event.channel.id)
+    manager.remove_channel(event.channel.id)
 
 
 get_channel_members = manager.get_channel_members
