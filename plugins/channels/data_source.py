@@ -72,9 +72,11 @@ class ChannelMemberManager:
                 session.add(member)
 
             # 添加成员到频道
-            channel.members.append(member)
-            session.commit()
-            return True
+            if member not in channel.members:
+                channel.members.append(member)
+                session.commit()
+                return True
+            return False
 
     def remove_member_from_channel(self, channel_id: str, member_id: str) -> bool:
         """从频道移除成员
