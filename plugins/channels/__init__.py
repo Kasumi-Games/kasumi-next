@@ -15,7 +15,7 @@ from utils import is_qq_bot
 from .data_source import ChannelMemberManager
 
 
-member_file = store.get_data_file("member", "member.db")
+member_file = store.get_data_file("channels", "channels.db")
 database_url = f"sqlite:///{member_file.absolute()}"
 
 
