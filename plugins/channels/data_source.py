@@ -1,9 +1,7 @@
 from typing import Optional, List
-from sqlalchemy import create_engine
-from sqlalchemy.orm import relationship
-from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Table, ForeignKey
+from sqlalchemy import create_engine, Column, String, Table, ForeignKey
+from sqlalchemy.orm import relationship, Mapped, sessionmaker, scoped_session
 
 
 Base = declarative_base()
@@ -20,11 +18,11 @@ channel_members = Table(
 class Member(Base):
     __tablename__ = "members"
 
-    id = Column(String, primary_key=True)
-    avatar_url = Column(String, nullable=True, default=None)
+    id: Mapped[str] = Column(String, primary_key=True)
+    avatar_url: Mapped[Optional[str]] = Column(String, nullable=True, default=None)
 
     # 定义反向关系，引用channels表
-    channels: List["Channel"] = relationship(
+    channels: Mapped[List["Channel"]] = relationship(
         "Channel", secondary=channel_members, back_populates="members"
     )
 
@@ -32,10 +30,10 @@ class Member(Base):
 class Channel(Base):
     __tablename__ = "channels"
 
-    id = Column(String, primary_key=True)
+    id: Mapped[str] = Column(String, primary_key=True)
 
     # 使用relationship表示多个Member对象
-    members: List[Member] = relationship(
+    members: Mapped[List[Member]] = relationship(
         "Member", secondary=channel_members, back_populates="channels"
     )
 
