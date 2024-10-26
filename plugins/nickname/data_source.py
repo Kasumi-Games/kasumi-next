@@ -11,11 +11,16 @@ import nonebot_plugin_localstore as store
 
 
 nickname_path = store.get_data_file("nickname", "data.db")
-
 Base = declarative_base()
-engine = create_engine(f"sqlite:///{nickname_path.resolve()}")
-Base.metadata.create_all(engine)
-session = sessionmaker(bind=engine)()
+
+session = None
+
+
+def init_database():
+    global session
+    engine = create_engine(f"sqlite:///{nickname_path.resolve()}")
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
 
 
 class Nickname(Base):
@@ -34,6 +39,8 @@ def get(user_id: str) -> Optional[str]:
     Returns:
         str: 用户昵称，如果用户没有设置昵称则返回 `None`
     """
+    if session is None:
+        init_database()
     nickname = session.query(Nickname).filter(Nickname.user_id == user_id).first()
     if nickname is None:
         return None
@@ -49,6 +56,8 @@ def get_id(nickname: str) -> Optional[str]:
     Returns:
         str: 用户 ID，如果没有找到用户则返回 `None`
     """
+    if session is None:
+        init_database()
     user = session.query(Nickname).filter(Nickname.nickname == nickname).first()
     if user is None:
         return None

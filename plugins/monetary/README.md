@@ -13,7 +13,7 @@ Monetary 是用于管理 Kasumi Next 货币系统的插件，提供了一整套�
 在您的项目中导入货币系统插件：
 
 ```python
-from .. import monetary
+from ..monetary import monetary
 ```
 
 ### 功能说明

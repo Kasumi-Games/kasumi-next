@@ -1,95 +1,34 @@
-import time
 import random
 from nonebot.adapters import Event
 from nonebot.matcher import Matcher
-from sqlalchemy import create_engine
 from nonebot.params import CommandArg
-from nonebot import require, on_command
-from sqlalchemy.orm import sessionmaker
+from nonebot import require, on_command, get_driver
 from nonebot.adapters.satori import MessageEvent, Message
 
 require("nonebot_plugin_localstore")
 
-import nonebot_plugin_localstore as store
 
 from ..nickname import nickname
 from utils import has_no_argument, PassiveGenerator
 
 from .utils import is_number
-from .transaction import Transaction
-from .data_source import Base, TransactionBase, User, TransactionCategory
+from .data_source import (
+    get,
+    add,
+    User,
+    daily,
+    session,
+    get_user,
+    transfer,
+    init_database,
+)
 
 
-database_path = store.get_data_file("monetary", "data.db")
-transaction_path = store.get_data_file("monetary", "transaction.db")
-
-engine = create_engine(f"sqlite:///{database_path.resolve()}")
-Base.metadata.create_all(engine)
-session = sessionmaker(bind=engine)()
-
-transaction_engine = create_engine(f"sqlite:///{transaction_path.resolve()}")
-TransactionBase.metadata.create_all(transaction_engine)
-transaction_session = sessionmaker(bind=transaction_engine)()
-
-transaction = Transaction(transaction_session)
-
-
-def get_user(user_id: str) -> User:
-    user = session.query(User).filter(User.user_id == user_id).first()
-    if not user:
-        user = User(user_id=user_id, balance=0, last_daily_time=0)
-        session.add(user)
-        session.commit()
-    return user
-
-
-def add(user_id: str, amount: int, description: str):
-    user = get_user(user_id)
-    user.balance += amount
-    session.commit()
-
-    transaction.add(user_id, TransactionCategory.INCOME, amount, description)
-
-
-def cost(user_id: str, amount: int, description: str):
-    user = get_user(user_id)
-    user.balance -= amount
-    session.commit()
-
-    transaction.add(user_id, TransactionCategory.EXPENSE, amount, description)
-
-
-def set(user_id: str, amount: int, description: str):
-    user = get_user(user_id)
-    user.balance = amount
-    session.commit()
-
-    transaction.add(user_id, TransactionCategory.SET, amount, description)
-
-
-def get(user_id: str) -> int:
-    return get_user(user_id).balance
-
-
-def transfer(from_user_id: str, to_user_id: str, amount: int, description: str):
-    cost(from_user_id, amount, f"transfer_to_{to_user_id}")
-    add(to_user_id, amount, f"transfer_from_{from_user_id}")
-    session.commit()
-
-    transaction.add(to_user_id, TransactionCategory.TRANSFER, amount, description)
-
-
-def daily(user_id: str) -> bool:
-    user = get_user(user_id)
-    # 如果上次签到在今日 0 点之前
-    if time.localtime(user.last_daily_time).tm_mday != time.localtime().tm_mday:
-        user.last_daily_time = time.time()
-        session.commit()
-        return True
-    return False
-
-
-__all__ = ["add", "cost", "set", "get", "transfer", "daily"]
+@get_driver().on_startup
+async def init():
+    global session
+    init_database()
+    from .data_source import session
 
 
 @on_command(

@@ -1,16 +1,23 @@
-from nonebot import on_command
 from nonebot.adapters import Message
 from nonebot.params import CommandArg
+from nonebot import on_command, get_driver
 from nonebot.adapters.satori import MessageEvent
 
-from .. import monetary
+from ..monetary import monetary
 from utils import PassiveGenerator
 
-from .data_source import Nickname, session
+from .data_source import Nickname, session, init_database, get, get_id
 
 
 set_nickname = on_command("setnick", priority=30, aliases={"叫我", "设置昵称"})
 get_nickname = on_command("getnick", priority=30, aliases={"我的昵称"})
+
+
+@get_driver().on_startup
+async def init():
+    global session
+    init_database()
+    from .data_source import session
 
 
 @set_nickname.handle()
@@ -97,4 +104,4 @@ async def handle_get_nickname(event: MessageEvent):
     )
 
 
-__all__ = ["get"]
+__all__ = ["get", "get_id"]
