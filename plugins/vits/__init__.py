@@ -8,7 +8,7 @@ from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
 
 from utils.passive_generator import PassiveGenerator as PG
 
-from .. import monetary
+from ..monetary import monetary
 
 from .config import Config
 from .utils import call_speaker_api, call_synthesize_api, match_character, speaker_dict

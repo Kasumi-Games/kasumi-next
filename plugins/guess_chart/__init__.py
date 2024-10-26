@@ -16,7 +16,7 @@ require("nonebot_plugin_apscheduler")
 
 from nonebot_plugin_apscheduler import scheduler
 
-from .. import monetary
+from ..monetary import monetary
 from utils.passive_generator import generators as gens
 from utils.passive_generator import PassiveGenerator as PG
 
