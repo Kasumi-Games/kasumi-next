@@ -121,8 +121,6 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
             speaker_id=speaker_id,
             url=plugin_config.bert_vits_api_url + "/synthesize",
         )
-        with open("test.wav", "wb") as f:
-            f.write(response)
     except Exception as e:
         await vits.finish("请求失败：" + str(e) + passive_generator.element)
 
