@@ -5,6 +5,7 @@ from nonebot.adapters import Message
 from nonebot.params import CommandArg
 from nonebot.adapters.satori import MessageEvent
 
+from .birthday import get_today_birthday as get_today_birthday
 from .passive_generator import PassiveGenerator as PassiveGenerator
 
 

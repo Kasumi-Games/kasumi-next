@@ -75,3 +75,13 @@ matcher.send("something" + passive_generator.element)
 
 此类适合在需要生成被动回复消息时使用。
 如果还是不会用，推荐查看 `plugins/cck/__init__.py` 中的使用方法。
+
+#### get_today_birthday
+
+用于获取今天过生日的角色。
+
+```python
+from utils import get_today_birthday
+
+characters = get_today_birthday()
+```

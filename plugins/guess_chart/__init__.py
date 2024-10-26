@@ -17,6 +17,7 @@ require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
 
 from ..monetary import monetary
+from utils import get_today_birthday
 from utils.passive_generator import generators as gens
 from utils.passive_generator import PassiveGenerator as PG
 
@@ -273,10 +274,20 @@ async def handle_start(
             else:
                 await game_start.finish("未知游戏类型！" + gens[message_id].element)
 
+            msg = MessageSegment.at(user_id)
+
+            birthday_characters = get_today_birthday()
+            birthday_characters_str = "和".join(birthday_characters)
+
+            if birthday_characters:
+                msg += f"回答正确！因为今天是{birthday_characters_str}的生日，奖励你 {amount} × 2 个星之碎片！\n"
+                amount *= 2
+            else:
+                msg += f"回答正确！奖励你 {amount} 个星之碎片\n"
+
             monetary.add(user_id, amount, "guess_chart")
             await game_start.send(
-                MessageSegment.at(user_id) + f"回答正确！奖励你 {amount} 个星之碎片\n"
-                f"谱面：{song_name} "
+                msg + f"谱面：{song_name} "
                 f"{diff.upper()} LV.{level}" + gens[message_id].element
             )
             await game_start.send(

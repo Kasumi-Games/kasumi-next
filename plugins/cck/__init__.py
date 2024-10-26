@@ -16,6 +16,7 @@ require("nonebot_plugin_apscheduler")
 import nonebot_plugin_localstore as localstore
 
 from ..monetary import monetary
+from utils import get_today_birthday
 from utils.passive_generator import generators as gens
 from utils.passive_generator import PassiveGenerator as PG
 
@@ -188,12 +189,20 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             continue
 
         gamers_store.remove(event.channel.id)
+        characters = get_today_birthday()
+        msg = MessageSegment.at(user_id)
         amount = random.randint(*cut_name_to_amount[image_cut_setting["cut_name"]])
+        if characters:
+            if character_name not in characters:
+                characters_str = "和".join(characters)
+                msg += f"正确！因为今天是{characters_str}的生日，奖励你 {amount} × 2 个星之碎片！答案是———{character_name} card_id: {card_id}"
+                amount *= 2
+            else:
+                msg += f"正确！答案是———{character_name} card_id: {card_id}。今天是她的生日哦，奖励你 {amount} × 4 个星之碎片！"
+                amount *= 4
+        else:
+            msg += f"正确！答案是———{character_name}，奖励你 {amount} 个星之碎片！card_id: {card_id}"
         monetary.add(user_id, amount, "cck")
-        await start_cck.send(
-            MessageSegment.at(user_id)
-            + f"正确！奖励你 {amount} 个星之碎片！答案是———{character_name} card_id: {card_id}"
-            + gens[msg_id].element
-        )
+        await start_cck.send(msg + gens[msg_id].element)
         await start_cck.send(full_image + gens[msg_id].element)
         break
