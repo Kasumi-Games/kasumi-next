@@ -131,7 +131,7 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
 
     await vits.send(
         MessageSegment.audio(
-            raw=encode_with_ntsilk(response, "wav", "silk"), mime="audio/silk"
+            raw=encode_with_ntsilk(response, "wav", "ntsilk"), mime="audio/silk"
         )
         + passive_generator.element
     )
