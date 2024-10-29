@@ -60,6 +60,37 @@ def encode_to_silk(file: bytes, format: str = "wav") -> bytes:
     return encoded_data
 
 
+def encode_with_ntsilk(file: bytes, format: str = "wav", target: str = "silk") -> bytes:
+    """Encode a file into any format using NTSilk."""
+    with tempfile.NamedTemporaryFile(
+        suffix=f".{format}", delete=False
+    ) as temp_input_file:
+        temp_input_file.write(file)
+
+    with tempfile.NamedTemporaryFile(
+        suffix=f".{target}", delete=False
+    ) as temp_output_file:
+        pass
+
+    ffmpeg_cmd = f"./ntsilk -i {temp_input_file.name} {temp_output_file.name}"
+    subprocess.run(
+        ffmpeg_cmd,
+        input=b"y",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    os.unlink(temp_input_file.name)
+
+    with open(temp_output_file.name, "rb") as encoded_file:
+        encoded_data = encoded_file.read()
+
+    os.unlink(temp_output_file.name)
+
+    return encoded_data
+
+
 def encode_to_mp3(file: bytes, format: str = "wav") -> bytes:
     """Encode a file into MP3 format."""
     with tempfile.NamedTemporaryFile(

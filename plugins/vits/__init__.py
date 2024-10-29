@@ -6,7 +6,7 @@ from nonebot_plugin_waiter import waiter
 from nonebot import on_command, get_driver, get_plugin_config
 from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
 
-from utils import encode_to_mp3
+from utils import encode_with_ntsilk
 from utils.passive_generator import PassiveGenerator as PG
 
 from ..monetary import monetary
@@ -130,7 +130,9 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
     monetary.cost(event.get_user_id(), required_amount, "vits")
 
     await vits.send(
-        MessageSegment.audio(raw=encode_to_mp3(response), mime="audio/mp3")
+        MessageSegment.audio(
+            raw=encode_with_ntsilk(response, "wav", "silk"), mime="audio/silk"
+        )
         + passive_generator.element
     )
 
