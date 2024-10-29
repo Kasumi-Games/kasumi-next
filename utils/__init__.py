@@ -72,13 +72,8 @@ def encode_with_ntsilk(file: bytes, format: str = "wav", target: str = "silk") -
     ) as temp_output_file:
         pass
 
-    ffmpeg_cmd = f"./ntsilk -i {temp_input_file.name} {temp_output_file.name}"
     subprocess.run(
-        ffmpeg_cmd,
-        input=b"y",
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        ["./ntsilk", "-i", temp_input_file.name, temp_output_file.name], input=b"y"
     )
 
     os.unlink(temp_input_file.name)
