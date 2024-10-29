@@ -58,3 +58,32 @@ def encode_to_silk(file: bytes, format: str = "wav") -> bytes:
     os.unlink(temp_output_file.name)
 
     return encoded_data
+
+
+def encode_to_mp3(file: bytes, format: str = "wav") -> bytes:
+    """Encode a file into MP3 format."""
+    with tempfile.NamedTemporaryFile(
+        suffix=f".{format}", delete=False
+    ) as temp_input_file:
+        temp_input_file.write(file)
+
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_output_file:
+        pass
+
+    ffmpeg_cmd = f"ffmpeg -i {temp_input_file.name} -f mp3 -acodec libmp3lame -ar 24000 -ac 1 {temp_output_file.name}"
+    subprocess.run(
+        ffmpeg_cmd,
+        input=b"y",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    os.unlink(temp_input_file.name)
+
+    with open(temp_output_file.name, "rb") as encoded_file:
+        encoded_data = encoded_file.read()
+
+    os.unlink(temp_output_file.name)
+
+    return encoded_data
