@@ -6,6 +6,7 @@ from nonebot_plugin_waiter import waiter
 from nonebot import on_command, get_driver, get_plugin_config
 from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
 
+from utils import encode_to_silk
 from utils.passive_generator import PassiveGenerator as PG
 
 from ..monetary import monetary
@@ -75,7 +76,9 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
 
         # 使用 speaker_list 作为角色列表
         await vits.send(
-            "角色列表：\n" + "\n".join([f"{k}: {', '.join(v)}" for k, v in speaker_dict.items()]) + passive_generator.element
+            "角色列表：\n"
+            + "\n".join([f"{k}: {', '.join(v)}" for k, v in speaker_dict.items()])
+            + passive_generator.element
         )
 
         resp = await check.wait(timeout=60)
@@ -127,7 +130,7 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
     monetary.cost(event.get_user_id(), required_amount, "vits")
 
     await vits.send(
-        MessageSegment.audio(raw=response, mime="audio/wav")
+        MessageSegment.audio(raw=encode_to_silk(response), mime="audio/silk")
         + passive_generator.element
     )
 
