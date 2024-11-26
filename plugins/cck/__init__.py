@@ -57,6 +57,9 @@ character_data: Dict[str, List[str]] = json.loads(
     (Path(__file__).parent / "character_data.json").read_text("utf-8")
 )
 
+for k, v in character_data.items():
+    character_data[k] = [str(i).lower() for i in v]
+
 if plugin_config.enable_cck:
 
     @get_driver().on_startup
@@ -167,7 +170,7 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             break
 
         found_characters = [
-            key for key, values in character_data.items() if msg in values
+            key for key, values in character_data.items() if msg.lower() in values
         ]
 
         if not found_characters:
