@@ -162,6 +162,7 @@ class Card:
             "dreamfes": ({"normal": True, "trained": True}, server),
             "birthday": ({"normal": False, "trained": True}, server),
             "kirafes": ({"normal": False, "trained": True}, server),
+            "special": ({"normal": True, "trained": True}, server),
         }
 
         return result_map[type]
