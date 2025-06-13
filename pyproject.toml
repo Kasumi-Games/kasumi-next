@@ -20,6 +20,7 @@ dependencies = [
     "nonebot-plugin-localstore>=0.6.0",
     "aiofiles>=23.2.1",
     "nonebot2[httpx,websockets]>=2.3.1",
+    "cairosvg>=2.7.1",
 ]
 requires-python = ">=3.9"
 readme = "README.md"

@@ -83,6 +83,13 @@ plugin_data = {
         },
         "examples": ["/tts", "/tts 你好", "/tts 香澄", "/tts 香澄 你好"],
     },
+    "娶群友": {
+        "description": "获得随机一个其他 群友/频道成员 的一张随机 BanG Dream! 卡牌风格的图片",
+        "usage": {
+            "/娶群友|qqy|ccb": "获取一张卡面"
+        },
+        "examples": ["/娶群友", "/qqy", "/ccb"]
+    },
 }
 
 
