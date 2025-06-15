@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import Dict, List
+from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot_plugin_waiter import waiter
 from nonebot import on_command, get_driver, get_plugin_config
@@ -29,12 +30,23 @@ vits = on_command("tts", priority=10, block=True)
 @get_driver().on_startup
 async def get_available_speakers():
     global speakers
-    speakers = await call_speaker_api(url=plugin_config.bert_vits_api_url + "/speakers")
-    # key: speaker_id, value: speaker_name
+    try:
+        speakers = await call_speaker_api(url=plugin_config.bert_vits_api_url + "/speakers")
+        # key: speaker_id, value: speaker_name
+    except Exception as e:
+        logger.warning("Speaker list fetching failed, will try again when next called")
 
 
 @vits.handle()
 async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
+    global speakers
+    if speakers is None:
+        try:
+            speakers = await call_speaker_api(url=plugin_config.bert_vits_api_url + "/speakers")
+        except Exception as e:
+            logger.error(f"Fetching speakers failed: {e}")
+            await vits.finish("TTS 服务出现故障，待会再来试试吧…")
+
     for seg in arg:
         if seg.type != "text":
             await vits.finish("Kasumi不太能理解怎么把这个转成语音呢...")
