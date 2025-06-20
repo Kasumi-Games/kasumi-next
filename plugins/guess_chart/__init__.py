@@ -123,6 +123,10 @@ async def handle_start(
         filtered_song_data = [
             song for song in flat_song_data if song["play_level"] == song_difficulty
         ]
+        if (song_num := len(filtered_song_data)) <= 3:
+            await game_start.finish(
+                f"{song_difficulty} 的曲子一共只有 {song_num} 首，太简单了哦！试试换个等级吧"
+            )
     elif game_difficulty == "easy":
         # 在 28 级及以上的歌曲中抽取
         game_type = "given_game_difficulty"
@@ -191,7 +195,7 @@ async def handle_start(
         f"这首曲子是 {band_name} 的哦",
     ]
 
-    logger.debug(f"谱面：{song_name} " f"{diff.upper()} LV.{level}")
+    logger.debug(f"谱面：{song_name} {diff.upper()} LV.{level}")
 
     await game_start.send(
         MessageSegment.image(raw=pil_image_to_bytes(img), mime="image/png")
