@@ -2,6 +2,7 @@ import random
 from nonebot.adapters import Event
 from nonebot.matcher import Matcher
 from nonebot.params import CommandArg
+from nonebot.permission import SUPERUSER
 from nonebot import require, on_command, get_driver
 from nonebot.adapters.satori import MessageEvent, Message
 
@@ -21,6 +22,7 @@ from .data_source import (
     get_user,
     transfer,
     init_database,
+    set as set_balance,
 )
 
 
@@ -122,10 +124,34 @@ async def handle_balancerank(matcher: Matcher, event: Event):
     await matcher.send(
         "\n".join(
             [
-                f"{i+1}. {nickname.get(user.user_id) or 'Unknown'}: {user.balance} 个星之碎片"
+                f"{i + 1}. {nickname.get(user.user_id) or 'Unknown'}: {user.balance} 个星之碎片"
                 for i, user in enumerate(users)
             ]
         )
         + f"\n你当前的排名是第 {rank} 名"
         + (f"，离上一名还差 {distance} 个星之碎片" if rank != 1 else "")
     )
+
+
+@on_command(
+    "balanceset", aliases={"设置余额"}, priority=10, block=False, permission=SUPERUSER
+).handle()
+async def set_balance_handler(
+    matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()
+):
+    if event.get_user_id() not in get_driver().config.superusers:
+        await matcher.finish()
+
+    try:
+        text = arg.extract_plain_text().strip()
+        user_id, amount, description = text.split()
+
+        passive_generator = PassiveGenerator(event)
+
+        set_balance(user_id, int(amount), description)
+
+        await matcher.finish(
+            f"已设置用户 {user_id} 的余额为 {amount}" + passive_generator.element
+        )
+    except Exception as e:
+        await matcher.finish(e)
