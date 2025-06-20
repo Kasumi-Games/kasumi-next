@@ -127,6 +127,7 @@ async def handle_start(
             gamers_store.remove(event.channel.id)
             await game_start.finish(
                 f"{song_difficulty} 的曲子一共只有 {song_num} 首，太简单了哦！试试换个等级吧"
+                + gens[event.message.id].element
             )
     elif game_difficulty == "easy":
         # 在 28 级及以上的歌曲中抽取
