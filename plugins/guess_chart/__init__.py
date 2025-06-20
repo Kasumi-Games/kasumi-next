@@ -124,6 +124,7 @@ async def handle_start(
             song for song in flat_song_data if song["play_level"] == song_difficulty
         ]
         if (song_num := len(filtered_song_data)) <= 3:
+            gamers_store.remove(event.channel.id)
             await game_start.finish(
                 f"{song_difficulty} 的曲子一共只有 {song_num} 首，太简单了哦！试试换个等级吧"
             )
