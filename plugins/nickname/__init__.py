@@ -3,7 +3,7 @@ from nonebot.params import CommandArg
 from nonebot import on_command, get_driver
 from nonebot.adapters.satori import MessageEvent
 
-from ..monetary import monetary
+from .. import monetary
 from utils import PassiveGenerator
 
 from .data_source import Nickname, session, init_database, get, get_id

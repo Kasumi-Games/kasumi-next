@@ -14,16 +14,16 @@ from nonebot.adapters.satori import MessageSegment, MessageEvent, Message
 
 require("nonebot_plugin_apscheduler")
 
-from nonebot_plugin_apscheduler import scheduler
+from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
-from ..monetary import monetary
-from utils import get_today_birthday
-from utils.passive_generator import generators as gens
-from utils.passive_generator import PassiveGenerator as PG
+from .. import monetary  # noqa: E402
+from utils import get_today_birthday  # noqa: E402
+from utils.passive_generator import generators as gens  # noqa: E402
+from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
-from .config import Config
-from .store import SongStore, BandStore, GamersStore
-from .utils import (
+from .config import Config  # noqa: E402
+from .store import SongStore, BandStore, GamersStore  # noqa: E402
+from .utils import (  # noqa: E402
     diff_num,
     fuzzy_match,
     num_to_range,

@@ -8,11 +8,11 @@ from nonebot import on_message, on_notice, require
 
 require("nonebot_plugin_localstore")
 
-import nonebot_plugin_localstore as store
+import nonebot_plugin_localstore as store  # noqa: E402
 
-from utils import is_qq_bot
+from utils import is_qq_bot  # noqa: E402
 
-from .data_source import ChannelMemberManager
+from .data_source import ChannelMemberManager  # noqa: E402
 
 
 member_file = store.get_data_file("channels", "channels.db")
@@ -39,14 +39,14 @@ async def handle_notice(event: GuildMemberAddedEvent):
 
 
 @on_notice(priority=1, block=False).handle()
-async def handle_notice(event: GuildMemberRemovedEvent):
+async def handle_notice_remove(event: GuildMemberRemovedEvent):
     if event.platform not in ["qq", "qqguild"]:
         return None
     manager.remove_member_from_channel(event.channel.id, event.get_user_id())
 
 
 @on_notice(priority=1, block=False).handle()
-async def handle_notice(event: GuildRemovedEvent):
+async def handle_notice_remove_channel(event: GuildRemovedEvent):
     if event.platform not in ["qq", "qqguild"]:
         return None
     manager.remove_channel(event.channel.id)

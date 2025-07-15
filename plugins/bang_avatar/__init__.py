@@ -20,9 +20,11 @@ src_path = localstore.get_data_dir("bang_avatar") / "src"
 cache_path = localstore.get_cache_dir("bang_avatar")
 
 if plugin_config.enable_bang_avatar:
+
     @get_driver().on_startup
     async def init_src():
         await initialize(src_path, cache_path)
+
 
 def check_and_use_money(user_id: str) -> bool:
     if monetary.get(user_id) >= WIFE_COST:
@@ -31,13 +33,11 @@ def check_and_use_money(user_id: str) -> bool:
     else:
         return False
 
+
 bang_avatar = on_command(
-    "娶群友",
-    aliases={"qqy","ccb"},
-    priority=10,
-    block=True,
-    rule=has_no_argument
+    "娶群友", aliases={"qqy", "ccb"}, priority=10, block=True, rule=has_no_argument
 )
+
 
 @bang_avatar.handle()
 async def handle_bang_avatar(event: MessageEvent):
@@ -46,8 +46,9 @@ async def handle_bang_avatar(event: MessageEvent):
     platform = event.login.platform
 
     all_users = [
-        member for member in channels.get_channel_members(channel_id)
-        if member.id != user_id 
+        member
+        for member in channels.get_channel_members(channel_id)
+        if member.id != user_id
     ]
 
     if all_users:
@@ -57,11 +58,11 @@ async def handle_bang_avatar(event: MessageEvent):
             await bang_avatar.finish(
                 # 如果是qqguild就用获取到的头像，否则设为None用api获取
                 await render(
-                    WifeData(user_id, wife.id).generate_wife_data(), 
-                    src_path, 
-                    wife.avatar_url if platform == "qqguild" else None
+                    WifeData(user_id, wife.id).generate_wife_data(),
+                    src_path,
+                    wife.avatar_url if platform == "qqguild" else None,
                 )
-                + f"娶到 {get_user_nickname(wife.id) or "Ta"} 了哦~"
+                + f"娶到 {get_user_nickname(wife.id) or 'Ta'} 了哦~"
                 + f"你手里还有 {monetary.get(user_id)} 个碎片"
             )
         else:

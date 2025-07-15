@@ -10,7 +10,7 @@ from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
 from utils import encode_with_ntsilk
 from utils.passive_generator import PassiveGenerator as PG
 
-from ..monetary import monetary
+from .. import monetary
 
 from .config import Config
 from .utils import call_speaker_api, call_synthesize_api, match_character, speaker_dict
@@ -31,10 +31,15 @@ vits = on_command("tts", priority=10, block=True)
 async def get_available_speakers():
     global speakers
     try:
-        speakers = await call_speaker_api(url=plugin_config.bert_vits_api_url + "/speakers")
+        speakers = await call_speaker_api(
+            url=plugin_config.bert_vits_api_url + "/speakers"
+        )
         # key: speaker_id, value: speaker_name
-    except Exception as e:
-        logger.warning("Speaker list fetching failed, will try again when next called")
+    except Exception:
+        logger.error(
+            "Speaker list fetching failed, will try again when next called",
+            exc_info=True,
+        )
 
 
 @vits.handle()
@@ -42,9 +47,11 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
     global speakers
     if speakers is None:
         try:
-            speakers = await call_speaker_api(url=plugin_config.bert_vits_api_url + "/speakers")
+            speakers = await call_speaker_api(
+                url=plugin_config.bert_vits_api_url + "/speakers"
+            )
         except Exception as e:
-            logger.error(f"Fetching speakers failed: {e}")
+            logger.error(f"Fetching speakers failed: {e}", exc_info=True)
             await vits.finish("TTS 服务出现故障，待会再来试试吧…")
 
     for seg in arg:

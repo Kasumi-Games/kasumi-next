@@ -13,17 +13,17 @@ from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
 
-import nonebot_plugin_localstore as localstore
+import nonebot_plugin_localstore as localstore  # noqa: E402
 
-from ..monetary import monetary
-from utils import get_today_birthday
-from utils.passive_generator import generators as gens
-from utils.passive_generator import PassiveGenerator as PG
+from .. import monetary  # noqa: E402
+from utils import get_today_birthday  # noqa: E402
+from utils.passive_generator import generators as gens  # noqa: E402
+from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
-from .card import Card
-from .config import Config
-from .store import GamersStore
-from .draw import random_crop_image, image_to_message
+from .card import Card  # noqa: E402
+from .config import Config  # noqa: E402
+from .store import GamersStore  # noqa: E402
+from .draw import random_crop_image, image_to_message  # noqa: E402
 
 
 plugin_config = get_plugin_config(Config)
@@ -182,7 +182,7 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         if player_counts[user_id] >= 3:
             await start_cck.send(
                 MessageSegment.at(user_id)
-                + f"你已经回答三次啦，可以回复 bzd 查看答案～"
+                + "你已经回答三次啦，可以回复 bzd 查看答案～"
                 + gens[msg_id].element
             )
             continue
