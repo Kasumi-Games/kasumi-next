@@ -34,7 +34,8 @@ async def balance(matcher: Matcher, event: Event):
 async def handle_daily(matcher: Matcher, event: Event):
     user_id = event.get_user_id()
     if daily(user_id):
-        amount = random.randint(1, 10)
+        # 使用正态分布，均值5.5，标准差2，确保在1-10范围内
+        amount = max(1, min(10, round(random.gauss(5.5, 2))))
         add(user_id, amount, "daily")
         await matcher.send(f"签到成功，获得 {amount} 个星之碎片")
     else:
