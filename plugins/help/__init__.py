@@ -34,9 +34,10 @@ plugin_data = {
             "/余额|balance": "查看余额",
             "/转账|transfer <昵称> <数量>": "转账",
             "/签到|daily": "每日签到",
-            "/余额排行榜|balancerank": "查看余额排行榜",
+            "/摘星|upgrade": "使用星之碎片升级",
+            "/排行榜|rank": "查看排行榜",
         },
-        "examples": ["/余额", "/转账 喵喵 10", "/签到", "/余额排行榜"],
+        "examples": ["/余额", "/转账 喵喵 10", "/签到", "/摘星", "/排行榜"],
     },
     "昵称": {
         "description": "设置 Kasumi 对你的称呼",
@@ -85,10 +86,8 @@ plugin_data = {
     },
     "娶群友": {
         "description": "获得随机一个其他 群友/频道成员 的一张随机 BanG Dream! 卡牌风格的图片",
-        "usage": {
-            "/娶群友|qqy|ccb": "获取一张卡面"
-        },
-        "examples": ["/娶群友", "/qqy", "/ccb"]
+        "usage": {"/娶群友|qqy|ccb": "获取一张卡面"},
+        "examples": ["/娶群友", "/qqy", "/ccb"],
     },
 }
 
