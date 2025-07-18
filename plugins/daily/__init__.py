@@ -6,8 +6,8 @@ from nonebot.permission import SUPERUSER
 from nonebot import on_command, get_driver
 from nonebot.adapters.satori import MessageEvent, Message
 
-from .utils import is_number
 from ..nickname import nickname
+from .utils import is_number, get_amount_for_level
 from utils import has_no_argument, PassiveGenerator
 from ..monetary import (
     get,
@@ -16,6 +16,8 @@ from ..monetary import (
     transfer,
     get_top_users,
     get_user_rank,
+    increase_level,
+    get_user_stats,
     set as set_balance,
 )
 
@@ -25,7 +27,8 @@ from ..monetary import (
 ).handle()
 async def balance(matcher: Matcher, event: Event):
     user_id = event.get_user_id()
-    await matcher.send(f"你还有 {get(user_id)} 个星之碎片")
+    user = get_user_stats(user_id)
+    await matcher.send(f"你有 {user.level} 个星星 和 {user.balance} 个星之碎片")
 
 
 @on_command(
@@ -93,23 +96,65 @@ async def handle_transfer(
     )
 
 
+@on_command("upgrade", aliases={"升级", "摘星"}, priority=10, block=True).handle()
+async def handle_upgrade(matcher: Matcher, event: Event):
+    user_id = event.get_user_id()
+    user = get_user_stats(user_id)
+    amount = get_amount_for_level(user.level + 1)
+    if user.balance < amount:
+        await matcher.send(f"余额不足，摘星需要 {amount} 个星之碎片")
+    else:
+        add(user_id, -amount, f"upgrade_{user.level + 1}")
+        increase_level(user_id)
+        await matcher.send(
+            f"摘星成功，消耗了 {amount} 个星之碎片。你现在有 {user.level} 颗星星 和 {user.balance} 个星之碎片哦~"
+        )
+
+
 @on_command(
-    "balancerank", aliases={"余额排行", "余额排行榜"}, priority=10, block=True
+    "balancerank",
+    aliases={"余额排行", "余额排行榜", "rank", "排行榜", "排行"},
+    priority=10,
+    block=True,
 ).handle()
 async def handle_balancerank(matcher: Matcher, event: Event):
     top_users = get_top_users(10)
     user_id = event.get_user_id()
-    rank, distance = get_user_rank(user_id)
+    rank_info = get_user_rank(user_id)
+
+    # 构建排名信息
+    rank_message = f"\n你当前的排名是第 {rank_info.rank} 名"
+
+    # 添加距离信息（第一名不显示额外信息）
+    if rank_info.rank != 1:
+        distance_parts = []
+
+        # 距离下一等级的等级差距
+        if rank_info.distance_to_next_level > 0:
+            distance_parts.append(f"{rank_info.distance_to_next_level} 个星星")
+
+        # 距离下一名的余额差距（只在等级相同时显示）
+        if rank_info.distance_to_next_rank > 0:
+            distance_parts.append(f"{rank_info.distance_to_next_rank} 个星之碎片")
+
+        # 根据差距情况组合消息
+        if distance_parts:
+            if len(distance_parts) == 1:
+                rank_message += f"，离上一名还差 {distance_parts[0]}"
+            else:
+                rank_message += f"，离上一名还差 {' 和 '.join(distance_parts)}"
+        else:
+            # 如果两个差距都为0，说明与上一名等级和余额一样
+            rank_message += "，与上一名相同"
 
     await matcher.send(
         "\n".join(
             [
-                f"{i + 1}. {nickname.get(user['user_id']) or 'Unknown'}: {user['balance']} 个星之碎片"
+                f"{i + 1}. {nickname.get(user.user_id) or 'Unknown'}: {user.level} 星 {user.balance} 碎片"
                 for i, user in enumerate(top_users)
             ]
         )
-        + f"\n你当前的排名是第 {rank} 名"
-        + (f"，离上一名还差 {distance} 个星之碎片" if rank != 1 else "")
+        + rank_message
     )
 
 
