@@ -135,6 +135,7 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
             + passive_generator.element
         )
 
+    monetary.cost(event.get_user_id(), required_amount, "vits")
     speaker_id = [k for k, v in speakers.items() if v == character][0]
 
     try:
@@ -144,9 +145,8 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
             url=plugin_config.bert_vits_api_url + "/synthesize",
         )
     except Exception as e:
+        monetary.add(event.get_user_id(), required_amount, "vits_error")
         await vits.finish("请求失败：" + str(e) + passive_generator.element)
-
-    monetary.cost(event.get_user_id(), required_amount, "vits")
 
     await vits.send(
         MessageSegment.audio(
