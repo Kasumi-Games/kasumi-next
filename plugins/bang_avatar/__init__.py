@@ -4,7 +4,7 @@ import nonebot_plugin_localstore as localstore
 from nonebot import get_plugin_config
 from nonebot.adapters.satori import MessageEvent
 from utils import has_no_argument
-from ..monetary import monetary
+from .. import monetary
 from .. import channels
 from ..nickname.data_source import get as get_user_nickname
 from .config import Config
