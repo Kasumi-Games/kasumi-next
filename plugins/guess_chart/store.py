@@ -1,6 +1,6 @@
 import bestdori.songs as songs
 from typing import Any, Dict, List
-from bestdori.utils import get_bands_all_async
+from bestdori.bands import get_all_async as get_bands_all_async
 
 from .utils import filter_song_data
 
