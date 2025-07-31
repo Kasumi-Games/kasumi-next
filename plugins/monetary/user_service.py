@@ -10,7 +10,7 @@ def get_user(user_id: str) -> User:
 
     user = session.query(User).filter(User.user_id == user_id).first()
     if not user:
-        user = User(user_id=user_id, balance=0, last_daily_time=0, level=1)
+        user = User(user_id=user_id, balance=0, last_daily_time=0, level=0)
         session.add(user)
         session.commit()
     return user
