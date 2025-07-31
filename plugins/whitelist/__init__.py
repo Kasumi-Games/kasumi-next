@@ -13,8 +13,8 @@ plugin_config = get_plugin_config(Config)
 async def check_blocked(event: MessageEvent):
     whitelist = plugin_config.whitelist
 
-    if event.platform in ["qq", "qqguild"]:
-        # 官方 Bot，直接放行
+    if event.platform in ["qq", "qqguild"] or event.platform.startswith("sandbox"):
+        # 官方 Bot 或沙盒调试，直接放行
         return None
 
     if whitelist is None:
