@@ -77,6 +77,15 @@ plugin_data = {
             "bzd",
         ],
     },
+    "黑香澄": {
+        "description": "BlackKasumi 小游戏",
+        "usage": {
+            "/黑香澄": "开始游戏",
+            "/黑香澄 <数量>": "开始游戏，并下注指定数量的碎片",
+            "/黑香澄 -h": "查看帮助",
+        },
+        "examples": ["/黑香澄", "/黑香澄 10", "/黑香澄 -h"],
+    },
     "tts": {
         "description": "文本转BanG Dream! & 少女歌剧角色语音(trained by Bilibili@Mahiroshi)",
         "usage": {

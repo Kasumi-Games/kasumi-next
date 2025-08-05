@@ -1,37 +1,8 @@
 import random
 from typing import List
 
-suits = ("红", "蓝", "橙", "绿")
-number_ranks = ("2", "3", "4", "5", "6", "7", "8", "9", "10")
-
-# 每个属性对应的主唱组合 (J, Q, K, A)
-# 确保所有8个乐队主唱都能出现，同时 Kasumi 在每个属性都是 A
-suit_vocalists = {
-    "红": {
-        "J": "Yukina",
-        "Q": "Ran",
-        "K": "Aya",
-        "A": "Kasumi",
-    },
-    "蓝": {
-        "J": "Kokoro",
-        "Q": "Mashiro",
-        "K": "Layer",
-        "A": "Kasumi",
-    },
-    "橙": {
-        "J": "Tomori",
-        "Q": "Yukina",
-        "K": "Ran",
-        "A": "Kasumi",
-    },
-    "绿": {
-        "J": "Aya",
-        "Q": "Kokoro",
-        "K": "Mashiro",
-        "A": "Kasumi",
-    },
-}
+suits = ("powerful", "cool", "happy", "pure")
+number_ranks = ("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
 
 
 class Card:
@@ -40,6 +11,9 @@ class Card:
     def __init__(self, suit: str, rank: str):
         self.suit = suit
         self.rank = rank
+        self._get_image = None
+        # 对于A牌，默认值为11；其他牌此属性不使用
+        self.ace_value = 11 if rank == "A" else None
 
     def __str__(self):
         return f"{self.suit} {self.rank}"
@@ -48,18 +22,10 @@ class Card:
         """获取牌的点数值"""
         if self.rank in ["2", "3", "4", "5", "6", "7", "8", "9", "10"]:
             return int(self.rank)
-        elif self.rank in [
-            "Yukina",
-            "Ran",
-            "Aya",
-            "Kokoro",
-            "Mashiro",
-            "Layer",
-            "Tomori",
-        ]:  # J, Q, K 对应的主唱们
+        elif self.rank in ["J", "Q", "K"]:
             return 10
-        elif self.rank == "Kasumi":  # A (Kasumi)
-            return 11
+        elif self.rank == "A":
+            return self.ace_value
         else:
             raise ValueError(f"未知的牌面等级: {self.rank}")
 
@@ -79,13 +45,7 @@ class Shoe:
         self.deck = []
         for _ in range(num_decks):
             for suit in suits:
-                ranks = number_ranks + (
-                    suit_vocalists[suit]["J"],
-                    suit_vocalists[suit]["Q"],
-                    suit_vocalists[suit]["K"],
-                    suit_vocalists[suit]["A"],
-                )
-                for rank in ranks:
+                for rank in number_ranks:
                     self.deck.append(Card(suit, rank))
 
     def shuffle(self):
@@ -112,18 +72,28 @@ class Hand:
         """初始化手牌"""
         self.cards: List[Card] = []
         self.value: int = 0
-        self.aces: int = 0
 
     def add_card(self, card: Card):
         """添加一张牌到手牌中"""
         self.cards.append(card)
-        self.value += card.get_value()
-        if card.rank == "Kasumi":  # A (Kasumi)
-            self.aces += 1
-        self._adjust_for_ace()
+        self._recalculate_value()
 
-    def _adjust_for_ace(self):
-        """调整手牌中的A值"""
-        while self.value > 21 and self.aces > 0:
-            self.value -= 10
-            self.aces -= 1
+    def _recalculate_value(self):
+        """重新计算手牌总值并调整A的值"""
+        # 重置所有A为11
+        for card in self.cards:
+            if card.rank == "A":
+                card.ace_value = 11
+
+        # 计算总值
+        self.value = sum(card.get_value() for card in self.cards)
+
+        # 如果超过21，将A从11调整为1，直到不超过21或没有可调整的A
+        aces_as_11 = [
+            card for card in self.cards if card.rank == "A" and card.ace_value == 11
+        ]
+        while self.value > 21 and aces_as_11:
+            # 将一个A从11调整为1
+            ace_to_adjust = aces_as_11.pop()
+            ace_to_adjust.ace_value = 1
+            self.value -= 10  # 从11变为1，差值是10

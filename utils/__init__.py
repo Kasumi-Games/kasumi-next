@@ -1,6 +1,8 @@
 import os
+import io
 import tempfile
 import subprocess
+from PIL import Image
 from nonebot.adapters import Message
 from nonebot.params import CommandArg
 from nonebot.adapters.satori import MessageEvent
@@ -113,3 +115,9 @@ def encode_to_mp3(file: bytes, format: str = "wav") -> bytes:
     os.unlink(temp_output_file.name)
 
     return encoded_data
+
+
+def image_to_bytes(image: Image.Image) -> bytes:
+    with io.BytesIO() as output:
+        image.save(output, format="PNG")
+        return output.getvalue()
