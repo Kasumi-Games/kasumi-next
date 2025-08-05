@@ -107,7 +107,7 @@ async def handle_upgrade(matcher: Matcher, event: Event):
         add(user_id, -amount, f"upgrade_{user.level + 1}")
         increase_level(user_id)
         await matcher.send(
-            f"摘星成功，消耗了 {amount} 个星之碎片。你现在有 {user.level} 颗星星 和 {user.balance} 个星之碎片哦~"
+            f"摘星成功，消耗了 {amount} 个星之碎片。你现在有 {user.level + 1} 颗星星 和 {user.balance - amount} 个星之碎片哦~"
         )
 
 
