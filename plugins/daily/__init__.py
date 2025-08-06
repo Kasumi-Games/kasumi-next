@@ -97,17 +97,32 @@ async def handle_transfer(
 
 
 @on_command("upgrade", aliases={"升级", "摘星"}, priority=10, block=True).handle()
-async def handle_upgrade(matcher: Matcher, event: Event):
+async def handle_upgrade(matcher: Matcher, event: Event, arg: Message = CommandArg()):
     user_id = event.get_user_id()
     user = get_user_stats(user_id)
-    amount = get_amount_for_level(user.level + 1)
-    if user.balance < amount:
-        await matcher.send(f"余额不足，摘星需要 {amount} 个星之碎片")
+
+    text = arg.extract_plain_text().strip()
+    if text.isdigit():
+        levels = int(text)
+        if levels <= 0:
+            await matcher.finish("摘星数量必须大于 0")
     else:
-        add(user_id, -amount, f"upgrade_{user.level + 1}")
-        increase_level(user_id)
+        levels = 1
+
+    for i in range(levels):
+        amount = get_amount_for_level(user.level + i)
+
+    if user.balance < amount:
+        if levels == 1:
+            await matcher.send(f"余额不足，摘星需要 {amount} 个星之碎片")
+        else:
+            await matcher.send(f"余额不足，摘 {levels} 颗星需要 {amount} 个星之碎片")
+    else:
+        for i in range(1, levels + 1):
+            add(user_id, -amount, f"upgrade_{user.level + i}")
+            increase_level(user_id)
         await matcher.send(
-            f"摘星成功，消耗了 {amount} 个星之碎片。你现在有 {user.level + 1} 颗星星 和 {user.balance - amount} 个星之碎片哦~"
+            f"摘星成功，消耗了 {amount} 个星之碎片。你现在有 {user.level + levels} 颗星星 和 {user.balance - amount} 个星之碎片哦~"
         )
 
 
