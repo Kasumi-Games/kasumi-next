@@ -73,7 +73,7 @@ def get_card_image(card: Card) -> MessageSegment:
     if card._get_image is not None:
         return MessageSegment.image(
             raw=image_to_bytes(card._get_image(ace_value)),
-            mime="image/png",
+            mime="image/jpeg",
         )
 
     image, _get_image = renderer.generate_card(
@@ -82,7 +82,7 @@ def get_card_image(card: Card) -> MessageSegment:
     card._get_image = _get_image
     return MessageSegment.image(
         raw=image_to_bytes(image),
-        mime="image/png",
+        mime="image/jpeg",
     )
 
 
@@ -194,7 +194,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
 
     init_msg = MessageSegment.image(
         raw=image_to_bytes(renderer.generate_table(dealer_hand, player_hand, True)),
-        mime="image/png",
+        mime="image/jpeg",
     )
 
     if player_hand.value == 21:
@@ -205,7 +205,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     raw=image_to_bytes(
                         renderer.generate_table(dealer_hand, player_hand, False)
                     ),
-                    mime="image/png",
+                    mime="image/jpeg",
                 )
                 + "平局！虽然是 BlackKasumi，但是没有奖励哦~\n"
                 + f"你现在有 {monetary.get(event.get_user_id())} 个碎片"
@@ -225,7 +225,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     raw=image_to_bytes(
                         renderer.generate_table(dealer_hand, player_hand, False)
                     ),
-                    mime="image/png",
+                    mime="image/jpeg",
                 )
                 + (
                     f"BlackKasumi！你获得了 1.5 × {bet_amount} = {int(bet_amount * 1.5)} 个碎片！\n"
@@ -284,7 +284,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     raw=image_to_bytes(
                         renderer.generate_table(dealer_hand, hand, True)
                     ),
-                    mime="image/png",
+                    mime="image/jpeg",
                 )
                 + f"【第 {idx + 1} 幅牌】\n"
                 + "你要“补牌”(h)还是“停牌”(s)呢？"
@@ -319,7 +319,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                     raw=image_to_bytes(
                                         renderer.generate_table(dealer_hand, hand, True)
                                     ),
-                                    mime="image/png",
+                                    mime="image/jpeg",
                                 )
                                 + (
                                     "请从“补牌”(h)或“停牌”(s)中选择一项哦"
@@ -361,14 +361,14 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         if count > 0:
             result_messages += f"Kasumi 一共补了 {count} 张牌" + MessageSegment.image(
                 raw=image_to_bytes(renderer.generate_hand(dealer_hand, False)),
-                mime="image/png",
+                mime="image/jpeg",
             )
         else:
             result_messages += (
                 "Kasumi 的点数已经大于等于 17，不需要补牌"
                 + MessageSegment.image(
                     raw=image_to_bytes(renderer.generate_hand(dealer_hand, False)),
-                    mime="image/png",
+                    mime="image/jpeg",
                 )
             )
 
@@ -450,7 +450,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                         player_hand.value <= 21,
                                     )
                                 ),
-                                mime="image/png",
+                                mime="image/jpeg",
                             )
                             + (
                                 "请从“补牌”(h)，“停牌”(s)中选择一项操作哦"
@@ -493,7 +493,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                                 player_hand.value <= 21,
                                             )
                                         ),
-                                        mime="image/png",
+                                        mime="image/jpeg",
                                     )
                                     + (
                                         "请从“补牌”(h)，“停牌”(s)中选择一项操作哦"
@@ -532,14 +532,14 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         if count > 0:
             result_messages += f"Kasumi 一共补了 {count} 张牌" + MessageSegment.image(
                 raw=image_to_bytes(renderer.generate_hand(dealer_hand, False)),
-                mime="image/png",
+                mime="image/jpeg",
             )
         else:
             result_messages += (
                 "Kasumi 的点数已经大于等于 17，不需要补牌"
                 + MessageSegment.image(
                     raw=image_to_bytes(renderer.generate_hand(dealer_hand, False)),
-                    mime="image/png",
+                    mime="image/jpeg",
                 )
             )
 

@@ -525,7 +525,7 @@ class BlackjackRenderer:
 
         # 将临时图像粘贴到原图像上
         if hasattr(draw, "_image"):
-            draw._image.paste(temp_img, (left, top), temp_img)
+            draw._image.paste(temp_img, (left, top), temp_img.split()[3])
 
     def _generate_background(self, width: int, height: int) -> Image.Image:
         """生成背景图片"""
@@ -533,7 +533,7 @@ class BlackjackRenderer:
         pattern = Image.open(self.resource_dir / "bg_object_big.png").convert("RGBA")
         for x in range(0, width, pattern.width):
             for y in range(0, height, pattern.height):
-                background.paste(pattern, (x, y), pattern)
+                background.paste(pattern, (x, y), pattern.split()[3])
         return background
 
     def generate_hand(self, hand: "Hand", second_card_back: bool) -> Image.Image:
@@ -833,7 +833,7 @@ class BlackjackRenderer:
             card_x = start_x + i * (
                 self.TableLayout.CARD_WIDTH + self.TableLayout.CARD_SPACING
             )
-            background.paste(card_image, (card_x, start_y), card_image)
+            background.paste(card_image, (card_x, start_y), card_image.split()[3])
 
     def generate_table(
         self, dealer_hand: "Hand", player_hand: "Hand", dealer_card_back: bool
@@ -923,4 +923,14 @@ class BlackjackRenderer:
             background, player_hand, cards_start_x, cards_start_y, False
         )
 
-        return background
+        # 确保没有透明背景
+        result = Image.new("RGBA", (table_width, table_height), (255, 255, 255, 255))
+        result.paste(background, (0, 0), background.split()[3])
+
+        # 缩小图片
+        result = result.resize(
+            (table_width // 2, table_height // 2), Image.Resampling.LANCZOS
+        )
+        result = result.convert("RGB")
+
+        return result

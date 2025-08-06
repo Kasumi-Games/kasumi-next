@@ -119,5 +119,5 @@ def encode_to_mp3(file: bytes, format: str = "wav") -> bytes:
 
 def image_to_bytes(image: Image.Image) -> bytes:
     with io.BytesIO() as output:
-        image.save(output, format="PNG")
+        image.save(output, format="JPEG", quality=90)
         return output.getvalue()
