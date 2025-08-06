@@ -109,8 +109,9 @@ async def handle_upgrade(matcher: Matcher, event: Event, arg: Message = CommandA
     else:
         levels = 1
 
+    amount = 0
     for i in range(levels):
-        amount = get_amount_for_level(user.level + i)
+        amount += get_amount_for_level(user.level + i)
 
     if user.balance < amount:
         if levels == 1:
