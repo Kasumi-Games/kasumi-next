@@ -13,14 +13,16 @@ plugin_config = get_plugin_config(Config)
 async def check_blocked(event: MessageEvent):
     whitelist = plugin_config.whitelist
 
-    if event.platform in ["qq", "qqguild"] or event.platform.startswith("sandbox"):
+    if event.login.platform in ["qq", "qqguild"] or event.login.platform.startswith(
+        "sandbox"
+    ):
         # 官方 Bot 或沙盒调试，直接放行
         return None
 
     if whitelist is None:
         return None
 
-    if event.self_id == event.get_user_id():
+    if event.login.user.id == event.get_user_id():
         raise IgnoredException("Blocked for self message")
 
     if event.channel.id in whitelist:

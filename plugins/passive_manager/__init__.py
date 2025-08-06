@@ -7,11 +7,11 @@ from nonebot.adapters.satori import MessageEvent, Bot
 
 require("nonebot_plugin_apscheduler")
 
-from nonebot_plugin_apscheduler import scheduler
+from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
-from utils import is_qq_bot
+from utils import is_qq_bot  # noqa: E402
 
-from .manager import PassiveManager
+from .manager import PassiveManager  # noqa: E402
 
 
 passive_manager = PassiveManager()

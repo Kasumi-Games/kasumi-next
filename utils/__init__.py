@@ -18,7 +18,7 @@ async def has_no_argument(arg: Message = CommandArg()):
 
 
 async def is_qq_bot(event: MessageEvent):
-    return event.platform in ["qq", "qqguild"]
+    return event.login.platform in ["qq", "qqguild"]
 
 
 def _encode(

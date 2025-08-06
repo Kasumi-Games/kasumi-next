@@ -31,7 +31,7 @@ async def handle_message(event: MessageCreatedEvent):
 
 @on_notice(priority=1, block=False).handle()
 async def handle_notice(event: GuildMemberAddedEvent):
-    if event.platform not in ["qq", "qqguild"]:
+    if event.login.platform not in ["qq", "qqguild"]:
         return None
     manager.add_member_to_channel(
         event.channel.id, event.get_user_id(), event.user.avatar
@@ -40,14 +40,14 @@ async def handle_notice(event: GuildMemberAddedEvent):
 
 @on_notice(priority=1, block=False).handle()
 async def handle_notice_remove(event: GuildMemberRemovedEvent):
-    if event.platform not in ["qq", "qqguild"]:
+    if event.login.platform not in ["qq", "qqguild"]:
         return None
     manager.remove_member_from_channel(event.channel.id, event.get_user_id())
 
 
 @on_notice(priority=1, block=False).handle()
 async def handle_notice_remove_channel(event: GuildRemovedEvent):
-    if event.platform not in ["qq", "qqguild"]:
+    if event.login.platform not in ["qq", "qqguild"]:
         return None
     manager.remove_channel(event.channel.id)
 
