@@ -21,13 +21,13 @@ import sys
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
 import time
-from enum import StrEnum
+from enum import Enum
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-class TransactionCategory(StrEnum):
+class TransactionCategory(Enum):
     """Transaction categories for monetary operations"""
 
     INCOME = "income"
@@ -64,7 +64,7 @@ class MonetaryDataRollback:
         shutil.copy2(self.data_db_path, data_backup)
         shutil.copy2(self.transaction_db_path, transaction_backup)
 
-        print(f"✅ 数据库备份完成:")
+        print("✅ 数据库备份完成:")
         print(f"   数据库备份: {data_backup}")
         print(f"   交易记录备份: {transaction_backup}")
 
@@ -182,33 +182,61 @@ class MonetaryDataRollback:
 
         # 根据交易类型执行反向操作
         new_balance = current_balance
+        new_level = current_level
 
-        if category == TransactionCategory.INCOME:
+        if category == TransactionCategory.INCOME.value:
             # 收入 -> 减少余额
             new_balance = current_balance - amount
             print(f"   收入回溯: {current_balance} - {amount} = {new_balance}")
 
-        elif category == TransactionCategory.EXPENSE:
+            # 检查是否是upgrade类型的收入（实际上是负数，表示花费）
+            if description.startswith("upgrade_"):
+                # 解析upgrade描述格式: upgrade_{old_level}_{levels}
+                try:
+                    parts = description.split("_")
+                    if len(parts) == 3:
+                        # {level}_{levels}
+                        old_level = int(parts[1])
+                        levels = int(parts[2])
+                        # 回溯时需要将用户级别降回升级前的状态
+                        new_level = old_level
+                        print(
+                            f"   🌟 升级回溯: 从等级 {current_level} 降回 {old_level} (降低了 {levels} 级)"
+                        )
+                    elif len(parts) == 2:
+                        # {level+1}
+                        old_level = int(parts[1])
+                        levels = 1
+                        new_level = old_level - levels
+                        print(
+                            f"   🌟 升级回溯: 从等级 {current_level} 降回 {new_level} (降低了 {levels} 级)"
+                        )
+                    else:
+                        print(f"   ⚠️  升级描述格式不正确: {description}")
+                except (ValueError, IndexError) as e:
+                    print(f"   ⚠️  解析升级描述失败: {description}, 错误: {e}")
+
+        elif category == TransactionCategory.EXPENSE.value:
             # 支出 -> 增加余额
             new_balance = current_balance + amount
             print(f"   支出回溯: {current_balance} + {amount} = {new_balance}")
 
-        elif category == TransactionCategory.SET:
+        elif category == TransactionCategory.SET.value:
             # SET操作比较复杂，需要查找之前的余额
             print(f"   ⚠️  SET操作回溯: 当前余额 {current_balance}, 设置值 {amount}")
             print(f"   📝 描述: {description}")
             # 对于SET操作，我们需要手动处理或跳过
-            print(f"   ⚠️  SET操作无法自动回溯，需要手动检查")
+            print("   ⚠️  SET操作无法自动回溯，需要手动检查")
             return False
 
-        elif category == TransactionCategory.TRANSFER:
+        elif category == TransactionCategory.TRANSFER.value:
             # 转账操作也比较复杂，通常涉及两个用户
             print(f"   ⚠️  转账操作回溯: {description}")
-            print(f"   📝 这可能需要手动处理转账的双方")
+            print("   📝 这可能需要手动处理转账的双方")
             return False
 
-        # 更新用户余额
-        self.update_user_data(user_id, new_balance, current_level, current_daily_time)
+        # 更新用户数据（包括余额和级别）
+        self.update_user_data(user_id, new_balance, new_level, current_daily_time)
 
         return True
 
@@ -257,7 +285,7 @@ class MonetaryDataRollback:
                     user_transactions[user_id] = []
                 user_transactions[user_id].append(tx)
 
-            print(f"📊 回溯统计:")
+            print("📊 回溯统计:")
             print(f"   总交易数: {len(transactions)}")
             print(f"   涉及用户: {len(user_transactions)}")
             print(f"   交易ID范围: {transactions[-1]['id']} ~ {transactions[0]['id']}")
@@ -277,12 +305,12 @@ class MonetaryDataRollback:
                     failed_transactions.append(transaction)
 
             # 5. 报告结果
-            print(f"\n📈 回溯完成:")
+            print("\n📈 回溯完成:")
             print(f"   成功回溯: {successful_count} 条")
             print(f"   失败/跳过: {len(failed_transactions)} 条")
 
             if failed_transactions:
-                print(f"\n⚠️  以下交易需要手动处理:")
+                print("\n⚠️  以下交易需要手动处理:")
                 for tx in failed_transactions:
                     print(
                         f"   ID:{tx['id']} - {tx['category']} - {tx['user_id']} - {tx['amount']}"
@@ -296,14 +324,14 @@ class MonetaryDataRollback:
                 if successful_transactions:
                     self.delete_transactions(successful_transactions)
 
-            print(f"\n✅ 回溯操作完成!")
-            print(f"💾 备份文件保存在:")
+            print("\n✅ 回溯操作完成!")
+            print("💾 备份文件保存在:")
             print(f"   {data_backup}")
             print(f"   {tx_backup}")
 
         except Exception as e:
             print(f"❌ 回溯过程中发生错误: {e}")
-            print(f"💾 可以使用以下备份文件恢复:")
+            print("💾 可以使用以下备份文件恢复:")
             print(f"   {data_backup}")
             print(f"   {tx_backup}")
             raise
@@ -340,7 +368,7 @@ def main():
             transactions = rollback.get_transactions_to_rollback()
 
             if transactions:
-                print(f"📋 将会回溯以下交易:")
+                print("📋 将会回溯以下交易:")
                 for tx in transactions:
                     print(
                         f"   ID:{tx['id']} - {tx['category']} - {tx['user_id']} - {tx['amount']}"
