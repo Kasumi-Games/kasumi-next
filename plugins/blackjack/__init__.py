@@ -35,6 +35,10 @@ def init_shoe() -> Shoe:
     return shoe
 
 
+def not_in_game(event: MessageEvent) -> bool:
+    return event.get_user_id() not in channel_players[event.channel.id]
+
+
 channel_shoe_map: Dict[str, Shoe] = defaultdict(init_shoe)
 channel_players: Dict[str, Set[str]] = defaultdict(set)
 reshuffle_threshold = 52 * 6 * 0.25
@@ -54,6 +58,7 @@ game_start = on_command(
     },
     priority=10,
     block=True,
+    rule=not_in_game,
 )
 
 
@@ -122,12 +127,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     if arg_text in ["h", "-h", "--help", "help"]:
         await game_start.finish(HELP_MESSAGE + gens[latest_message_id].element)
 
-    if event.get_user_id() in channel_players[event.channel.id]:
-        await game_start.finish(
-            "你已经在游戏中了，请先结束当前游戏哦~" + gens[latest_message_id].element
-        )
-    else:
-        channel_players[event.channel.id].add(event.get_user_id())
+    channel_players[event.channel.id].add(event.get_user_id())
 
     bet_amount = None
     character_ids = [get_character_id(name) for name in get_today_birthday()]
