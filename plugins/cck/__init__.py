@@ -8,7 +8,7 @@ from nonebot import get_plugin_config
 from nonebot_plugin_waiter import waiter
 from typing import Any, Dict, List, Union
 from nonebot import on_command, get_driver, require
-from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
+from nonebot.adapters.satori import MessageEvent, Message
 
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
@@ -181,9 +181,7 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
         if player_counts[user_id] >= 3:
             await start_cck.send(
-                MessageSegment.at(user_id)
-                + "你已经回答三次啦，可以回复 bzd 查看答案～"
-                + gens[msg_id].element
+                +"你已经回答三次啦，可以回复 bzd 查看答案～" + gens[msg_id].element
             )
             continue
 
@@ -193,7 +191,7 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
         gamers_store.remove(event.channel.id)
         characters = get_today_birthday()
-        msg = MessageSegment.at(user_id)
+        msg = Message()
         amount = random.randint(*cut_name_to_amount[image_cut_setting["cut_name"]])
         if characters:
             if character_name not in characters:
