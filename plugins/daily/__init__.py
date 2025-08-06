@@ -111,7 +111,7 @@ async def handle_upgrade(matcher: Matcher, event: Event, arg: Message = CommandA
 
     amount = 0
     for i in range(levels):
-        amount += get_amount_for_level(user.level + i)
+        amount += get_amount_for_level(user.level + i + 1)
 
     if user.balance < amount:
         if levels == 1:
@@ -119,9 +119,8 @@ async def handle_upgrade(matcher: Matcher, event: Event, arg: Message = CommandA
         else:
             await matcher.finish(f"余额不足，摘 {levels} 颗星需要 {amount} 个星之碎片")
     else:
-        for i in range(1, levels + 1):
-            add(user_id, -amount, f"upgrade_{user.level + i}")
-            increase_level(user_id)
+        add(user_id, -amount, f"upgrade_{user.level}_{levels}")
+        increase_level(user_id, levels)
         await matcher.finish(
             f"摘星成功，消耗了 {amount} 个星之碎片。你现在有 {user.level + levels} 颗星星 和 {user.balance - amount} 个星之碎片哦~"
         )
@@ -194,5 +193,7 @@ async def set_balance_handler(
         await matcher.finish(
             f"已设置用户 {user_id} 的余额为 {amount}" + passive_generator.element
         )
-    except Exception as e:
-        await matcher.finish(e)
+    except Exception:
+        await matcher.finish(
+            "设置余额失败，请检查参数格式：设置余额 <用户ID> <金额> <描述>"
+        )
