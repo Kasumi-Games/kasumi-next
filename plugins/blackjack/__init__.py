@@ -297,7 +297,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                         mime="image/jpeg",
                     )
                     + f"【第 {idx + 1} 幅牌】\n"
-                    + "你要“补牌”(h)还是“停牌”(s)呢？"
+                    + "你要“补牌”(h)，“停牌”(s)还是“投降”(q)呢？"
                     + gens[latest_message_id].element
                 )
                 playing = True
@@ -322,7 +322,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                             action = get_action(msg)
                             if action is None:
                                 await game_start.send(
-                                    "请从“补牌”(h)或“停牌”(s)中选择一项哦"
+                                    "请从“补牌”(h)，“停牌”(s)或“投降”(q)中选择一项哦"
                                     + gens[latest_message_id].element
                                 )
                                 continue
@@ -332,13 +332,13 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                     MessageSegment.image(
                                         raw=image_to_bytes(
                                             renderer.generate_table(
-                                                dealer_hand, hand, True
+                                                dealer_hand, hand, hand.value <= 21
                                             )
                                         ),
                                         mime="image/jpeg",
                                     )
                                     + (
-                                        "请从“补牌”(h)或“停牌”(s)中选择一项哦"
+                                        "请从“补牌”(h)，“停牌”(s)或“投降”(q)中选择一项哦"
                                         if hand.value <= 21
                                         else ""
                                     )
@@ -360,6 +360,27 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                     + gens[latest_message_id].element
                                 )
                                 continue
+                            elif action == "q":
+                                monetary.cost(
+                                    event.get_user_id(),
+                                    (bet_amount / 2).__ceil__(),
+                                    "blackjack",
+                                )
+                                channel_players[event.channel.id].remove(
+                                    event.get_user_id()
+                                )
+                                await game_start.finish(
+                                    MessageSegment.image(
+                                        raw=image_to_bytes(
+                                            renderer.generate_table(
+                                                dealer_hand, hand, False
+                                            )
+                                        ),
+                                        mime="image/jpeg",
+                                    )
+                                    + f"你投降啦，Kasumi 获胜！扣除你 {bet_amount} ÷ 2 = {(bet_amount / 2).__ceil__()} 个碎片，你现在还有 {monetary.get(event.get_user_id())} 个碎片"
+                                    + gens[latest_message_id].element
+                                )
                             else:
                                 # action == "s"
                                 playing = False
@@ -435,7 +456,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             play_round = 1
             await game_start.send(
                 init_msg
-                + "请从“补牌”(h)，“停牌”(s)或者“双倍”(d)中选择一项操作哦"
+                + "请从“补牌”(h)，“停牌”(s)，“双倍”(d)或者“投降”(q)中选择一项操作哦"
                 + gens[latest_message_id].element
             )
             while playing:
@@ -453,10 +474,12 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                         gens[latest_message_id] = PG(resp)
 
                         action = get_action(msg)
+                        print(action)
                         if action is None:
                             await game_start.send(
                                 "请从“补牌”(h)，“停牌”(s)"
-                                + ("或者“双倍”(d)" if play_round == 1 else "")
+                                + ("“双倍”(d)" if play_round == 1 else "")
+                                + "或者“投降”(q)"
                                 + "中选择一项操作哦"
                                 + gens[latest_message_id].element
                             )
@@ -477,7 +500,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                     mime="image/jpeg",
                                 )
                                 + (
-                                    "请从“补牌”(h)，“停牌”(s)中选择一项操作哦"
+                                    "请从“补牌”(h)，“停牌”(s)或“投降”(q)中选择一项操作哦"
                                     if player_hand.value <= 21
                                     else ""
                                 )
@@ -523,7 +546,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                             mime="image/jpeg",
                                         )
                                         + (
-                                            "请从“补牌”(h)，“停牌”(s)中选择一项操作哦"
+                                            "请从“补牌”(h)，“停牌”(s)或“投降”(q)中选择一项操作哦"
                                             if player_hand.value <= 21
                                             else ""
                                         )
@@ -547,7 +570,27 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                     + gens[latest_message_id].element
                                 )
                                 continue
-
+                        elif action == "q":
+                            monetary.cost(
+                                event.get_user_id(),
+                                (bet_amount / 2).__ceil__(),
+                                "blackjack",
+                            )
+                            channel_players[event.channel.id].remove(
+                                event.get_user_id()
+                            )
+                            await game_start.finish(
+                                MessageSegment.image(
+                                    raw=image_to_bytes(
+                                        renderer.generate_table(
+                                            dealer_hand, player_hand, False
+                                        )
+                                    ),
+                                    mime="image/jpeg",
+                                )
+                                + f"你投降啦，Kasumi 获胜！扣除你 {bet_amount} ÷ 2 = {(bet_amount / 2).__ceil__()} 个碎片，你现在还有 {monetary.get(event.get_user_id())} 个碎片"
+                                + gens[latest_message_id].element
+                            )
             # Kasumi的回合
             result_messages = Message()
             result_messages += "到 Kasumi 的回合啦！"

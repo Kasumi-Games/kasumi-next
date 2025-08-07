@@ -9,5 +9,7 @@ def get_action(msg: str) -> Optional[str]:
         return "s"
     elif msg in ["d", "double", "双倍", "双"]:
         return "d"
+    elif msg in ["q", "quit", "退出", "退", "surrender", "投降"]:
+        return "q"
     else:
         return None
