@@ -649,8 +649,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     except MatcherException:
         raise
     except Exception as e:
-        logger.error("Blackjack error: " + str(e), exc_info=True)
         channel_players[event.channel.id].discard(event.get_user_id())
+        logger.error("Blackjack error: " + str(e), exc_info=True)
         await game_start.finish(
             "发送意外错误！下注已退回给你，再试一次吧？"
             + gens[latest_message_id].element
