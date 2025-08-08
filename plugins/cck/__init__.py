@@ -181,7 +181,7 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
         if player_counts[user_id] >= 3:
             await start_cck.send(
-                +"你已经回答三次啦，可以回复 bzd 查看答案～" + gens[msg_id].element
+                "你已经回答三次啦，可以回复 bzd 查看答案～" + gens[msg_id].element
             )
             continue
 
