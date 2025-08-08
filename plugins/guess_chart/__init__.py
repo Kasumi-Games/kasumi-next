@@ -280,7 +280,7 @@ async def handle_start(
             else:
                 await game_start.finish("未知游戏类型！" + gens[message_id].element)
 
-            msg = MessageSegment.at(user_id)
+            msg = Message()
 
             birthday_characters = get_today_birthday()
             birthday_characters_str = "和".join(birthday_characters)
