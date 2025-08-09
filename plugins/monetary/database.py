@@ -7,7 +7,10 @@ require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store  # noqa: E402
 
 from .models import Base, TransactionBase  # noqa: E402
-from .migration import migrate_add_level_column  # noqa: E402
+from .migration import (  # noqa: E402
+    migrate_add_level_column,
+    migrate_fix_balance_column,
+)
 
 
 # Database paths
@@ -23,8 +26,9 @@ def init_database():
     """Initialize database connections and create tables"""
     global session, transaction_session
 
-    # Run migration first (before creating tables with SQLAlchemy)
+    # Run migrations first (before creating tables with SQLAlchemy)
     migrate_add_level_column()
+    migrate_fix_balance_column()
 
     # Initialize main database
     engine = create_engine(f"sqlite:///{database_path.resolve()}")
