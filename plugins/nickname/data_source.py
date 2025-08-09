@@ -7,7 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 require("nonebot_plugin_localstore")
 
-import nonebot_plugin_localstore as store
+import nonebot_plugin_localstore as store  # noqa: E402
 
 
 nickname_path = store.get_data_file("nickname", "data.db")

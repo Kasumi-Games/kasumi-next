@@ -1,16 +1,21 @@
 import random
-from nonebot import on_command, get_driver
-import nonebot_plugin_localstore as localstore
 from nonebot import get_plugin_config
 from nonebot.adapters.satori import MessageEvent
-from utils import has_no_argument
-from .. import monetary
-from .. import channels
-from ..nickname.data_source import get as get_user_nickname
-from .config import Config
-from .render import render
-from .models import WifeData
-from .initialize import initialize
+from nonebot import on_command, get_driver, require
+
+require("nonebot_plugin_localstore")
+
+import nonebot_plugin_localstore as localstore  # noqa: E402
+
+from .. import monetary  # noqa: E402
+from .. import channels  # noqa: E402
+from utils import has_no_argument  # noqa: E402
+from ..nickname.data_source import get as get_user_nickname  # noqa: E402
+
+from .config import Config  # noqa: E402
+from .render import render  # noqa: E402
+from .models import WifeData  # noqa: E402
+from .initialize import initialize  # noqa: E402
 
 
 plugin_config = get_plugin_config(Config)
