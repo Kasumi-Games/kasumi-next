@@ -1,7 +1,14 @@
 import time
+from typing import List
 from .database import get_session
 from .models import User, TransactionCategory
 from .transaction_service import get_transaction_manager
+
+
+def get_all_users() -> List[User]:
+    """Get all users"""
+    session = get_session()
+    return session.query(User).all()
 
 
 def get_user(user_id: str) -> User:
