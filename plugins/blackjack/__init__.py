@@ -5,13 +5,15 @@ from nonebot.log import logger
 from collections import defaultdict
 from nonebot.params import CommandArg
 from typing import Optional, Dict, Set
-from nonebot_plugin_waiter import waiter
 from nonebot.exception import MatcherException
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageEvent, Message, MessageSegment
 
 require("cck")  # for card images
+require("nonebot_plugin_waiter")
 require("nonebot_plugin_localstore")
+
+from nonebot_plugin_waiter import waiter  # noqa: E402
 
 from .. import monetary  # noqa: E402
 from ..cck import card_manager  # noqa: E402

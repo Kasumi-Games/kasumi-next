@@ -3,17 +3,25 @@ from pathlib import Path
 from typing import Dict, List
 from nonebot.log import logger
 from nonebot.params import CommandArg
-from nonebot_plugin_waiter import waiter
-from nonebot import on_command, get_driver, get_plugin_config
+from nonebot import on_command, get_driver, get_plugin_config, require
 from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
 
-from utils import encode_with_ntsilk
-from utils.passive_generator import PassiveGenerator as PG
+require("nonebot_plugin_waiter")
 
-from .. import monetary
+from nonebot_plugin_waiter import waiter  # noqa: E402
 
-from .config import Config
-from .utils import call_speaker_api, call_synthesize_api, match_character, speaker_dict
+from utils import encode_with_ntsilk  # noqa: E402
+from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
+
+from .. import monetary  # noqa: E402
+
+from .config import Config  # noqa: E402
+from .utils import (  # noqa: E402
+    speaker_dict,
+    match_character,
+    call_speaker_api,
+    call_synthesize_api,
+)
 
 
 plugin_config = get_plugin_config(Config)

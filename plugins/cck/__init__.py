@@ -5,14 +5,15 @@ from pathlib import Path
 from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot import get_plugin_config
-from nonebot_plugin_waiter import waiter
 from typing import Any, Dict, List, Union
 from nonebot import on_command, get_driver, require
 from nonebot.adapters.satori import MessageEvent, Message
 
+require("nonebot_plugin_waiter")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
 
+from nonebot_plugin_waiter import waiter  # noqa: E402
 import nonebot_plugin_localstore as localstore  # noqa: E402
 
 from .. import monetary  # noqa: E402

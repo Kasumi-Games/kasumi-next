@@ -6,14 +6,15 @@ from nonebot.log import logger
 from bestdori.charts import Chart
 from bestdori.render import render
 from nonebot import get_plugin_config
-from nonebot_plugin_waiter import waiter
 from typing import Optional, List, Union
 from nonebot.params import Depends, CommandArg
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageSegment, MessageEvent, Message
 
+require("nonebot_plugin_waiter")
 require("nonebot_plugin_apscheduler")
 
+from nonebot_plugin_waiter import waiter  # noqa: E402
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from .. import monetary  # noqa: E402
