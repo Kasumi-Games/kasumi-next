@@ -99,7 +99,7 @@ class ScheduledMailService:
 
         query = session.query(ScheduledMail)
         if not include_sent:
-            query = query.filter(not ScheduledMail.is_sent)
+            query = query.filter(ScheduledMail.is_sent == False)  # noqa: E712
 
         return query.order_by(ScheduledMail.scheduled_time.asc()).all()
 
