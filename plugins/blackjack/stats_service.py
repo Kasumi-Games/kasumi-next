@@ -249,23 +249,30 @@ def create_win_loss_chart(stats: BlackjackStats) -> Optional[bytes]:
     ax2.plot(
         game_numbers, cumulative_profit, "b-", linewidth=2, marker="o", markersize=4
     )
-    ax2.axhline(y=0, color="red", linestyle="--", alpha=0.7)
+    ax2.axhline(y=0, color="gray", linestyle="--", alpha=0.7)
+
+    # 先填充整个区域为浅灰色作为基础
+    ax2.fill_between(game_numbers, cumulative_profit, 0, alpha=0.1, color="gray")
+
+    # 然后分别填充正负区域，使用interpolate确保连续性
     ax2.fill_between(
         game_numbers,
         cumulative_profit,
         0,
-        where=(np.array(cumulative_profit) >= 0),
+        where=np.array(cumulative_profit) >= 0,
         color="green",
         alpha=0.3,
+        interpolate=True,
         label="盈利区域",
     )
     ax2.fill_between(
         game_numbers,
         cumulative_profit,
         0,
-        where=(np.array(cumulative_profit) < 0),
+        where=np.array(cumulative_profit) < 0,
         color="red",
         alpha=0.3,
+        interpolate=True,
         label="亏损区域",
     )
     ax2.set_title("累计收益趋势", fontsize=14, fontweight="bold", fontproperties=font)

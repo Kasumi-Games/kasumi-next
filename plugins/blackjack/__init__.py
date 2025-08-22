@@ -715,9 +715,6 @@ async def handle_stats(event: MessageEvent):
         if chart_bytes:
             # 如果成功生成图表，添加图表
             response_message += MessageSegment.image(raw=chart_bytes, mime="image/png")
-            response_message += MessageSegment.text(
-                f"\n📊 最近 {min(30, len(stats.recent_games))} 次游戏输赢图表"
-            )
         else:
             response_message += MessageSegment.text("\n📊 图表生成失败")
 
