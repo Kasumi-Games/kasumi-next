@@ -126,6 +126,29 @@ async def handle_upgrade(matcher: Matcher, event: Event, arg: Message = CommandA
         )
 
 
+@on_command("watch", aliases={"观星"}, priority=10, block=True).handle()
+async def handle_watch(matcher: Matcher, event: Event, arg: Message = CommandArg()):
+    user_id = event.get_user_id()
+    user = get_user_stats(user_id)
+
+    text = arg.extract_plain_text().strip()
+    if text.isdigit():
+        levels = int(text)
+        if levels <= 0:
+            await matcher.finish("观星数量必须大于 0")
+    else:
+        levels = 1
+
+    amount = 0
+    for i in range(levels):
+        amount += get_amount_for_level(user.level + i + 1)
+
+    if levels == 1:
+        await matcher.finish(f"观测到下一个星需要 {amount} 个星之碎片")
+    else:
+        await matcher.finish(f"观测到之后的 {levels} 颗星需要 {amount} 个星之碎片")
+
+
 @on_command(
     "balancerank",
     aliases={"余额排行", "余额排行榜", "rank", "排行榜", "排行"},
