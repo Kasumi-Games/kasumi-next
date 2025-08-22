@@ -25,6 +25,7 @@ from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from .utils import get_action  # noqa: E402
 from .models import Shoe, Hand, Card  # noqa: E402
 from .render import BlackjackRenderer  # noqa: E402
+from .stats_service import get_blackjack_stats, create_win_loss_chart  # noqa: E402
 
 
 HELP_MESSAGE = MessageSegment.image(
@@ -63,6 +64,19 @@ game_start = on_command(
     priority=10,
     block=True,
     rule=not_in_game,
+)
+game_stats = on_command(
+    "黑香澄统计",
+    aliases={
+        "bkstats",
+        "bjstats",
+        "bk统计",
+        "bj统计",
+        "bks",
+        "bjs",
+    },
+    priority=10,
+    block=True,
 )
 
 
@@ -666,4 +680,54 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         await game_start.finish(
             "发送意外错误！下注已退回给你，再试一次吧？"
             + gens[latest_message_id].element
+        )
+
+
+@game_stats.handle()
+async def handle_stats(event: MessageEvent):
+    """处理黑香澄统计信息查询"""
+    user_id = event.get_user_id()
+    gens[event.message.id] = PG(event)
+
+    try:
+        # 获取玩家的blackjack统计数据
+        stats = get_blackjack_stats(user_id)
+
+        if stats.total_games == 0:
+            await game_stats.finish(
+                "你还没有玩过黑香澄游戏哦，快来试试吧！"
+                + gens[event.message.id].element
+            )
+
+        # 构建统计信息文本
+        stats_text = f"""🎴 黑香澄游戏统计
+📊 {stats.total_games}局 | 胜{stats.wins} 负{stats.losses} | 胜率{stats.win_rate:.1%}
+💰 投入{stats.total_wagered} | 得{stats.total_won} 失{stats.total_lost} | 净收益{stats.net_profit:+d}
+🎰 平均赌注{stats.avg_bet:.1f} | 平均赢{stats.avg_win:.1f} | 平均输{stats.avg_loss:.1f}
+🏆 最高赢{stats.biggest_win} | 最高输{stats.biggest_loss}"""
+
+        # 尝试生成图表
+        chart_bytes = create_win_loss_chart(stats)
+
+        # 发送统计信息
+        response_message = MessageSegment.text(stats_text)
+
+        if chart_bytes:
+            # 如果成功生成图表，添加图表
+            response_message += MessageSegment.image(raw=chart_bytes, mime="image/png")
+            response_message += MessageSegment.text(
+                f"\n📊 最近 {min(30, len(stats.recent_games))} 次游戏输赢图表"
+            )
+        else:
+            response_message += MessageSegment.text("\n📊 图表生成失败")
+
+        response_message += gens[event.message.id].element
+        await game_stats.finish(response_message)
+
+    except MatcherException:
+        raise
+    except Exception as e:
+        logger.error(f"获取blackjack统计信息时出错: {e}", exc_info=True)
+        await game_stats.finish(
+            "获取统计信息时出现错误，请稍后再试" + gens[event.message.id].element
         )

@@ -7,6 +7,7 @@ from .ranking_service import (
     get_user_rank,
     get_user_stats,
 )
+from .transaction_service import get_user_transactions
 from .user_service import (
     get_user,
     get_level,
@@ -47,4 +48,5 @@ __all__ = [
     "init_database",
     "UserRank",
     "UserStats",
+    "get_user_transactions",
 ]
