@@ -168,7 +168,7 @@ def get_blackjack_stats(user_id: str) -> BlackjackStats:
         total_wagered=total_wagered,
         total_won=total_won,
         total_lost=total_lost,
-        net_profit=net_profit,
+        net_profit=int(net_profit),
         avg_bet=avg_bet,
         avg_win=avg_win,
         avg_loss=avg_loss,
