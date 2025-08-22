@@ -46,14 +46,6 @@ settings.proxy = plugin_config.bestdori_proxy
 nickname_song = read_csv_to_dict(Path(__file__).parent / "nickname_song.csv")
 
 
-diff_to_amount = {
-    "easy": (1, 2),
-    "normal": (2, 3),
-    "hard": (3, 6),
-    "expert": (6, 12),
-}
-
-
 song_store = SongStore()
 band_store = BandStore()
 gamers_store = GamersStore()
@@ -117,6 +109,10 @@ async def handle_start(
     flat_song_data: list = flatten_song_data(song_data)
     sorted_song_data = sort_by_difficulty(flat_song_data)
 
+    potential_song_number = 0
+    max_song_num = max([len(v) for v in sorted_song_data.values()])  # about 271
+    max_amount = 12
+
     if arg.extract_plain_text().strip().isdigit():
         # 指定特定难度的谱面
         game_type = "given_play_level"
@@ -130,21 +126,25 @@ async def handle_start(
                 f"{song_difficulty} 的曲子一共只有 {song_num} 首，太简单了哦！试试换个等级吧"
                 + gens[event.message.id].element
             )
+        potential_song_number = song_num
     elif game_difficulty == "easy":
         # 在 28 级及以上的歌曲中抽取
         game_type = "given_game_difficulty"
         filtered_song_data = [
             song for song in flat_song_data if song["play_level"] >= 28
         ]
+        potential_song_number = len(filtered_song_data)
     elif game_difficulty == "normal":
         # 在 27 级及以上的歌曲中抽取
         game_type = "given_game_difficulty"
         filtered_song_data = [
             song for song in flat_song_data if song["play_level"] >= 27
         ]
+        potential_song_number = len(filtered_song_data)
     else:
         game_type = "given_game_difficulty"
         filtered_song_data = flat_song_data
+        potential_song_number = len(filtered_song_data)
 
     if not filtered_song_data:
         gamers_store.remove(event.channel.id)
@@ -243,6 +243,12 @@ async def handle_start(
             guessed_chart_id = msg
         else:
             if msg == "提示":
+                if game_type == "given_game_difficulty":
+                    if game_difficulty in {"hard", "expert"}:
+                        await game_start.send(
+                            "hard 和 expert 难度没有提示哦" + gens[message_id].element
+                        )
+                        continue
                 if not tips:
                     await game_start.send("没有更多提示了哦" + gens[message_id].element)
                 else:
@@ -269,14 +275,17 @@ async def handle_start(
         if guessed_chart_id == correct_chart_id:
             gamers_store.remove(event.channel.id)
             if game_type == "given_game_difficulty":
-                amount = random.randint(*diff_to_amount[game_difficulty])
-            elif game_type == "given_play_level":
-                max_song_num = max(
-                    [len(v) for v in sorted_song_data.values()]
-                )  # about 271
-                max_amount = 12
                 amount = (
-                    (max_amount / max_song_num) * len(sorted_song_data[song_difficulty])
+                    (max_amount / max_song_num) * potential_song_number
+                ).__ceil__()
+                if game_difficulty == "hard":
+                    amount *= 1.5
+                elif game_difficulty == "expert":
+                    amount *= 1.5 * 2.5
+                amount = amount.__ceil__()
+            elif game_type == "given_play_level":
+                amount = (
+                    (max_amount / max_song_num) * potential_song_number
                 ).__ceil__()
             else:
                 await game_start.finish("未知游戏类型！" + gens[message_id].element)
