@@ -584,6 +584,9 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                                             f"你爆牌啦，Kasumi 获胜！扣除你 {bet_amount} 个碎片，你现在还有 {monetary.get(event.get_user_id())} 个碎片"
                                             + gens[latest_message_id].element
                                         )
+                                    else:
+                                        playing = False
+                                        break
                             else:
                                 await game_start.send(
                                     "不能在非第一轮使用双倍下注哦~请重新选择"
