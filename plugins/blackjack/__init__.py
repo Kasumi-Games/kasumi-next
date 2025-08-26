@@ -18,7 +18,6 @@ from nonebot_plugin_waiter import waiter  # noqa: E402
 from .. import monetary  # noqa: E402
 from ..cck import card_manager  # noqa: E402
 from utils import image_to_bytes  # noqa: E402
-from utils.birthday import get_today_birthday  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
@@ -149,8 +148,6 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         channel_players[event.channel.id].add(event.get_user_id())
 
         bet_amount = None
-        character_ids = [get_character_id(name) for name in get_today_birthday()]
-        character_ids = [id for id in character_ids if id is not None]
 
         try:
             bet_amount = int(arg_text)
@@ -235,14 +232,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     + gens[latest_message_id].element
                 )
             else:
-                if len(character_ids) > 0:
-                    monetary.add(
-                        event.get_user_id(), int(bet_amount * 1.5 * 1.5), "blackjack"
-                    )
-                else:
-                    monetary.add(
-                        event.get_user_id(), int(bet_amount * 1.5), "blackjack"
-                    )
+                monetary.add(event.get_user_id(), int(bet_amount * 1.5), "blackjack")
 
                 channel_players[event.channel.id].remove(event.get_user_id())
                 await game_start.finish(
@@ -254,8 +244,6 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     )
                     + (
                         f"BlackKasumi！你获得了 1.5 × {bet_amount} = {int(bet_amount * 1.5)} 个碎片！\n"
-                        if len(character_ids) == 0
-                        else f"BlackKasumi！今天是{'和'.join(get_today_birthday())}的生日，奖励多多！你获得了 1.5 × {bet_amount} × 1.5 = {int(bet_amount * 1.5 * 1.5)} 个碎片！\n"
                     )
                     + f"你现在有 {monetary.get(event.get_user_id())} 个碎片！"
                     + gens[latest_message_id].element
@@ -436,30 +424,12 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     result_messages += f"【第 {idx + 1} 幅牌】你爆牌啦，Kasumi 获胜！刚才已经扣除了你 {bet_amount} 个碎片"
                 else:
                     if dealer_hand.value > 21:
-                        if len(character_ids) > 0:
-                            monetary.add(
-                                event.get_user_id(),
-                                (bet_amount * 1.5).__ceil__(),
-                                "blackjack",
-                            )
-                            result_messages += f"【第 {idx + 1} 幅牌】Kasumi 爆牌，你获胜啦！今天是{'和'.join(get_today_birthday())}的生日，奖励多多！你获得了 {bet_amount} × 1.5 = {(bet_amount * 1.5).__ceil__()} 个碎片"
-                        else:
-                            monetary.add(event.get_user_id(), bet_amount, "blackjack")
-                            result_messages += f"【第 {idx + 1} 幅牌】Kasumi 爆牌，你获胜啦！获得了 {bet_amount} 个碎片"
+                        monetary.add(event.get_user_id(), bet_amount, "blackjack")
+                        result_messages += f"【第 {idx + 1} 幅牌】Kasumi 爆牌，你获胜啦！获得了 {bet_amount} 个碎片"
                     else:
                         if hand.value > dealer_hand.value:
-                            if len(character_ids) > 0:
-                                monetary.add(
-                                    event.get_user_id(),
-                                    (bet_amount * 1.5).__ceil__(),
-                                    "blackjack",
-                                )
-                                result_messages += f"【第 {idx + 1} 幅牌】{hand.value} > {dealer_hand.value}，你获胜啦！今天是{'和'.join(get_today_birthday())}的生日，奖励多多！你获得了 {bet_amount} × 1.5 = {(bet_amount * 1.5).__ceil__()} 个碎片"
-                            else:
-                                monetary.add(
-                                    event.get_user_id(), bet_amount, "blackjack"
-                                )
-                                result_messages += f"【第 {idx + 1} 幅牌】{hand.value} > {dealer_hand.value}，你获胜啦！获得了 {bet_amount} 个碎片"
+                            monetary.add(event.get_user_id(), bet_amount, "blackjack")
+                            result_messages += f"【第 {idx + 1} 幅牌】{hand.value} > {dealer_hand.value}，你获胜啦！获得了 {bet_amount} 个碎片"
                         elif hand.value < dealer_hand.value:
                             monetary.cost(event.get_user_id(), bet_amount, "blackjack")
                             result_messages += f"【第 {idx + 1} 幅牌】{hand.value} < {dealer_hand.value}，Kasumi 获胜！扣除你 {bet_amount} 个碎片"
@@ -644,26 +614,12 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             result_messages = Message()
 
             if dealer_hand.value > 21:
-                if len(character_ids) > 0:
-                    monetary.add(
-                        event.get_user_id(), (bet_amount * 1.5).__ceil__(), "blackjack"
-                    )
-                    result_messages += f"Kasumi 爆牌，你获胜啦！今天是{'和'.join(get_today_birthday())}的生日，奖励多多！你获得了 {bet_amount} × 1.5 = {(bet_amount * 1.5).__ceil__()} 个碎片，你现在有 {monetary.get(event.get_user_id())} 个碎片"
-                else:
-                    monetary.add(event.get_user_id(), bet_amount, "blackjack")
-                    result_messages += f"Kasumi 爆牌，你获胜啦！获得了 {bet_amount} 个碎片，你现在有 {monetary.get(event.get_user_id())} 个碎片"
+                monetary.add(event.get_user_id(), bet_amount, "blackjack")
+                result_messages += f"Kasumi 爆牌，你获胜啦！获得了 {bet_amount} 个碎片，你现在有 {monetary.get(event.get_user_id())} 个碎片"
             else:
                 if player_hand.value > dealer_hand.value:
-                    if len(character_ids) > 0:
-                        monetary.add(
-                            event.get_user_id(),
-                            (bet_amount * 1.5).__ceil__(),
-                            "blackjack",
-                        )
-                        result_messages += f"{player_hand.value} > {dealer_hand.value}，你获胜啦！今天是{'和'.join(get_today_birthday())}的生日，奖励多多！你获得了 {bet_amount} × 1.5 = {(bet_amount * 1.5).__ceil__()} 个碎片，你现在有 {monetary.get(event.get_user_id())} 个碎片"
-                    else:
-                        monetary.add(event.get_user_id(), bet_amount, "blackjack")
-                        result_messages += f"{player_hand.value} > {dealer_hand.value}，你获胜啦！获得了 {bet_amount} 个碎片，你现在有 {monetary.get(event.get_user_id())} 个碎片"
+                    monetary.add(event.get_user_id(), bet_amount, "blackjack")
+                    result_messages += f"{player_hand.value} > {dealer_hand.value}，你获胜啦！获得了 {bet_amount} 个碎片，你现在有 {monetary.get(event.get_user_id())} 个碎片"
                 elif player_hand.value < dealer_hand.value:
                     monetary.cost(event.get_user_id(), bet_amount, "blackjack")
                     result_messages += f"{player_hand.value} < {dealer_hand.value}，Kasumi 获胜！扣除你 {bet_amount} 个碎片，你现在还有 {monetary.get(event.get_user_id())} 个碎片"
