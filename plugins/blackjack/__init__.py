@@ -259,7 +259,7 @@ async def handle_player_bust(
 ) -> None:
     """处理玩家爆牌的情况"""
     # 玩家爆牌，输掉下注金额
-    end_player_game(user_id, GameResult.BUST, winnings=0)
+    end_player_game(user_id, GameResult.BUST, winnings=-bet_amount)
     await matcher.finish(
         f"你爆牌啦，Kasumi 获胜！输掉了 {bet_amount} 个碎片，你现在还有 {monetary.get(user_id)} 个碎片"
         + gens[latest_message_id].element
