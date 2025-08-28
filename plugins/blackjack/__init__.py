@@ -66,9 +66,7 @@ def start_player_game(user_id: str, bet_amount: int) -> bool:
     return True
 
 
-def end_player_game(
-    user_id: str, result: GameResult, winnings: int = 0, is_split: bool = False
-) -> None:
+def end_player_game(user_id: str, result: GameResult, winnings: int = 0) -> None:
     """
     结束玩家游戏，处理奖金，并记录到数据库
 
@@ -82,6 +80,10 @@ def end_player_game(
         return
 
     bet_amount = player_bets.get(user_id, 0)
+
+    if player_split_state[user_id] > 0:
+        bet_amount //= 2
+
     total_return = bet_amount + winnings
 
     # 如果有返还金额，添加到玩家账户
@@ -94,12 +96,17 @@ def end_player_game(
         bet_amount=bet_amount,
         result=result,
         winnings=winnings,
-        is_split=is_split,
+        is_split=player_split_state[user_id] > 0,
     )
 
     # 清理玩家状态
-    active_players.discard(user_id)
-    player_bets.pop(user_id, None)
+    if player_split_state[user_id] == 0:
+        active_players.discard(user_id)
+        player_bets.pop(user_id, None)
+
+    if player_split_state[user_id] > 0:
+        player_split_state[user_id] -= 1
+        player_bets[user_id] //= 2
 
 
 def refund_player_bet(user_id: str) -> None:
@@ -121,6 +128,7 @@ def refund_player_bet(user_id: str) -> None:
 channel_shoe_map: Dict[str, Shoe] = defaultdict(init_shoe)
 active_players: Set[str] = set()  # 全局跟踪正在游戏中的玩家
 player_bets: Dict[str, int] = {}  # 跟踪每个玩家的下注金额
+player_split_state: Dict[str, int] = defaultdict(lambda: 0)  # 跟踪每个玩家的剩余对局数
 reshuffle_threshold = 52 * 6 * 0.25
 renderer: BlackjackRenderer = None
 
@@ -255,13 +263,21 @@ def evaluate_hand_result(
 
 
 async def handle_player_bust(
-    user_id: str, bet_amount: int, latest_message_id: str, matcher
+    user_id: str,
+    bet_amount: int,
+    latest_message_id: str,
+    matcher,
 ) -> None:
     """处理玩家爆牌的情况"""
     # 玩家爆牌，输掉下注金额
     end_player_game(user_id, GameResult.BUST, winnings=-bet_amount)
-    await matcher.finish(
-        f"你爆牌啦，Kasumi 获胜！输掉了 {bet_amount} 个碎片，你现在还有 {monetary.get(user_id)} 个碎片"
+    await matcher.send(
+        f"你爆牌啦，Kasumi 获胜！输掉了 {bet_amount} 个碎片"
+        + (
+            f"，你现在还有 {monetary.get(user_id)} 个碎片"
+            if player_split_state[user_id] == 0
+            else ""
+        )
         + gens[latest_message_id].element
     )
 
@@ -278,14 +294,19 @@ async def handle_surrender(
     # 投降损失一半下注金额
     loss_amount = (bet_amount / 2).__ceil__()
     end_player_game(user_id, GameResult.SURRENDER, winnings=-loss_amount)
-    await matcher.finish(
+    await matcher.send(
         MessageSegment.image(
             raw=image_to_bytes(
                 renderer.generate_table(dealer_hand, player_hand, False)
             ),
             mime="image/jpeg",
         )
-        + f"你投降啦，Kasumi 获胜！损失了 {loss_amount} 个碎片，你现在还有 {monetary.get(user_id)} 个碎片"
+        + f"你投降啦，Kasumi 获胜！损失了 {loss_amount} 个碎片"
+        + (
+            f"，你现在还有 {monetary.get(user_id)} 个碎片"
+            if player_split_state[user_id] == 0
+            else ""
+        )
         + gens[latest_message_id].element
     )
 
@@ -298,7 +319,6 @@ async def play_player_turn(
     latest_message_id: str,
     check,
     matcher,
-    is_split: bool = False,
     hand_name: str = "",
     show_initial_message: bool = True,
 ) -> tuple[str, bool, int]:
@@ -311,7 +331,7 @@ async def play_player_turn(
 
     # 初始提示消息
     if show_initial_message:
-        if is_split:
+        if player_split_state[event.get_user_id()] > 0:
             prompt = f'{hand_name}\n你要"补牌"(h)，"停牌"(s)还是"投降"(q)呢？'
         else:
             prompt = '请从"补牌"(h)，"停牌"(s)，"双倍"(d)或者"投降"(q)中选择一项操作哦'
@@ -347,8 +367,10 @@ async def play_player_turn(
                 action = get_action(msg)
                 if action is None:
                     # 无效输入
-                    if is_split:
-                        error_msg = '请从"补牌"(h)，"停牌"(s)或"投降"(q)中选择一项哦'
+                    if player_split_state[event.get_user_id()] > 0:
+                        error_msg = (
+                            '请从"补牌"(h)，"停牌"(s)或"投降"(q)中选择一项操作哦'
+                        )
                     else:
                         error_msg = (
                             '请从"补牌"(h)，"停牌"(s)'
@@ -364,14 +386,9 @@ async def play_player_turn(
 
                     next_prompt = ""
                     if player_hand.value < 21:
-                        if is_split:
-                            next_prompt = (
-                                '请从"补牌"(h)，"停牌"(s)或"投降"(q)中选择一项哦'
-                            )
-                        else:
-                            next_prompt = (
-                                '请从"补牌"(h)，"停牌"(s)或"投降"(q)中选择一项操作哦'
-                            )
+                        next_prompt = (
+                            '请从"补牌"(h)，"停牌"(s)或"投降"(q)中选择一项操作哦'
+                        )
                     elif player_hand.value == 21:
                         next_prompt = ""  # 不显示提示，因为会自动停牌
 
@@ -408,7 +425,7 @@ async def play_player_turn(
 
                 elif action == "d":
                     # 双倍下注
-                    if is_split:
+                    if player_split_state[event.get_user_id()] > 0:
                         await matcher.send(
                             "分牌之后不能双倍下注哦~请重新选择"
                             + gens[latest_message_id].element
@@ -421,7 +438,7 @@ async def play_player_turn(
                         )
                         continue
                     else:
-                        if monetary.get(event.get_user_id()) < bet_amount * 2:
+                        if monetary.get(event.get_user_id()) < bet_amount:
                             await matcher.send(
                                 f"你只有 {monetary.get(event.get_user_id())} 个碎片，不够双倍下注哦~请重新选择"
                                 + gens[latest_message_id].element
@@ -429,7 +446,9 @@ async def play_player_turn(
                             continue
                         else:
                             # 执行双倍下注
+                            monetary.cost(event.get_user_id(), bet_amount, "blackjack")
                             bet_amount *= 2
+                            player_bets[event.get_user_id()] = bet_amount
                             player_hand.add_card(
                                 channel_shoe_map[event.channel.id].deal()
                             )
@@ -667,6 +686,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 monetary.cost(event.get_user_id(), bet_amount, "blackjack")
                 # 更新玩家下注记录（现在是双倍下注）
                 player_bets[event.get_user_id()] = bet_amount * 2
+                bet_amount *= 2
+                player_split_state[event.get_user_id()] = 1
 
         if split_card:
             second_hand = Hand()
@@ -674,20 +695,32 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             player_hand.add_card(channel_shoe_map[event.channel.id].deal())
             second_hand.add_card(channel_shoe_map[event.channel.id].deal())
 
+            game_ended_map = {1: False, 2: False}
+
             for idx, hand in enumerate([player_hand, second_hand]):
-                latest_message_id, game_ended, _ = await play_player_turn(
-                    hand,
-                    dealer_hand,
-                    bet_amount,
-                    event,
-                    latest_message_id,
-                    check,
-                    game_start,
-                    is_split=True,
-                    hand_name=f"【第 {idx + 1} 幅牌】",
-                )
-                if game_ended:
-                    return  # 游戏已结束（投降或爆牌）
+                if hand.value == 21:
+                    await game_start.send(
+                        MessageSegment.image(
+                            raw=image_to_bytes(
+                                renderer.generate_table(dealer_hand, hand, True)
+                            ),
+                            mime="image/jpeg",
+                        )
+                        + f"【第 {idx + 1} 幅牌】"
+                        + gens[latest_message_id].element
+                    )
+                else:
+                    latest_message_id, game_ended, _ = await play_player_turn(
+                        hand,
+                        dealer_hand,
+                        bet_amount // 2,
+                        event,
+                        latest_message_id,
+                        check,
+                        game_start,
+                        hand_name=f"【第 {idx + 1} 幅牌】",
+                    )
+                    game_ended_map[idx + 1] = game_ended
 
             # Kasumi的回合
             dealer_result = play_dealer_turn(
@@ -701,10 +734,14 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 winnings, hand_result = evaluate_hand_result(
                     hand,
                     dealer_hand,
-                    bet_amount,
+                    bet_amount // 2,
                     f"第 {idx + 1} 幅牌",
                 )
-                total_winnings += winnings
+                total_winnings += (
+                    winnings
+                    if not game_ended_map[idx + 1]
+                    else 0  # if the game is ended already, the winnings is already calculated
+                )
                 result_messages += hand_result + "\n"
 
             # 处理总的输赢，根据总收益确定结果
@@ -715,11 +752,13 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             else:
                 split_result = GameResult.BUST  # 或其他失败结果
 
+            player_split_state[event.get_user_id()] = 0
+            # 因为最后是一起结算的，所以就等价于没有分牌
+
             end_player_game(
                 event.get_user_id(),
                 split_result,
                 winnings=total_winnings,
-                is_split=True,
             )
             result_messages += f"你现在有 {monetary.get(event.get_user_id())} 个碎片"
 
@@ -734,7 +773,6 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 latest_message_id,
                 check,
                 game_start,
-                is_split=False,
             )
             if game_ended:
                 return  # 游戏已结束（投降或爆牌）
@@ -770,6 +808,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         # 发生错误时退还下注金额
         refund_player_bet(event.get_user_id())
         logger.error("Blackjack error: " + str(e), exc_info=True)
+        logger.exception(e)
         await game_start.finish(
             "发生意外错误！下注已退回给你，再试一次吧？"
             + gens[latest_message_id].element
