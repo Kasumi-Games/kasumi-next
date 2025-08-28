@@ -230,10 +230,9 @@ class MonetaryDataRollback:
             return False
 
         elif category == TransactionCategory.TRANSFER.value:
-            # 转账操作也比较复杂，通常涉及两个用户
-            print(f"   ⚠️  转账操作回溯: {description}")
-            print("   📝 这可能需要手动处理转账的双方")
-            return False
+            # 转账操作时会同时写入三条记录，分别是 income、expense、transfer
+            # 所以不需要回溯
+            return True
 
         # 更新用户数据（包括余额和级别）
         self.update_user_data(user_id, new_balance, new_level, current_daily_time)
@@ -244,23 +243,32 @@ class MonetaryDataRollback:
         """删除已回溯的交易记录"""
         transaction_ids = [tx["id"] for tx in transactions]
 
+        # SQLite的变量限制通常是999，我们使用500来确保安全
+        batch_size = 500
+        total_deleted = 0
+
         with sqlite3.connect(self.transaction_db_path) as conn:
             cursor = conn.cursor()
 
-            # 批量删除交易记录
-            placeholders = ",".join("?" * len(transaction_ids))
-            cursor.execute(
-                f"""
-                DELETE FROM transactions 
-                WHERE id IN ({placeholders})
-            """,
-                transaction_ids,
-            )
+            # 分批删除交易记录
+            for i in range(0, len(transaction_ids), batch_size):
+                batch_ids = transaction_ids[i : i + batch_size]
+                placeholders = ",".join("?" * len(batch_ids))
+                cursor.execute(
+                    f"""
+                    DELETE FROM transactions 
+                    WHERE id IN ({placeholders})
+                """,
+                    batch_ids,
+                )
 
-            deleted_count = cursor.rowcount
+                batch_deleted = cursor.rowcount
+                total_deleted += batch_deleted
+                print(f"🗑️  删除批次 {i // batch_size + 1}: {batch_deleted} 条记录")
+
             conn.commit()
 
-        print(f"🗑️  删除了 {deleted_count} 条交易记录")
+        print(f"🗑️  总共删除了 {total_deleted} 条交易记录")
 
     def execute_rollback(self, delete_transactions: bool = True):
         """执行完整的回溯操作"""
