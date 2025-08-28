@@ -1,5 +1,11 @@
 import random
 from typing import List
+from enum import StrEnum
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+
+# Database base class
+Base = declarative_base()
 
 suits = ("powerful", "cool", "happy", "pure")
 number_ranks = ("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
@@ -97,3 +103,34 @@ class Hand:
             ace_to_adjust = aces_as_11.pop()
             ace_to_adjust.ace_value = 1
             self.value -= 10  # 从11变为1，差值是10
+
+    def __str__(self):
+        return f"Hand: {self.cards}, Value: {self.value}"
+
+
+class GameResult(StrEnum):
+    """Blackjack game result types"""
+
+    WIN = "win"  # 普通获胜
+    BLACKJACK = "blackjack"  # BlackJack获胜
+    PUSH = "push"  # 平局
+    SURRENDER = "surrender"  # 投降
+    BUST = "bust"  # 爆牌
+    TIMEOUT = "timeout"  # 超时
+
+
+class BlackjackGame(Base):
+    """Blackjack game record table"""
+
+    __tablename__ = "blackjack_games"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    bet_amount = Column(Integer, nullable=False)  # 总下注金额（包括分牌）
+    result = Column(String, nullable=False)  # GameResult enum value
+    winnings = Column(Integer, nullable=False)  # 净收益（可为负）
+    is_split = Column(Integer, default=0)  # 是否分牌 (0/1)
+    timestamp = Column(Integer, nullable=False)  # Unix timestamp
+
+    def __repr__(self):
+        return f"<BlackjackGame(user_id={self.user_id}, bet={self.bet_amount}, result={self.result}, winnings={self.winnings})>"

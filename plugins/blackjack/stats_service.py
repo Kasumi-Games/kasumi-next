@@ -8,8 +8,8 @@ from dataclasses import dataclass
 import matplotlib.font_manager as fm
 from typing import List, Optional, cast
 
-from .. import monetary
-from ..monetary.models import Transaction, TransactionCategory
+from .models import BlackjackGame
+from .game_service import BlackjackGameService
 
 
 font_path = Path(__file__).parent / "recourses" / "old.ttf"
@@ -48,48 +48,33 @@ class BlackjackStats:
     recent_games: List[BlackjackGameRecord]  # 最近30次游戏记录
 
 
-def _analyze_game_records(transactions: List[Transaction]) -> List[BlackjackGameRecord]:
+def _convert_db_games_to_records(
+    db_games: List[BlackjackGame],
+) -> List[BlackjackGameRecord]:
     """
-    分析交易记录，提取游戏结果
+    将数据库游戏记录转换为BlackjackGameRecord格式
 
     Args:
-        transactions: blackjack交易记录列表
+        db_games: 数据库游戏记录列表
 
     Returns:
-        游戏记录列表
+        BlackjackGameRecord列表
     """
     game_records = []
 
-    for transaction in transactions:
-        if transaction.category == TransactionCategory.INCOME:
-            # 赢钱记录
-            # 从金额推算原始赌注（考虑1.5倍和生日bonus）
-            if transaction.amount % 3 == 0:  # 可能是1.5倍奖励
-                bet_amount = int(transaction.amount / 1.5)
-            else:
-                bet_amount = transaction.amount  # 1:1赔率
+    for game in db_games:
+        is_win = game.result in ["win", "blackjack"]
 
-            game_records.append(
-                BlackjackGameRecord(
-                    time=transaction.time,
-                    amount=transaction.amount,
-                    is_win=True,
-                    bet_amount=bet_amount,
-                )
+        game_records.append(
+            BlackjackGameRecord(
+                time=game.timestamp,
+                amount=game.winnings,  # 净收益
+                is_win=is_win,
+                bet_amount=game.bet_amount,
             )
+        )
 
-        elif transaction.category == TransactionCategory.EXPENSE:
-            # 输钱记录
-            game_records.append(
-                BlackjackGameRecord(
-                    time=transaction.time,
-                    amount=-transaction.amount,  # 转为负数表示损失
-                    is_win=False,
-                    bet_amount=transaction.amount,
-                )
-            )
-
-    return sorted(game_records, key=lambda x: x.time, reverse=True)
+    return game_records
 
 
 def get_blackjack_stats(user_id: str) -> BlackjackStats:
@@ -102,10 +87,10 @@ def get_blackjack_stats(user_id: str) -> BlackjackStats:
     Returns:
         完整的blackjack统计数据
     """
-    # 使用monetary插件的通用接口获取blackjack交易记录
-    all_transactions = monetary.get_user_transactions(user_id, "blackjack")
+    # 从数据库获取统计信息
+    stats_dict = BlackjackGameService.get_user_stats(user_id)
 
-    if not all_transactions:
+    if stats_dict["total_games"] == 0:
         # 没有游戏记录，返回空统计
         return BlackjackStats(
             user_id=user_id,
@@ -126,54 +111,26 @@ def get_blackjack_stats(user_id: str) -> BlackjackStats:
             recent_games=[],
         )
 
-    # 分析游戏记录
-    game_records = _analyze_game_records(all_transactions)
-
-    # 计算基础统计
-    total_games = len(game_records)
-    wins = sum(1 for record in game_records if record.is_win)
-    losses = total_games - wins
-    pushes = 0  # 平局在当前实现中不会产生交易记录
-
-    win_rate = wins / total_games if total_games > 0 else 0.0
-
-    # 计算金额统计
-    total_wagered = sum(record.bet_amount for record in game_records)
-    total_won = sum(record.amount for record in game_records if record.amount > 0)
-    total_lost = abs(sum(record.amount for record in game_records if record.amount < 0))
-    net_profit = total_won - total_lost
-
-    # 计算平均值
-    avg_bet = total_wagered / total_games if total_games > 0 else 0.0
-    avg_win = total_won / wins if wins > 0 else 0.0
-    avg_loss = total_lost / losses if losses > 0 else 0.0
-
-    # 计算最值
-    win_amounts = [record.amount for record in game_records if record.amount > 0]
-    loss_amounts = [abs(record.amount) for record in game_records if record.amount < 0]
-
-    biggest_win = max(win_amounts) if win_amounts else 0
-    biggest_loss = max(loss_amounts) if loss_amounts else 0
-
     # 获取最近30次游戏记录
-    recent_games = game_records[:30]
+    recent_db_games = BlackjackGameService.get_user_games(user_id, limit=30)
+    recent_games = _convert_db_games_to_records(recent_db_games)
 
     return BlackjackStats(
         user_id=user_id,
-        total_games=total_games,
-        wins=wins,
-        losses=losses,
-        pushes=pushes,
-        win_rate=win_rate,
-        total_wagered=total_wagered,
-        total_won=total_won,
-        total_lost=total_lost,
-        net_profit=int(net_profit),
-        avg_bet=avg_bet,
-        avg_win=avg_win,
-        avg_loss=avg_loss,
-        biggest_win=biggest_win,
-        biggest_loss=biggest_loss,
+        total_games=stats_dict["total_games"],
+        wins=stats_dict["wins"],
+        losses=stats_dict["losses"],
+        pushes=stats_dict["pushes"],
+        win_rate=stats_dict["win_rate"],
+        total_wagered=stats_dict["total_wagered"],
+        total_won=stats_dict["total_won"],
+        total_lost=stats_dict["total_lost"],
+        net_profit=stats_dict["net_profit"],
+        avg_bet=stats_dict["avg_bet"],
+        avg_win=stats_dict["avg_win"],
+        avg_loss=stats_dict["avg_loss"],
+        biggest_win=stats_dict["biggest_win"],
+        biggest_loss=stats_dict["biggest_loss"],
         recent_games=recent_games,
     )
 
