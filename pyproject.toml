@@ -34,4 +34,7 @@ license = {text = "MIT"}
 distribution = false
 
 [dependency-groups]
-dev = []
+dev = [
+    "pandas>=2.3.2",
+    "seaborn>=0.13.2",
+]
