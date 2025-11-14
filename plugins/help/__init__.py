@@ -108,6 +108,21 @@ plugin_data = {
         },
         "examples": ["/邮箱", "/邮件 1"],
     },
+    "魔裁": {
+        "description": "魔法少女的魔女审判相关功能",
+        "usage": {
+            "/安安说 <文本> <表情:害羞|生气|病娇|无语|开心>": "让安安说话",
+            "【疑问|反驳|伪证|赞同】<文本>": "生成审判选择图片。多行输入表示多个选项",
+            "/切换角色 <角色名:艾玛|希罗>": "切换审判选择中的角色",
+        },
+        "examples": [
+            "/安安说 吾辈现在不想说话",
+            "/安安说 吾辈命令你现在【猛击自己的魔丸一百下】 生气",
+            "【伪证】我和艾玛不是恋人\n【赞同】我们初中的时候就确认关系了",
+            "【疑问】汉娜和雪莉约会没有邀请我很可疑",
+            "/切换角色 希罗",
+        ],
+    },
 }
 
 
@@ -115,7 +130,7 @@ help = on_command("help", priority=1, aliases={"帮助", "帮助信息"})
 
 
 @help.handle()
-async def _(bot: Bot, plugin: Message = CommandArg()):
+async def _(bot: Bot, plugin: Message = CommandArg()):  # type: ignore
     plugin: str = plugin.extract_plain_text().strip()
 
     if plugin == "":
