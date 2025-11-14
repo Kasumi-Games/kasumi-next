@@ -24,7 +24,7 @@ dependencies = [
     "opencv-python>=4.12.0.88",
     "nonebot-plugin-alconna>=0.59.4",
     "matplotlib>=3.9.4",
-    "nonebot-plugin-manosaba-memes>=0.1.1",
+    "nonebot-plugin-manosaba-memes>=0.1.2",
 ]
 requires-python = ">=3.10"
 readme = "README.md"

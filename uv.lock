@@ -886,7 +886,7 @@ requires-dist = [
     { name = "nonebot-plugin-alconna", specifier = ">=0.59.4" },
     { name = "nonebot-plugin-apscheduler", specifier = ">=0.4.0" },
     { name = "nonebot-plugin-localstore", specifier = ">=0.6.0" },
-    { name = "nonebot-plugin-manosaba-memes", specifier = ">=0.1.1" },
+    { name = "nonebot-plugin-manosaba-memes", specifier = ">=0.1.2" },
     { name = "nonebot-plugin-waiter", specifier = ">=0.6.2" },
     { name = "nonebot2", extras = ["httpx", "websockets"], specifier = ">=2.3.1" },
     { name = "opencv-python", specifier = ">=4.12.0.88" },
@@ -1356,16 +1356,16 @@ wheels = [
 
 [[package]]
 name = "nonebot-plugin-manosaba-memes"
-version = "0.1.1"
+version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nonebot-plugin-alconna" },
     { name = "nonebot2" },
     { name = "sketchbook-py" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/6d/b0b4a7a9aa35583d3aafadbb302e2a20d72e7090d37bb2770f616fe851d3/nonebot_plugin_manosaba_memes-0.1.1.tar.gz", hash = "sha256:3b7754f54c6955bd20ac465fc39a41964aa39756fae3b841d81608ff9eb7b53f", size = 39114376, upload-time = "2025-11-14T09:20:20.235Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/b1/f2c4678b568ba500ec933ce336607fc79e350e4afa4f94e87dd961652204/nonebot_plugin_manosaba_memes-0.1.2.tar.gz", hash = "sha256:04d4d163e1a920c6783368f7386d8259dc068d58f7c10c65911729a3cca20671", size = 39114398, upload-time = "2025-11-14T10:05:01.409Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/b5/b762d4583e420b395f5cd62a89e8cf0330e6be4012d4d8462bc19457eec3/nonebot_plugin_manosaba_memes-0.1.1-py3-none-any.whl", hash = "sha256:53d957fc1a6d3c14b8064b9c372136daa45211c9e13c59c883cce93958379983", size = 39125292, upload-time = "2025-11-14T09:20:16.824Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/e3/1c929510e5a6524e1b1a3b67f8312a43c2f4efac8c0cb65e760a4b8a3024/nonebot_plugin_manosaba_memes-0.1.2-py3-none-any.whl", hash = "sha256:524517754f7bf390e08358cde4c6ded66ac4d3accf1683af82d73cdbd1b42470", size = 39125307, upload-time = "2025-11-14T10:04:58.43Z" },
 ]
 
 [[package]]
