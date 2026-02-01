@@ -28,4 +28,7 @@ def init_database():
 
 def get_session():
     """Get the database session"""
+    global session
+    if session is None:
+        init_database()
     return session

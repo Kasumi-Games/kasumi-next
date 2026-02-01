@@ -544,14 +544,37 @@ class BlackjackRenderer:
             card_count
         )
 
-        # 为分数文字添加额外空间
-        score_area_height = self.TableLayout.CARD_TEXT_FONT_SIZE
+        # 为名字标签添加额外空间
         total_width = container_width + self.TableLayout.MARGIN * 2
         total_height = (
-            container_height + score_area_height + self.TableLayout.MARGIN * 2
+            self.TableLayout.MARGIN  # 顶部边距
+            + self.TableLayout.NAME_TAG_HEIGHT  # 标签高度
+            + self.TableLayout.MARGIN  # 标签下边距
+            + container_height  # 卡牌容器
+            + self.TableLayout.MARGIN  # 底部边距
         )
 
         background = self._generate_background(total_width, total_height)
+        draw = ImageDraw.Draw(background)
+
+        # 当前Y位置追踪器
+        current_y = self.TableLayout.MARGIN
+
+        # 绘制Kasumi名字标签（包含分数）
+        if second_card_back:
+            score_text = f"共 {hand.cards[0].get_value()} + ? 点"
+        else:
+            score_text = f"共 {hand.value} 点"
+
+        self._draw_name_tag_with_score(
+            draw,
+            self.TableLayout.MARGIN,
+            current_y,
+            "Kasumi",
+            score_text,
+            self.TableLayout.DEALER_TAG_COLOR,
+        )
+        current_y += self.TableLayout.NAME_TAG_HEIGHT + self.TableLayout.MARGIN
 
         # 绘制卡牌
         cards_start_x = (
@@ -559,37 +582,9 @@ class BlackjackRenderer:
             + self.TableLayout.CARD_CONTAINER_PADDING_HORIZONTAL
             + self.TableLayout.CARD_SPACING
         )
-        cards_start_y = (
-            self.TableLayout.MARGIN + self.TableLayout.CARD_CONTAINER_PADDING_VERTICAL
-        )
+        cards_start_y = current_y + self.TableLayout.CARD_CONTAINER_PADDING_VERTICAL
         self._draw_hand_cards(
             background, hand, cards_start_x, cards_start_y, second_card_back
-        )
-
-        # 绘制分数文字
-        draw = ImageDraw.Draw(background)
-        if second_card_back:
-            score_text = f"共 {hand.cards[0].get_value()} + ? 点"
-        else:
-            score_text = f"共 {hand.value} 点"
-
-        text_bbox = draw.textbbox(
-            (0, 0), score_text, font=self.get_font(self.TableLayout.CARD_TEXT_FONT_SIZE)
-        )
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
-
-        # 将分数文字绘制在右下角
-        text_x = total_width - text_width - self.TableLayout.MARGIN // 4
-        text_y = total_height - text_height - self.TableLayout.MARGIN // 4
-
-        draw.text(
-            (text_x, text_y),
-            score_text,
-            fill=self.TableLayout.WHITE_TEXT_COLOR,
-            font=self.get_font(self.TableLayout.CARD_TEXT_FONT_SIZE),
-            stroke_width=self.TableLayout.CARD_TEXT_STROKE_WIDTH,
-            stroke_fill=self.TableLayout.BLACK_TEXT_COLOR,
         )
 
         return background
@@ -696,7 +691,7 @@ class BlackjackRenderer:
         total_text_width = name_width + score_width
 
         # 动态调整标签宽度
-        tag_width = max(self.TableLayout.NAME_TAG_WIDTH, total_text_width + 32)
+        tag_width = max(self.TableLayout.NAME_TAG_WIDTH, total_text_width + 64)
 
         self.draw_rounded_rectangle(
             draw,
