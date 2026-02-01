@@ -1,4 +1,5 @@
 import time
+import datetime
 from typing import List
 from .database import get_session
 from .models import User, TransactionCategory
@@ -123,10 +124,13 @@ def decrease_level(user_id: str, levels: int = 1):
 def daily_checkin(user_id: str) -> bool:
     """Check and record daily checkin"""
     session = get_session()
-
     user = get_user(user_id)
-    # Check if last checkin was before today
-    if time.localtime(user.last_daily_time).tm_mday != time.localtime().tm_mday:
+
+    # Convert last_daily_time to date
+    last_checkin_date = datetime.datetime.fromtimestamp(user.last_daily_time).date()
+    today = datetime.datetime.now().date()
+
+    if last_checkin_date != today:
         user.last_daily_time = time.time()
         session.commit()
         return True
