@@ -19,6 +19,7 @@ class GameSession:
     split_hand: Optional[Hand] = None
     split_bet: int = 0
     current_hand_index: int = 0
+    is_first_game_today: bool = False  # 今日首局标记
 
     def is_split(self) -> bool:
         return self.split_hand is not None
@@ -42,6 +43,7 @@ class GameManager:
         self._active_players: Set[str] = set()
         self._player_bets: Dict[str, int] = {}
         self._player_split_state: Dict[str, int] = defaultdict(lambda: 0)
+        self._first_game_today: Dict[str, bool] = {}  # 追踪今日首局状态
 
     def set_renderer(self, renderer) -> None:
         self.renderer = renderer
@@ -100,17 +102,43 @@ class GameManager:
         monetary.cost(user_id, bet_amount, "blackjack")
         self._active_players.add(user_id)
         self._player_bets[user_id] = bet_amount
+
+        # 检查是否为今日首局
+        self._first_game_today[user_id] = not BlackjackGameService.has_played_today(
+            user_id
+        )
         return True
 
-    def end_game(self, user_id: str, result: GameResult, winnings: int = 0) -> None:
+    def is_first_game_today(self, user_id: str) -> bool:
+        """检查当前游戏是否为今日首局"""
+        return self._first_game_today.get(user_id, False)
+
+    def end_game(
+        self, user_id: str, result: GameResult, winnings: int = 0
+    ) -> tuple[int, bool]:
+        """
+        结束游戏并返回实际奖金和是否应用首局加成
+
+        Returns:
+            tuple[int, bool]: (实际奖金, 是否应用了今日首局双倍加成)
+        """
         if user_id not in self._active_players:
-            return
+            return winnings, False
 
         bet_amount = self._player_bets.get(user_id, 0)
         if self._player_split_state[user_id] > 0:
             bet_amount //= 2
 
-        total_return = bet_amount + winnings
+        # 检查今日首局双倍加成（仅对胜利生效）
+        first_game_bonus_applied = False
+        actual_winnings = winnings
+        if winnings > 0 and self._first_game_today.get(user_id, False):
+            actual_winnings = winnings * 2
+            first_game_bonus_applied = True
+            # 首局加成只能用一次，标记为已使用
+            self._first_game_today[user_id] = False
+
+        total_return = bet_amount + actual_winnings
         if total_return > 0:
             monetary.add(user_id, total_return, "blackjack")
 
@@ -118,19 +146,22 @@ class GameManager:
             user_id=user_id,
             bet_amount=bet_amount,
             result=result,
-            winnings=winnings,
+            winnings=actual_winnings,
             is_split=self._player_split_state[user_id] > 0,
         )
 
         if self._player_split_state[user_id] == 0:
             self._active_players.discard(user_id)
             self._player_bets.pop(user_id, None)
+            self._first_game_today.pop(user_id, None)
             self.remove_session(user_id)
 
         if self._player_split_state[user_id] > 0:
             self._player_split_state[user_id] -= 1
             if user_id in self._player_bets:
                 self._player_bets[user_id] //= 2
+
+        return actual_winnings, first_game_bonus_applied
 
     def refund_game(self, user_id: str) -> None:
         if user_id not in self._active_players:

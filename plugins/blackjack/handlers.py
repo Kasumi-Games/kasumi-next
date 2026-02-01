@@ -69,12 +69,21 @@ def play_dealer_turn(
 
 
 def evaluate_hand_result(
-    player_hand: Hand, dealer_hand: Hand, bet_amount: int, hand_name: str = ""
+    player_hand: Hand,
+    dealer_hand: Hand,
+    bet_amount: int,
+    hand_name: str = "",
+    bonus_applied: bool = False,
+    actual_winnings: int = 0,
 ) -> tuple[int, str]:
     """
     评估单手牌的结果
     返回: (奖金金额, 结果文本)
     奖金金额是相对于下注金额的额外收益，不包括本金
+
+    Args:
+        bonus_applied: 是否应用了今日首局双倍加成
+        actual_winnings: 实际奖金（如果bonus_applied为True，这是双倍后的奖金）
     """
     prefix = f"【{hand_name}】" if hand_name else ""
 
@@ -82,9 +91,28 @@ def evaluate_hand_result(
         return -bet_amount, prefix + Messages.BUST_LOSE.format(amount=bet_amount)
 
     if dealer_hand.value > 21:
+        if bonus_applied:
+            return (
+                bet_amount,
+                prefix
+                + Messages.DEALER_BUST_WIN_BONUS.format(
+                    original=bet_amount, amount=actual_winnings
+                ),
+            )
         return bet_amount, prefix + Messages.DEALER_BUST_WIN.format(amount=bet_amount)
 
     if player_hand.value > dealer_hand.value:
+        if bonus_applied:
+            return (
+                bet_amount,
+                prefix
+                + Messages.RESULT_WIN_BONUS.format(
+                    player=player_hand.value,
+                    dealer=dealer_hand.value,
+                    original=bet_amount,
+                    amount=actual_winnings,
+                ),
+            )
         return (
             bet_amount,
             prefix
@@ -390,11 +418,19 @@ async def handle_initial_blackjack(
             )
         else:
             blackjack_winnings = int(bet_amount * 1.5)
-            game_manager.end_game(
+            actual_winnings, bonus_applied = game_manager.end_game(
                 session.user_id,
                 GameResult.BLACKJACK,
                 winnings=blackjack_winnings,
             )
+            if bonus_applied:
+                win_msg = Messages.BLACKJACK_WIN_BONUS.format(
+                    bet=bet_amount, amount=actual_winnings
+                )
+            else:
+                win_msg = Messages.BLACKJACK_WIN.format(
+                    bet=bet_amount, amount=actual_winnings
+                )
             await matcher.finish(
                 MessageSegment.image(
                     raw=image_to_bytes(
@@ -404,9 +440,7 @@ async def handle_initial_blackjack(
                     ),
                     mime="image/jpeg",
                 )
-                + Messages.BLACKJACK_WIN.format(
-                    bet=bet_amount, amount=blackjack_winnings
-                )
+                + win_msg
                 + f"你现在有 {monetary.get(session.user_id)} 个碎片！"
                 + gens[latest_message_id].element
             )
@@ -547,11 +581,15 @@ async def handle_split_game(
 
     game_manager.set_split_state(event.get_user_id(), 0)
 
-    game_manager.end_game(
+    actual_winnings, bonus_applied = game_manager.end_game(
         event.get_user_id(),
         split_result,
         winnings=total_winnings,
     )
+    if bonus_applied:
+        result_messages += Messages.SPLIT_TOTAL_BONUS.format(
+            original=total_winnings, amount=actual_winnings
+        )
     result_messages += f"你现在有 {monetary.get(event.get_user_id())} 个碎片"
     await matcher.send(result_messages + gens[latest_message_id].element)
 
@@ -584,18 +622,37 @@ async def handle_normal_game(
     await matcher.send(dealer_result)
     result_messages = Message()
 
-    winnings, hand_result = evaluate_hand_result(
-        session.player_hand, session.dealer_hand, bet_amount
+    # 先计算原始奖金确定游戏结果类型
+    if session.player_hand.value > 21:
+        winnings = -bet_amount
+        game_result = GameResult.BUST
+    elif session.dealer_hand.value > 21:
+        winnings = bet_amount
+        game_result = GameResult.WIN
+    elif session.player_hand.value > session.dealer_hand.value:
+        winnings = bet_amount
+        game_result = GameResult.WIN
+    elif session.player_hand.value < session.dealer_hand.value:
+        winnings = -bet_amount
+        game_result = GameResult.BUST
+    else:
+        winnings = 0
+        game_result = GameResult.PUSH
+
+    # 结束游戏并获取实际奖金和加成状态
+    actual_winnings, bonus_applied = game_manager.end_game(
+        event.get_user_id(), game_result, winnings=winnings
     )
 
-    if winnings > 0:
-        game_result = GameResult.WIN
-    elif winnings == 0:
-        game_result = GameResult.PUSH
-    else:
-        game_result = GameResult.BUST
+    # 使用加成信息生成正确的结果消息
+    _, hand_result = evaluate_hand_result(
+        session.player_hand,
+        session.dealer_hand,
+        bet_amount,
+        bonus_applied=bonus_applied,
+        actual_winnings=actual_winnings,
+    )
 
-    game_manager.end_game(event.get_user_id(), game_result, winnings=winnings)
     result_messages += (
         hand_result + f"，你现在有 {monetary.get(event.get_user_id())} 个碎片"
     )

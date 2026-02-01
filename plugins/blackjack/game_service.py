@@ -3,6 +3,7 @@ Blackjack game database service for storing and retrieving game records.
 """
 
 import time
+from datetime import datetime
 from typing import List, Optional
 
 from .database import get_session
@@ -11,6 +12,33 @@ from .models import BlackjackGame, GameResult
 
 class BlackjackGameService:
     """Service class for handling blackjack game database operations"""
+
+    @staticmethod
+    def has_played_today(user_id: str) -> bool:
+        """
+        Check if the user has played any game today
+
+        Args:
+            user_id: Player's user ID
+
+        Returns:
+            True if user has played at least one game today
+        """
+        session = get_session()
+
+        # 获取今天0点的时间戳
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_timestamp = int(today_start.timestamp())
+
+        # 查询今天是否有游戏记录
+        count = (
+            session.query(BlackjackGame)
+            .filter(BlackjackGame.user_id == user_id)
+            .filter(BlackjackGame.timestamp >= today_timestamp)
+            .count()
+        )
+
+        return count > 0
 
     @staticmethod
     def record_game(

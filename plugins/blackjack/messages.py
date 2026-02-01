@@ -30,7 +30,9 @@ class Messages:
 
     BUST_LOSE = "你爆牌啦，Kasumi 获胜！输掉了 {amount} 个碎片"
     DEALER_BUST_WIN = "Kasumi 爆牌，你获胜啦！赢得了 {amount} 个碎片"
+    DEALER_BUST_WIN_BONUS = "Kasumi 爆牌，你获胜啦！今日首局双倍加成，赢得了 {original} × 2 = {amount} 个碎片"
     RESULT_WIN = "{player} > {dealer}，你获胜啦！赢得了 {amount} 个碎片"
+    RESULT_WIN_BONUS = "{player} > {dealer}，你获胜啦！今日首局双倍加成，赢得了 {original} × 2 = {amount} 个碎片"
     RESULT_LOSE = "{player} < {dealer}，Kasumi 获胜！输掉了 {amount} 个碎片"
     RESULT_PUSH = "{player} = {dealer}，平局！下注金额返还"
 
@@ -38,6 +40,9 @@ class Messages:
 
     BLACKJACK_PUSH = "平局！虽然是 BlackKasumi，但是没有奖励哦~\n"
     BLACKJACK_WIN = "BlackKasumi！你赢得了 1.5 × {bet} = {amount} 个碎片！\n"
+    BLACKJACK_WIN_BONUS = (
+        "BlackKasumi！今日首局双倍加成，你赢得了 1.5 × {bet} × 2 = {amount} 个碎片！\n"
+    )
 
     SPLIT_PROMPT = "你有一对相同点数的牌，是否要分牌？\n"
     SPLIT_CHOICE = "请从“是”或“否”中选择一项哦"
@@ -46,3 +51,4 @@ class Messages:
     SPLIT_NOT_ENOUGH = (
         "你只有 {amount} 个碎片，不够分牌的额外下注哦~接下来将按照不分牌处理"
     )
+    SPLIT_TOTAL_BONUS = "今日首局双倍加成，总计赢得 {original} × 2 = {amount} 个碎片\n"
