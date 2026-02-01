@@ -27,7 +27,6 @@ from .store import SongStore, BandStore, GamersStore  # noqa: E402
 from .utils import (  # noqa: E402
     diff_num,
     fuzzy_match,
-    num_to_range,
     get_difficulty,
     read_csv_to_dict,
     get_jacket_image,
@@ -184,8 +183,9 @@ async def handle_start(
     level = song_info.get("difficulty", {}).get(diff_num[diff], {}).get("playLevel")
     song_name = song["song_name"]
 
-    note_num = chart_statistics.notes
-    note_num_range = num_to_range(note_num)
+    # note_num = chart_statistics.notes
+    # note_num_range = num_to_range(note_num)
+    # removed because the information can be found in the chart image
 
     band_id: int = song_info["bandId"]
     band_name = get_value_from_list(band_data[str(band_id)]["bandName"])
@@ -194,7 +194,7 @@ async def handle_start(
 
     tips: List[str] = [
         f"这首曲子是 {level} 级的哦",
-        f"这首曲子的物量是 {note_num_range[0]} 到 {note_num_range[1]} 哦",
+        f"这首曲子的 BPM 是 {int(chart_statistics.main_bpm)} 哦",
         f"这首曲子是 {band_name} 的哦",
     ]
 
