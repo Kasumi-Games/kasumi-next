@@ -26,3 +26,4 @@ class Messages:
     CLAIM_EXPIRED = "这个红包已经过期了，未领取部分已退还"
     CLAIM_FAILED = "抢红包失败，请稍后再试"
     CLAIM_SUCCESS = "恭喜你抢到 {amount} 个星之碎片！"
+    CLAIM_COMPLETE = "{creator}的红包在{duration}内被抢完，{lucky_king}是手气王（{lucky_amount} 个星之碎片）！"

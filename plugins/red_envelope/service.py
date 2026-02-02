@@ -1,6 +1,7 @@
 import json
 import random
 import time
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from nonebot.log import logger
@@ -8,6 +9,16 @@ from nonebot.log import logger
 from .. import monetary
 from .database import get_session
 from .models import ClaimRecord, RedEnvelope
+
+
+@dataclass
+class EnvelopeCompletionInfo:
+    """Info returned when an envelope is fully claimed."""
+
+    creator_id: str
+    duration_seconds: int
+    lucky_king_id: str
+    lucky_king_amount: int
 
 
 EXPIRE_SECONDS = 24 * 60 * 60
@@ -174,7 +185,7 @@ def _expire_envelope(envelope: RedEnvelope) -> int:
 
 def claim_envelope(
     user_id: str, channel_id: str, channel_index: Optional[int] = None
-) -> Tuple[str, Optional[int]]:
+) -> Tuple[str, Optional[int], Optional[EnvelopeCompletionInfo]]:
     session = get_session()
     now = int(time.time())
 
@@ -201,14 +212,14 @@ def claim_envelope(
         )
 
     if not envelope:
-        return ("no_active" if channel_index is None else "not_found", None)
+        return ("no_active" if channel_index is None else "not_found", None, None)
 
     if envelope.is_expired or envelope.expires_at <= now:
         _expire_envelope(envelope)
-        return ("expired", None)
+        return ("expired", None, None)
 
     if envelope.remaining_count <= 0 or envelope.remaining_amount <= 0:
-        return ("empty", None)
+        return ("empty", None, None)
 
     already_claimed = (
         session.query(ClaimRecord)
@@ -219,18 +230,19 @@ def claim_envelope(
         .first()
     )
     if already_claimed:
-        return ("already", None)
+        return ("already", None, None)
 
     # Pop the next pre-generated amount
     pending = json.loads(envelope.pending_amounts)
     if not pending:
-        return ("empty", None)
+        return ("empty", None, None)
     amount = pending.pop(0)
 
     try:
         envelope.pending_amounts = json.dumps(pending)
         envelope.remaining_amount -= amount
         envelope.remaining_count -= 1
+        is_last_claim = envelope.remaining_count == 0
 
         claim = ClaimRecord(
             envelope_id=envelope.id,
@@ -243,11 +255,29 @@ def claim_envelope(
 
         monetary.add(user_id, amount, f"red_envelope_claim_{envelope.id}")
         logger.info(f"红包领取成功: id={envelope.id} user={user_id} amount={amount}")
-        return ("success", amount)
+
+        # If this was the last claim, find the lucky king
+        completion_info = None
+        if is_last_claim:
+            all_claims = (
+                session.query(ClaimRecord)
+                .filter(ClaimRecord.envelope_id == envelope.id)
+                .all()
+            )
+            lucky_king = max(all_claims, key=lambda c: c.amount)
+            duration = now - envelope.created_at
+            completion_info = EnvelopeCompletionInfo(
+                creator_id=envelope.creator_id,
+                duration_seconds=duration,
+                lucky_king_id=lucky_king.user_id,
+                lucky_king_amount=lucky_king.amount,
+            )
+
+        return ("success", amount, completion_info)
     except Exception as e:
         session.rollback()
         logger.error(f"领取红包时发生错误: {e}")
-        return ("error", None)
+        return ("error", None, None)
 
 
 def expire_overdue_envelopes() -> int:

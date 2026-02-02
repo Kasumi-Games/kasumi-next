@@ -17,11 +17,13 @@ from .. import monetary  # noqa: E402
 from .database import init_database  # noqa: E402
 from .messages import Messages  # noqa: E402
 from .service import (  # noqa: E402
+    EnvelopeCompletionInfo,  # noqa: F401
     claim_envelope,
     create_envelope,
     expire_overdue_envelopes,
     get_active_envelopes,
 )
+from ..nickname import nickname  # noqa: E402
 
 
 @get_driver().on_startup
@@ -52,6 +54,24 @@ def _get_channel_id(event: MessageEvent) -> Optional[str]:
     if hasattr(event, "channel") and event.channel:
         return event.channel.id
     return None
+
+
+def _format_duration(seconds: int) -> str:
+    """Format duration in a human-readable Chinese format."""
+    if seconds < 60:
+        return f" {seconds} 秒"
+    elif seconds < 3600:
+        minutes = seconds // 60
+        secs = seconds % 60
+        if secs == 0:
+            return f"{minutes} 分钟"
+        return f" {minutes} 分 {secs} 秒"
+    else:
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        if minutes == 0:
+            return f" {hours} 小时"
+        return f" {hours} 小时 {minutes} 分钟"
 
 
 @create_cmd.handle()
@@ -126,7 +146,9 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
         channel_index = int(text)
 
     try:
-        status, amount = claim_envelope(user_id, channel_id, channel_index)
+        status, amount, completion_info = claim_envelope(
+            user_id, channel_id, channel_index
+        )
         if status == "no_active":
             await claim_cmd.finish(Messages.CLAIM_NO_ACTIVE + passive_generator.element)
         if status == "not_found":
@@ -140,11 +162,24 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
         if status == "error":
             await claim_cmd.finish(Messages.CLAIM_FAILED + passive_generator.element)
         if status == "success":
-            await claim_cmd.finish(
+            await claim_cmd.send(
                 Messages.CLAIM_SUCCESS.format(amount=amount) + passive_generator.element
             )
 
-        await claim_cmd.finish(Messages.CLAIM_FAILED + passive_generator.element)
+            # Add completion message if this was the last claim
+            if completion_info:
+                creator_name = nickname.get(completion_info.creator_id) or "某人"
+                lucky_king_name = nickname.get(completion_info.lucky_king_id) or "某人"
+                duration_str = _format_duration(completion_info.duration_seconds)
+                await claim_cmd.finish(
+                    Messages.CLAIM_COMPLETE.format(
+                        creator=creator_name,
+                        duration=duration_str,
+                        lucky_king=lucky_king_name,
+                        lucky_amount=completion_info.lucky_king_amount,
+                    )
+                    + passive_generator.element
+                )
     except MatcherException:
         raise
     except Exception as e:
