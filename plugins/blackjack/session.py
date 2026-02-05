@@ -175,6 +175,18 @@ class GameManager:
         self._player_bets.pop(user_id, None)
         self.remove_session(user_id)
 
+    def refund_half_game(self, user_id: str) -> None:
+        if user_id not in self._active_players:
+            return
+
+        bet_amount = self._player_bets.get(user_id, 0)
+        if bet_amount > 0:
+            monetary.add(user_id, bet_amount // 2, "blackjack")
+
+        self._active_players.discard(user_id)
+        self._player_bets.pop(user_id, None)
+        self.remove_session(user_id)
+
     def get_player_bet(self, user_id: str) -> int:
         return self._player_bets.get(user_id, 0)
 

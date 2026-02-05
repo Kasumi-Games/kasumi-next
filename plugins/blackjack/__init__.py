@@ -201,11 +201,11 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         raise
     except Exception as e:
         # 发生错误时退还下注金额
-        game_manager.refund_game(event.get_user_id())
+        game_manager.refund_half_game(event.get_user_id())
         logger.error("Blackjack error: " + str(e), exc_info=True)
         logger.exception(e)
         await game_start.finish(
-            "发生意外错误！下注已退回给你，再试一次吧？"
+            "发生意外错误！已退回一半的下注碎片给你，再试一次吧？"
             + gens[latest_message_id].element
         )
 
