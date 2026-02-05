@@ -3,13 +3,17 @@ from nonebot.adapters import Event
 from nonebot.matcher import Matcher
 from nonebot.params import CommandArg
 from nonebot.permission import SUPERUSER
-from nonebot import on_command, get_driver
+from nonebot import on_command, get_driver, require
 from nonebot.adapters.satori import MessageEvent, Message
 
-from ..nickname import nickname
-from .utils import is_number, get_amount_for_level
-from utils import has_no_argument, PassiveGenerator
-from ..monetary import (
+require("nonebot_plugin_waiter")
+
+from nonebot_plugin_waiter import waiter  # noqa: E402
+
+from ..nickname import nickname  # noqa: E402
+from .utils import is_number, get_amount_for_level  # noqa: E402
+from utils import has_no_argument, PassiveGenerator  # noqa: E402
+from ..monetary import (  # noqa: E402
     get,
     add,
     daily,
@@ -17,6 +21,7 @@ from ..monetary import (
     get_top_users,
     get_user_rank,
     increase_level,
+    decrease_level,
     get_user_stats,
     set as set_balance,
 )
@@ -147,6 +152,61 @@ async def handle_watch(matcher: Matcher, event: Event, arg: Message = CommandArg
         await matcher.finish(f"观测到下一个星需要 {amount} 个星之碎片")
     else:
         await matcher.finish(f"观测到之后的 {levels} 颗星需要 {amount} 个星之碎片")
+
+
+shatter = on_command("shatter", aliases={"碎星"}, priority=10, block=True)
+
+
+@shatter.handle()
+async def handle_shatter(event: MessageEvent, arg: Message = CommandArg()):
+    user_id = event.get_user_id()
+    user = get_user_stats(user_id)
+
+    text = arg.extract_plain_text().strip()
+    if text.isdigit():
+        levels = int(text)
+        if levels <= 0:
+            await shatter.finish("碎星数量必须大于 0")
+    else:
+        levels = 1
+
+    if user.level < levels:
+        await shatter.finish(f"你只有 {user.level} 颗星星，无法碎 {levels} 颗星")
+
+    # 计算碎星可以获得的碎片数量（减半）
+    full_amount = 0
+    for i in range(levels):
+        full_amount += get_amount_for_level(user.level - i)
+
+    refund_amount = full_amount // 2
+
+    if levels == 1:
+        await shatter.send(
+            f"碎星将会获得 {refund_amount} 个星之碎片（原价 {full_amount} 的一半），确定要碎星吗？回复「确认」继续"
+        )
+    else:
+        await shatter.send(
+            f"碎 {levels} 颗星将会获得 {refund_amount} 个星之碎片（原价 {full_amount} 的一半），确定要碎星吗？回复「确认」继续"
+        )
+
+    @waiter(waits=["message"], matcher=shatter, block=False, keep_session=True)
+    async def check(event_: MessageEvent) -> str:
+        return event_.get_message().extract_plain_text().strip()
+
+    resp = await check.wait(timeout=30)
+
+    if resp is None:
+        await shatter.finish("操作超时，已取消碎星")
+
+    if resp not in ["确认", "确定", "是", "yes", "y"]:
+        await shatter.finish("已取消碎星")
+
+    # 执行碎星
+    decrease_level(user_id, levels)
+    add(user_id, refund_amount, f"shatter_{user.level}_{levels}")
+    await shatter.finish(
+        f"碎星成功，获得 {refund_amount} 个星之碎片。你现在有 {user.level - levels} 颗星星 和 {user.balance + refund_amount} 个星之碎片"
+    )
 
 
 @on_command(

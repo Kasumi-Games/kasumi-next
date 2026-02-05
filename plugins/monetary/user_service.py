@@ -110,13 +110,13 @@ def increase_level(user_id: str, levels: int = 1):
 
 
 def decrease_level(user_id: str, levels: int = 1):
-    """Decrease user's level by specified amount (minimum level is 1)"""
+    """Decrease user's level by specified amount (minimum level is 0)"""
     if levels < 0:
         raise ValueError("Level decrease must be positive")
 
     session = get_session()
     user = get_user(user_id)
-    user.level = max(1, user.level - levels)  # Ensure level never goes below 1
+    user.level = max(0, user.level - levels)  # Ensure level never goes below 0
     session.commit()
 
 
