@@ -48,14 +48,14 @@ def not_in_game(event: MessageEvent) -> bool:
 
 game_start = on_command(
     "扫雷",
-    aliases={"mines", "探险", "m"},
+    aliases={"mines", "探险", "mk"},
     priority=10,
     block=True,
     rule=not_in_game,
 )
 game_stats = on_command(
     "扫雷统计",
-    aliases={"minesstats", "探险统计", "ms"},
+    aliases={"minesstats", "探险统计", "mks"},
     priority=10,
     block=True,
 )
