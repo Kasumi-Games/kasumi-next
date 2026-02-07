@@ -10,7 +10,7 @@ from .utils import get_random_kasumi, get_random_arisa
 if TYPE_CHECKING:
     from ..models import Field
 
-FONT_PATH = Path(__file__).resolve().parents[2] / "resources" / "Fonts" / "old.ttf"
+FONT_PATH = Path(__file__).resolve().parents[1] / "resources" / "Fonts" / "old.ttf"
 
 
 def draw_rounded_rectangle(
@@ -290,7 +290,7 @@ def generate_unrevealed_field(index: int) -> Image.Image:
     # Draw the index
     index_draw = ImageDraw.Draw(output)
     bbox = index_draw.textbbox(
-        (0, 0), str(index), font=ImageFont.truetype(str(FONT_PATH), 80)
+        (0, 0), str(index), font=ImageFont.truetype(str(FONT_PATH.absolute()), 80)
     )
     index_draw.text(
         (
@@ -298,7 +298,7 @@ def generate_unrevealed_field(index: int) -> Image.Image:
             height // 2 - (bbox[3] + bbox[1]) // 2,
         ),
         str(index),
-        font=ImageFont.truetype(str(FONT_PATH), 80),
+        font=ImageFont.truetype(str(FONT_PATH.absolute()), 80),
         fill=(255, 255, 255, 255),
     )
 
@@ -381,8 +381,8 @@ def generate_title(
         canvas
     )  # Create draw object after pills are drawn because they return new images
 
-    font1 = ImageFont.truetype(str(FONT_PATH), text1_size)
-    font2 = ImageFont.truetype(str(FONT_PATH), text2_size)
+    font1 = ImageFont.truetype(str(FONT_PATH.absolute()), text1_size)
+    font2 = ImageFont.truetype(str(FONT_PATH.absolute()), text2_size)
 
     text1_bbox = draw.textbbox((0, 0), text1, font=font1)
     text2_bbox = draw.textbbox((0, 0), text2, font=font2)
