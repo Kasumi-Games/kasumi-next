@@ -89,6 +89,16 @@ plugin_data = {
         },
         "examples": ["/黑香澄", "/黑香澄 10", "/黑香澄 -h", "/黑香澄统计"],
     },
+    "探险": {
+        "description": "Arisa 的地下室探险小游戏",
+        "usage": {
+            "/探险|mines": "开始探险",
+            "/探险 <下注碎片> <雷的数量>": "开始探险，并下注指定数量的碎片和雷（Arisa）的数量",
+            "/探险 -h": "查看帮助",
+            "/探险统计": "查看统计信息",
+        },
+        "examples": ["/探险", "/探险 10", "/探险 10 3", "/探险统计"],
+    },
     "tts": {
         "description": "文本转BanG Dream! & 少女歌剧角色语音(trained by Bilibili@Mahiroshi)",
         "usage": {
