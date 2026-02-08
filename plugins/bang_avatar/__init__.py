@@ -9,7 +9,7 @@ import nonebot_plugin_localstore as localstore  # noqa: E402
 
 from .. import monetary  # noqa: E402
 from .. import channels  # noqa: E402
-from utils import has_no_argument  # noqa: E402
+from utils import has_no_argument, PassiveGenerator  # noqa: E402
 from ..nickname.data_source import get as get_user_nickname  # noqa: E402
 
 from .config import Config  # noqa: E402
@@ -49,6 +49,7 @@ async def handle_bang_avatar(event: MessageEvent):
     user_id = event.get_user_id()
     channel_id = event.channel.id
     platform = event.login.platform
+    passive_generator = PassiveGenerator(event)
 
     all_users = [
         member
@@ -69,10 +70,14 @@ async def handle_bang_avatar(event: MessageEvent):
                 )
                 + f"娶到 {get_user_nickname(wife.id) or 'Ta'} 了哦~"
                 + f"你手里还有 {monetary.get(user_id)} 个碎片"
+                + passive_generator.element
             )
         else:
             await bang_avatar.finish(
                 f"余额不足，你手里只有 {monetary.get(user_id)} 个碎片哦，先赚些星之碎片吧~"
+                + passive_generator.element
             )
     else:
-        await bang_avatar.finish("群里暂时没有人能被你娶到哦~")
+        await bang_avatar.finish(
+            "群里暂时没有人能被你娶到哦~" + passive_generator.element
+        )

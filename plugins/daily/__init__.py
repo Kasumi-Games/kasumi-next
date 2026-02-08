@@ -1,5 +1,4 @@
 import random
-from nonebot.adapters import Event
 from nonebot.matcher import Matcher
 from nonebot.params import CommandArg
 from nonebot.permission import SUPERUSER
@@ -30,24 +29,31 @@ from ..monetary import (  # noqa: E402
 @on_command(
     "balance", aliases={"余额"}, priority=10, block=True, rule=has_no_argument
 ).handle()
-async def balance(matcher: Matcher, event: Event):
+async def balance(matcher: Matcher, event: MessageEvent):
     user_id = event.get_user_id()
     user = get_user_stats(user_id)
-    await matcher.send(f"你有 {user.level} 个星星 和 {user.balance} 个星之碎片")
+    passive_generator = PassiveGenerator(event)
+    await matcher.send(
+        f"你有 {user.level} 个星星 和 {user.balance} 个星之碎片"
+        + passive_generator.element
+    )
 
 
 @on_command(
     "daily", aliases={"签到"}, priority=10, block=True, rule=has_no_argument
 ).handle()
-async def handle_daily(matcher: Matcher, event: Event):
+async def handle_daily(matcher: Matcher, event: MessageEvent):
     user_id = event.get_user_id()
+    passive_generator = PassiveGenerator(event)
     if daily(user_id):
         # 使用正态分布，均值5.5，标准差2，确保在1-10范围内
         amount = max(1, min(10, round(random.gauss(5.5, 2))))
         add(user_id, amount, "daily")
-        await matcher.send(f"签到成功，获得 {amount} 个星之碎片")
+        await matcher.send(
+            f"签到成功，获得 {amount} 个星之碎片" + passive_generator.element
+        )
     else:
-        await matcher.send("今天已经签到过了")
+        await matcher.send("今天已经签到过了" + passive_generator.element)
 
 
 @on_command("transfer", aliases={"转账"}, priority=10, block=True).handle()
@@ -102,15 +108,16 @@ async def handle_transfer(
 
 
 @on_command("upgrade", aliases={"升级", "摘星"}, priority=10, block=True).handle()
-async def handle_upgrade(matcher: Matcher, event: Event, arg: Message = CommandArg()):
+async def handle_upgrade(matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()):
     user_id = event.get_user_id()
     user = get_user_stats(user_id)
+    passive_generator = PassiveGenerator(event)
 
     text = arg.extract_plain_text().strip()
     if text.isdigit():
         levels = int(text)
         if levels <= 0:
-            await matcher.finish("摘星数量必须大于 0")
+            await matcher.finish("摘星数量必须大于 0" + passive_generator.element)
     else:
         levels = 1
 
@@ -120,27 +127,34 @@ async def handle_upgrade(matcher: Matcher, event: Event, arg: Message = CommandA
 
     if user.balance < amount:
         if levels == 1:
-            await matcher.finish(f"余额不足，摘星需要 {amount} 个星之碎片")
+            await matcher.finish(
+                f"余额不足，摘星需要 {amount} 个星之碎片" + passive_generator.element
+            )
         else:
-            await matcher.finish(f"余额不足，摘 {levels} 颗星需要 {amount} 个星之碎片")
+            await matcher.finish(
+                f"余额不足，摘 {levels} 颗星需要 {amount} 个星之碎片"
+                + passive_generator.element
+            )
     else:
         add(user_id, -amount, f"upgrade_{user.level}_{levels}")
         increase_level(user_id, levels)
         await matcher.finish(
             f"摘星成功，消耗了 {amount} 个星之碎片。你现在有 {user.level + levels} 颗星星 和 {user.balance - amount} 个星之碎片哦~"
+            + passive_generator.element
         )
 
 
 @on_command("watch", aliases={"观星"}, priority=10, block=True).handle()
-async def handle_watch(matcher: Matcher, event: Event, arg: Message = CommandArg()):
+async def handle_watch(matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()):
     user_id = event.get_user_id()
     user = get_user_stats(user_id)
+    passive_generator = PassiveGenerator(event)
 
     text = arg.extract_plain_text().strip()
     if text.isdigit():
         levels = int(text)
         if levels <= 0:
-            await matcher.finish("观星数量必须大于 0")
+            await matcher.finish("观星数量必须大于 0" + passive_generator.element)
     else:
         levels = 1
 
@@ -149,9 +163,14 @@ async def handle_watch(matcher: Matcher, event: Event, arg: Message = CommandArg
         amount += get_amount_for_level(user.level + i + 1)
 
     if levels == 1:
-        await matcher.finish(f"观测到下一个星需要 {amount} 个星之碎片")
+        await matcher.finish(
+            f"观测到下一个星需要 {amount} 个星之碎片" + passive_generator.element
+        )
     else:
-        await matcher.finish(f"观测到之后的 {levels} 颗星需要 {amount} 个星之碎片")
+        await matcher.finish(
+            f"观测到之后的 {levels} 颗星需要 {amount} 个星之碎片"
+            + passive_generator.element
+        )
 
 
 shatter = on_command("shatter", aliases={"碎星"}, priority=10, block=True)
@@ -161,17 +180,21 @@ shatter = on_command("shatter", aliases={"碎星"}, priority=10, block=True)
 async def handle_shatter(event: MessageEvent, arg: Message = CommandArg()):
     user_id = event.get_user_id()
     user = get_user_stats(user_id)
+    passive_generator = PassiveGenerator(event)
 
     text = arg.extract_plain_text().strip()
     if text.isdigit():
         levels = int(text)
         if levels <= 0:
-            await shatter.finish("碎星数量必须大于 0")
+            await shatter.finish("碎星数量必须大于 0" + passive_generator.element)
     else:
         levels = 1
 
     if user.level < levels:
-        await shatter.finish(f"你只有 {user.level} 颗星星，无法碎 {levels} 颗星")
+        await shatter.finish(
+            f"你只有 {user.level} 颗星星，无法碎 {levels} 颗星"
+            + passive_generator.element
+        )
 
     # 计算碎星可以获得的碎片数量（减半）
     full_amount = 0
@@ -183,10 +206,12 @@ async def handle_shatter(event: MessageEvent, arg: Message = CommandArg()):
     if levels == 1:
         await shatter.send(
             f"碎星将会获得 {refund_amount} 个星之碎片（原价 {full_amount} 的一半），确定要碎星吗？回复「确认」继续"
+            + passive_generator.element
         )
     else:
         await shatter.send(
             f"碎 {levels} 颗星将会获得 {refund_amount} 个星之碎片（原价 {full_amount} 的一半），确定要碎星吗？回复「确认」继续"
+            + passive_generator.element
         )
 
     @waiter(waits=["message"], matcher=shatter, block=False, keep_session=True)
@@ -196,16 +221,17 @@ async def handle_shatter(event: MessageEvent, arg: Message = CommandArg()):
     resp = await check.wait(timeout=30)
 
     if resp is None:
-        await shatter.finish("操作超时，已取消碎星")
+        await shatter.finish("操作超时，已取消碎星" + passive_generator.element)
 
     if resp not in ["确认", "确定", "是", "yes", "y"]:
-        await shatter.finish("已取消碎星")
+        await shatter.finish("已取消碎星" + passive_generator.element)
 
     # 执行碎星
     decrease_level(user_id, levels)
     add(user_id, refund_amount, f"shatter_{user.level}_{levels}")
     await shatter.finish(
         f"碎星成功，获得 {refund_amount} 个星之碎片。你现在有 {user.level - levels} 颗星星 和 {user.balance + refund_amount} 个星之碎片"
+        + passive_generator.element
     )
 
 
@@ -215,10 +241,11 @@ async def handle_shatter(event: MessageEvent, arg: Message = CommandArg()):
     priority=10,
     block=True,
 ).handle()
-async def handle_balancerank(matcher: Matcher, event: Event):
+async def handle_balancerank(matcher: Matcher, event: MessageEvent):
     top_users = get_top_users(10)
     user_id = event.get_user_id()
     rank_info = get_user_rank(user_id)
+    passive_generator = PassiveGenerator(event)
 
     # 构建排名信息
     rank_message = f"\n你当前的排名是第 {rank_info.rank} 名"
@@ -253,6 +280,7 @@ async def handle_balancerank(matcher: Matcher, event: Event):
             ]
         )
         + rank_message
+        + passive_generator.element
     )
 
 
@@ -265,11 +293,11 @@ async def set_balance_handler(
     if event.get_user_id() not in get_driver().config.superusers:
         await matcher.finish()
 
+    passive_generator = PassiveGenerator(event)
+
     try:
         text = arg.extract_plain_text().strip()
         user_id, amount, description = text.split()
-
-        passive_generator = PassiveGenerator(event)
 
         set_balance(user_id, int(amount), description)
 
@@ -279,4 +307,5 @@ async def set_balance_handler(
     except Exception:
         await matcher.finish(
             "设置余额失败，请检查参数格式：设置余额 <用户ID> <金额> <描述>"
+            + passive_generator.element
         )
