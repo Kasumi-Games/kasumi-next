@@ -6,6 +6,11 @@ import nonebot_plugin_localstore as store
 from PIL import Image, ImageDraw, ImageFont
 from typing import Tuple, Optional, Callable, TYPE_CHECKING, Dict, Any
 
+from plugins.render_service import (
+    generate_simple_background,
+    draw_rounded_rectangle as shared_draw_rounded_rectangle,
+)
+
 if TYPE_CHECKING:
     from .models import Hand
 
@@ -415,126 +420,15 @@ class BlackjackRenderer:
         outline: Optional[Tuple[int, int, int, int]] = None,
         width: int = 1,
     ):
-        """
-        绘制圆角矩形
-
-        参数说明:
-            draw: ImageDraw 对象
-            bbox: 矩形边界框 (left, top, right, bottom)
-            corner_radius: 圆角半径，默认为10
-            fill: 填充颜色 (R, G, B, A)，None表示不填充
-            outline: 边框颜色 (R, G, B, A)，None表示无边框
-            width: 边框宽度，默认为1
-        """
-        left, top, right, bottom = bbox
-
-        # 确保圆角半径不超过矩形的一半
-        max_radius = min((right - left) // 2, (bottom - top) // 2)
-        corner_radius = min(corner_radius, max_radius)
-
-        # 如果圆角半径为0，直接绘制普通矩形
-        if corner_radius <= 0:
-            draw.rectangle(bbox, fill=fill, outline=outline, width=width)
-            return
-
-        # 创建临时图像来绘制圆角矩形
-        temp_img = Image.new("RGBA", (right - left, bottom - top), (0, 0, 0, 0))
-        temp_draw = ImageDraw.Draw(temp_img)
-
-        # 绘制圆角矩形的各个部分
-        w, h = right - left, bottom - top
-
-        # 绘制填充部分
-        if fill:
-            # 中心矩形（水平）
-            temp_draw.rectangle([corner_radius, 0, w - corner_radius, h], fill=fill)
-            # 中心矩形（垂直）
-            temp_draw.rectangle([0, corner_radius, w, h - corner_radius], fill=fill)
-
-            # 四个圆角
-            # 左上角
-            temp_draw.pieslice(
-                [0, 0, corner_radius * 2, corner_radius * 2], 180, 270, fill=fill
-            )
-            # 右上角
-            temp_draw.pieslice(
-                [w - corner_radius * 2, 0, w, corner_radius * 2], 270, 360, fill=fill
-            )
-            # 左下角
-            temp_draw.pieslice(
-                [0, h - corner_radius * 2, corner_radius * 2, h], 90, 180, fill=fill
-            )
-            # 右下角
-            temp_draw.pieslice(
-                [w - corner_radius * 2, h - corner_radius * 2, w, h], 0, 90, fill=fill
-            )
-
-        # 绘制边框
-        if outline and width > 0:
-            # 如果有边框，需要多次绘制来实现指定宽度
-            for i in range(width):
-                # 上边框
-                temp_draw.line([corner_radius, i, w - corner_radius, i], fill=outline)
-                # 下边框
-                temp_draw.line(
-                    [corner_radius, h - i - 1, w - corner_radius, h - i - 1],
-                    fill=outline,
-                )
-                # 左边框
-                temp_draw.line([i, corner_radius, i, h - corner_radius], fill=outline)
-                # 右边框
-                temp_draw.line(
-                    [w - i - 1, corner_radius, w - i - 1, h - corner_radius],
-                    fill=outline,
-                )
-
-                # 四个圆角边框
-                # 左上角
-                temp_draw.arc(
-                    [i, i, corner_radius * 2 - i, corner_radius * 2 - i],
-                    180,
-                    270,
-                    fill=outline,
-                )
-                # 右上角
-                temp_draw.arc(
-                    [w - corner_radius * 2 + i, i, w - i, corner_radius * 2 - i],
-                    270,
-                    360,
-                    fill=outline,
-                )
-                # 左下角
-                temp_draw.arc(
-                    [i, h - corner_radius * 2 + i, corner_radius * 2 - i, h - i],
-                    90,
-                    180,
-                    fill=outline,
-                )
-                # 右下角
-                temp_draw.arc(
-                    [
-                        w - corner_radius * 2 + i,
-                        h - corner_radius * 2 + i,
-                        w - i,
-                        h - i,
-                    ],
-                    0,
-                    90,
-                    fill=outline,
-                )
-
-        # 将临时图像粘贴到原图像上
-        if hasattr(draw, "_image"):
-            draw._image.paste(temp_img, (left, top), temp_img.split()[3])
-
-    def _generate_background(self, width: int, height: int) -> Image.Image:
-        """生成背景图片"""
-        background = Image.new("RGBA", (width, height), (255, 255, 255, 255))
-        pattern = Image.open(self.resource_dir / "bg_object_big.png").convert("RGBA")
-        for x in range(0, width, pattern.width):
-            for y in range(0, height, pattern.height):
-                background.paste(pattern, (x, y), pattern.split()[3])
-        return background
+        shared_draw_rounded_rectangle(
+            draw,
+            bbox,
+            corner_radius=corner_radius,
+            fill=fill,
+            outline=outline,
+            width=width,
+            scale=4,
+        )
 
     def generate_hand(self, hand: "Hand", second_card_back: bool) -> Image.Image:
         """生成手牌的图片"""
@@ -554,7 +448,7 @@ class BlackjackRenderer:
             + self.TableLayout.MARGIN  # 底部边距
         )
 
-        background = self._generate_background(total_width, total_height)
+        background = generate_simple_background(total_width, total_height)
         draw = ImageDraw.Draw(background)
 
         # 当前Y位置追踪器
@@ -836,7 +730,7 @@ class BlackjackRenderer:
         """生成包含庄家和玩家手牌的游戏桌面"""
         # 计算布局尺寸
         table_width, table_height = self._calculate_table_size(dealer_hand, player_hand)
-        background = self._generate_background(table_width, table_height)
+        background = generate_simple_background(table_width, table_height)
         draw = ImageDraw.Draw(background)
 
         # 当前Y位置追踪器

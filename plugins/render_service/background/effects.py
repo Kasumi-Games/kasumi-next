@@ -3,15 +3,13 @@ import math
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-from .utils import alpha_composite_paste
+from ..primitives import alpha_composite_paste
 
 
 def spread(
     image: Image.Image, width: int, height: int, brightness_add: int
 ) -> Image.Image:
-    """
-    Tiles the image across the canvas and increases brightness.
-    """
+    """Tile image across canvas and adjust brightness."""
     if brightness_add != 0:
         if image.mode == "RGBA":
             r, g, b, a = image.split()
@@ -26,18 +24,13 @@ def spread(
     canvas_ratio = width / height
 
     if img_ratio > canvas_ratio:
-        scaled_height = height
         scaled_width = width
         scaled_height = int(image.height * (width / image.width))
-
     else:
         scaled_height = height
         scaled_width = int(image.width * (height / image.height))
 
-    scaled_image = image.resize(
-        (int(scaled_width), int(scaled_height)), Image.Resampling.BICUBIC
-    )
-
+    scaled_image = image.resize((int(scaled_width), int(scaled_height)), Image.Resampling.BICUBIC)
     canvas = Image.new("RGBA", (width, height))
 
     for y in range(0, height, int(scaled_height)):
@@ -53,9 +46,7 @@ def create_blurred_triangle_pattern(
     triangle_size: float,
     brightness_difference: float,
 ) -> Image.Image:
-    """
-    Applies a blurred triangle pattern overlay.
-    """
+    """Apply a blurred triangle pattern overlay."""
     blurred_image = image.filter(ImageFilter.GaussianBlur(blur_radius))
 
     mask = Image.new("L", (image.width, image.height), 0)

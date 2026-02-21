@@ -1,257 +1,20 @@
 from pathlib import Path
-from typing import Tuple, Optional, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 from ..models import BlockType
-from .background import create_bg
+from plugins.render_service import (
+    create_bg,
+    draw_pill,
+    load_font,
+    draw_rounded_rectangle,
+)
 from .utils import get_random_kasumi, get_random_arisa
+from plugins.render_service.primitives import RESOURCES_DIR
 
 if TYPE_CHECKING:
     from ..models import Field
-
-FONT_PATH = Path(__file__).resolve().parents[1] / "resources" / "Fonts" / "old.ttf"
-
-
-def draw_rounded_rectangle(
-    image: Image.Image,
-    bbox: Tuple[int, int, int, int],
-    corner_radius: int = 10,
-    fill: Optional[Tuple[int, int, int, int]] = None,
-    outline: Optional[Tuple[int, int, int, int]] = None,
-    width: int = 1,
-    scale: int = 4,
-) -> Image.Image:
-    """
-    Draw a rounded rectangle on a existing image with anti-aliased edges
-
-    Args:
-        image: the Image object
-        bbox: the border box (left, top, right, bottom)
-        corner_radius: the corner radius, default is 10
-        fill: the fill color (R, G, B, A), None means no fill
-        outline: the outline color (R, G, B, A), None means no outline
-        width: the outline width, default is 1
-        scale: supersampling scale factor for anti-aliasing, default is 4
-
-    Returns:
-        The image with the rounded rectangle drawn on it.
-    """
-    left, top, right, bottom = bbox
-    w, h = right - left, bottom - top
-
-    # ensure the corner radius is not greater than half of the rectangle
-    max_radius = min(w // 2, h // 2)
-    corner_radius = min(corner_radius, max_radius)
-
-    # if the corner radius is 0, draw a normal rectangle
-    if corner_radius <= 0:
-        draw = ImageDraw.Draw(image)
-        draw.rectangle(bbox, fill=fill, outline=outline, width=width)
-        return image
-
-    # Scale up dimensions for supersampling
-    scaled_w, scaled_h = w * scale, h * scale
-    scaled_radius = corner_radius * scale
-    scaled_width = width * scale
-
-    # create a temporary image at higher resolution
-    # Initialize background with fill color (but 0 alpha) to avoid dark edges during resizing
-    bg_color = (0, 0, 0, 0)
-    if fill:
-        bg_color = (fill[0], fill[1], fill[2], 0)
-    temp_img = Image.new("RGBA", (scaled_w, scaled_h), bg_color)
-    temp_draw = ImageDraw.Draw(temp_img)
-
-    # draw the fill part
-    if fill:
-        # draw the center rectangle (horizontal)
-        temp_draw.rectangle(
-            [scaled_radius, 0, scaled_w - scaled_radius, scaled_h], fill=fill
-        )
-        # draw the center rectangle (vertical)
-        temp_draw.rectangle(
-            [0, scaled_radius, scaled_w, scaled_h - scaled_radius], fill=fill
-        )
-
-        # draw the four corners
-        # draw the top left corner
-        temp_draw.pieslice(
-            [0, 0, scaled_radius * 2, scaled_radius * 2], 180, 270, fill=fill
-        )
-        # draw the top right corner
-        temp_draw.pieslice(
-            [scaled_w - scaled_radius * 2, 0, scaled_w, scaled_radius * 2],
-            270,
-            360,
-            fill=fill,
-        )
-        # draw the bottom left corner
-        temp_draw.pieslice(
-            [0, scaled_h - scaled_radius * 2, scaled_radius * 2, scaled_h],
-            90,
-            180,
-            fill=fill,
-        )
-        # draw the bottom right corner
-        temp_draw.pieslice(
-            [
-                scaled_w - scaled_radius * 2,
-                scaled_h - scaled_radius * 2,
-                scaled_w,
-                scaled_h,
-            ],
-            0,
-            90,
-            fill=fill,
-        )
-
-    # draw the outline
-    if outline and width > 0:
-        # if there is an outline, we need to draw it multiple times to achieve the specified width
-        for i in range(scaled_width):
-            # draw the top outline
-            temp_draw.line(
-                [scaled_radius, i, scaled_w - scaled_radius, i], fill=outline
-            )
-            # draw the bottom outline
-            temp_draw.line(
-                [
-                    scaled_radius,
-                    scaled_h - i - 1,
-                    scaled_w - scaled_radius,
-                    scaled_h - i - 1,
-                ],
-                fill=outline,
-            )
-            # draw the left outline
-            temp_draw.line(
-                [i, scaled_radius, i, scaled_h - scaled_radius], fill=outline
-            )
-            # draw the right outline
-            temp_draw.line(
-                [
-                    scaled_w - i - 1,
-                    scaled_radius,
-                    scaled_w - i - 1,
-                    scaled_h - scaled_radius,
-                ],
-                fill=outline,
-            )
-
-            # draw the four corners of the outline
-            # draw the top left corner
-            temp_draw.arc(
-                [i, i, scaled_radius * 2 - i, scaled_radius * 2 - i],
-                180,
-                270,
-                fill=outline,
-            )
-            # draw the top right corner
-            temp_draw.arc(
-                [
-                    scaled_w - scaled_radius * 2 + i,
-                    i,
-                    scaled_w - i,
-                    scaled_radius * 2 - i,
-                ],
-                270,
-                360,
-                fill=outline,
-            )
-            # draw the bottom left corner
-            temp_draw.arc(
-                [
-                    i,
-                    scaled_h - scaled_radius * 2 + i,
-                    scaled_radius * 2 - i,
-                    scaled_h - i,
-                ],
-                90,
-                180,
-                fill=outline,
-            )
-            # draw the bottom right corner
-            temp_draw.arc(
-                [
-                    scaled_w - scaled_radius * 2 + i,
-                    scaled_h - scaled_radius * 2 + i,
-                    scaled_w - i,
-                    scaled_h - i,
-                ],
-                0,
-                90,
-                fill=outline,
-            )
-
-    # Downsample to target size for anti-aliased edges
-    temp_img = temp_img.resize((w, h), Image.Resampling.LANCZOS)
-
-    # Alpha composite the temporary image to the original image
-    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    layer.paste(temp_img, (left, top))
-    return Image.alpha_composite(image, layer)
-
-
-def draw_pill(
-    image: Image.Image,
-    bbox: Tuple[int, int, int, int],
-    fill: Tuple[int, int, int, int],
-    scale: int = 4,
-) -> Image.Image:
-    """
-    Draw a pill shape (stadium/discorectangle) with anti-aliased edges.
-
-    The pill consists of: left semicircle + rectangle + right semicircle.
-    The radius of the semicircles is half the height of the bounding box.
-
-    Args:
-        image: the Image object
-        bbox: the border box (left, top, right, bottom)
-        fill: the fill color (R, G, B, A)
-        scale: supersampling scale factor for anti-aliasing, default is 4
-
-    Returns:
-        The image with the pill drawn on it.
-    """
-    left, top, right, bottom = bbox
-    w, h = right - left, bottom - top
-
-    # The radius is half the height
-    radius = h // 2
-
-    # Scale up dimensions for supersampling
-    scaled_w, scaled_h = w * scale, h * scale
-    scaled_radius = radius * scale
-
-    # Create a temporary image at higher resolution
-    # Initialize background with fill color (but 0 alpha) to avoid dark edges during resizing
-    bg_color = (0, 0, 0, 0)
-    # fill is guaranteed to be a tuple here as per signature
-    bg_color = (fill[0], fill[1], fill[2], 0)
-    temp_img = Image.new("RGBA", (scaled_w, scaled_h), bg_color)
-    temp_draw = ImageDraw.Draw(temp_img)
-
-    # Draw the center rectangle
-    temp_draw.rectangle(
-        [scaled_radius, 0, scaled_w - scaled_radius, scaled_h], fill=fill
-    )
-
-    # Draw the left semicircle
-    temp_draw.pieslice([0, 0, scaled_radius * 2, scaled_h], 90, 270, fill=fill)
-
-    # Draw the right semicircle
-    temp_draw.pieslice(
-        [scaled_w - scaled_radius * 2, 0, scaled_w, scaled_h], 270, 90, fill=fill
-    )
-
-    # Downsample to target size for anti-aliased edges
-    temp_img = temp_img.resize((w, h), Image.Resampling.LANCZOS)
-
-    # Alpha composite the temporary image to the original image
-    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    layer.paste(temp_img, (left, top))
-    return Image.alpha_composite(image, layer)
 
 
 def generate_unrevealed_field(index: int) -> Image.Image:
@@ -289,16 +52,14 @@ def generate_unrevealed_field(index: int) -> Image.Image:
 
     # Draw the index
     index_draw = ImageDraw.Draw(output)
-    bbox = index_draw.textbbox(
-        (0, 0), str(index), font=ImageFont.truetype(str(FONT_PATH.absolute()), 80)
-    )
+    bbox = index_draw.textbbox((0, 0), str(index), font=load_font(80, "old.ttf"))
     index_draw.text(
         (
             width // 2 - (bbox[2] + bbox[0]) // 2,
             height // 2 - (bbox[3] + bbox[1]) // 2,
         ),
         str(index),
-        font=ImageFont.truetype(str(FONT_PATH.absolute()), 80),
+        font=load_font(80, "old.ttf"),
         fill=(255, 255, 255, 255),
     )
 
@@ -381,8 +142,8 @@ def generate_title(
         canvas
     )  # Create draw object after pills are drawn because they return new images
 
-    font1 = ImageFont.truetype(str(FONT_PATH.absolute()), text1_size)
-    font2 = ImageFont.truetype(str(FONT_PATH.absolute()), text2_size)
+    font1 = load_font(text1_size, "old.ttf")
+    font2 = load_font(text2_size, "old.ttf")
 
     text1_bbox = draw.textbbox((0, 0), text1, font=font1)
     text2_bbox = draw.textbbox((0, 0), text2, font=font2)
@@ -414,7 +175,7 @@ def generate_title(
 
 def render(field: "Field") -> Image.Image:
     canvas = create_bg(
-        Path(__file__).resolve().parents[1] / "resources" / "bg.png",
+        RESOURCES_DIR / "BG" / "bg00039.png",
         width=896,
         height=1024,
     )

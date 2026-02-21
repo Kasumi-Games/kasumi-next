@@ -1,9 +1,13 @@
 import math
 import random
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .utils import FONTS_DIR, alpha_composite_paste
+from ..primitives import alpha_composite_paste
+
+RESOURCES_DIR = Path(__file__).resolve().parents[1] / "resources"
+FONTS_DIR = RESOURCES_DIR / "Fonts"
 
 
 def scatter_images(
@@ -13,9 +17,7 @@ def scatter_images(
     angle_range: float,
     size_range: tuple[float, float],
 ) -> Image.Image:
-    """
-    Scatters images randomly on the canvas.
-    """
+    """Scatter decorative images across a canvas."""
     star_img = Image.open(image_path).convert("RGBA")
 
     width, height = canvas.size
@@ -32,7 +34,6 @@ def scatter_images(
 
         paste_x = int(x - s_img.width / 2)
         paste_y = int(y - s_img.height / 2)
-
         alpha_composite_paste(canvas, s_img, (paste_x, paste_y))
 
     return canvas
@@ -50,13 +51,10 @@ def draw_text_on_canvas(
     opacity: float,
     scale_x: float,
 ) -> Image.Image:
-    """
-    Draws specific text pattern.
-    """
+    """Draw repeated skewed text pattern on a canvas."""
     try:
         font = ImageFont.truetype(str(FONTS_DIR / "Orbitron Black.ttf"), font_size)
     except OSError:
-        print("Font not found, using default.")
         font = ImageFont.load_default()
 
     dummy_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
@@ -66,14 +64,10 @@ def draw_text_on_canvas(
 
     txt_img = Image.new(
         "RGBA",
-        (
-            int(text_width_raw + stroke_width * 2 + 50),
-            int(text_height_raw + stroke_width * 2 + 50),
-        ),
+        (int(text_width_raw + stroke_width * 2 + 50), int(text_height_raw + stroke_width * 2 + 50)),
         (0, 0, 0, 0),
     )
     d = ImageDraw.Draw(txt_img)
-
     d.text(
         (stroke_width + 10, stroke_width + 10),
         text,
@@ -95,7 +89,6 @@ def draw_text_on_canvas(
     tan_skew = math.tan(skew_rad)
     skew_offset = abs(h * tan_skew)
     skewed_w = int(new_w + skew_offset)
-
     x_shift = skew_offset if tan_skew < 0 else 0
 
     skewed_img = txt_img.transform(
@@ -106,12 +99,10 @@ def draw_text_on_canvas(
     )
 
     txt_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-
     rotated_img = skewed_img.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
 
     space_x = rotated_img.width + letter_spacing
     space_y = rotated_img.height + line_spacing
-
     cols = int(canvas.width / space_x) + 4
     rows = int(canvas.height / space_y) + 4
 
@@ -120,11 +111,10 @@ def draw_text_on_canvas(
         row_offset = (space_x / 2) if (r % 2 != 0) else 0
         for c in range(-2, cols):
             x = c * space_x + row_offset
-
             txt_layer.paste(rotated_img, (int(x), int(y)), rotated_img)
 
     if opacity < 1.0:
-        r, g, b, a = txt_layer.split()
+        _, _, _, a = txt_layer.split()
         a = a.point(lambda i: int(i * opacity))
         txt_layer.putalpha(a)
 
