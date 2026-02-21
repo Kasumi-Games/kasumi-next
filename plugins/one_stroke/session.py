@@ -54,6 +54,9 @@ class GameSession:
     def elapsed_seconds(self) -> float:
         return max(0.0, time.monotonic() - self.started_at)
 
+    def restart_timer(self) -> None:
+        self.started_at = time.monotonic()
+
     def reset(self) -> None:
         self.current_pos = self.graph.start_node
         self.drawn_edges.clear()

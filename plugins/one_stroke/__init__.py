@@ -17,14 +17,14 @@ from utils.passive_generator import generators as gens  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
 from .. import monetary  # noqa: E402
-from ..nickname import get as get_nickname  # noqa: E402
-from .database import get_leaderboard, get_session as get_db_session  # noqa: E402
-from .render import render, render_leaderboard  # noqa: E402
 from .messages import Messages  # noqa: E402
-from .models import MoveResult, OneStrokeGame  # noqa: E402
 from .session import GameManager  # noqa: E402
+from ..nickname import get as get_nickname  # noqa: E402
+from .models import MoveResult, OneStrokeGame  # noqa: E402
+from .render import render, render_leaderboard  # noqa: E402
 from .difficulty import apply_time_decay, calculate_reward  # noqa: E402
 from .graph_generator import generate_graph, parse_difficulty  # noqa: E402
+from .database import get_leaderboard, get_session as get_db_session  # noqa: E402
 
 
 game_manager = GameManager()
@@ -128,6 +128,7 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
             )
             + gens[latest_message_id].element
         )
+        session.restart_timer()
 
         while True:
             resp = await check.wait(timeout=300)
