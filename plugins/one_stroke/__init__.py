@@ -19,6 +19,7 @@ from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from .. import monetary  # noqa: E402
 from .messages import Messages  # noqa: E402
 from .session import GameManager  # noqa: E402
+from utils import get_today_birthday  # noqa: E402
 from ..nickname import get as get_nickname  # noqa: E402
 from .models import MoveResult, OneStrokeGame  # noqa: E402
 from .render import render, render_leaderboard  # noqa: E402
@@ -178,11 +179,17 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
 
             if session.is_complete:
                 elapsed_seconds = session.elapsed_seconds()
-                final_reward = apply_time_decay(
+                base_final_reward = apply_time_decay(
                     base_reward=session.reward,
                     elapsed_seconds=elapsed_seconds,
                     graph=session.graph,
                 )
+                final_reward = base_final_reward
+                birthday_characters = get_today_birthday()
+                win_message = ""
+                if birthday_characters:
+                    birthday_characters_str = "和".join(birthday_characters)
+                    final_reward *= 2
                 db = get_db_session()
                 db.add(
                     OneStrokeGame(
@@ -197,16 +204,24 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 db.commit()
                 monetary.add(event.get_user_id(), final_reward, "one_stroke")
                 balance = monetary.get(event.get_user_id())
+                if birthday_characters:
+                    win_message = Messages.BIRTHDAY_WIN.format(
+                        elapsed_seconds=round(elapsed_seconds, 2),
+                        birthday_characters=birthday_characters_str,
+                        reward=base_final_reward,
+                        bonus_reward=final_reward,
+                        balance=balance,
+                    )
+                else:
+                    win_message = Messages.WIN.format(
+                        elapsed_seconds=round(elapsed_seconds, 2),
+                        reward=final_reward,
+                        balance=balance,
+                    )
                 game_manager.end_game(event.get_user_id())
                 await game_start.finish(
                     _render_image(session)
-                    + MessageSegment.text(
-                        Messages.WIN.format(
-                            elapsed_seconds=round(elapsed_seconds, 2),
-                            reward=final_reward,
-                            balance=balance,
-                        )
-                    )
+                    + MessageSegment.text(win_message)
                     + gens[latest_message_id].element
                 )
 

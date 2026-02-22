@@ -24,5 +24,10 @@ class Messages:
     MOVE_FAIL_OOB = "第 {step} 步无效：超出边界。"
 
     WIN = "挑战成功，耗时 {elapsed_seconds} 秒！获得 {reward} 个星之碎片，现在有 {balance} 个碎片。"
+    BIRTHDAY_WIN = (
+        "挑战成功，耗时 {elapsed_seconds} 秒！"
+        "今天是{birthday_characters}的生日，奖励翻倍！"
+        "获得 {reward} * 2 = {bonus_reward} 个星之碎片，现在有 {balance} 个碎片。"
+    )
     PROGRESS = "已绘制 {drawn}/{total} 条线段，继续！"
     ERROR = "发生意外错误，本局已结束，请稍后重试。"
