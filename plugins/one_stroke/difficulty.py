@@ -7,17 +7,17 @@ from collections import defaultdict
 from .models import Edge, Graph, Node
 
 DECAY_DELAY_BY_SCALE = {
-    3: 2.5,
-    4: 6.0,
-    5: 10.0,
+    3: 3,
+    4: 6.5,
+    5: 10.5,
 }
 DECAY_TAU_BY_SCALE = {
     3: 7.21,
     4: 14.42,
     5: 28.84,
 }
-DEFAULT_DECAY_DELAY_SECONDS = 6.0
-DEFAULT_DECAY_TAU_SECONDS = 4.0
+DEFAULT_DECAY_DELAY_SECONDS = 6.5
+DEFAULT_DECAY_TAU_SECONDS = 14.42
 
 
 def _build_adj(graph: Graph) -> Dict[Node, Set[Node]]:
