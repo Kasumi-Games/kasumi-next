@@ -100,7 +100,7 @@ async def handle_get_nickname(event: MessageEvent):
         await get_nickname.finish("你还没有设置昵称哦！" + passive_generator.element)
 
     await get_nickname.finish(
-        f"你的昵称是{nickname.nickname}~" + passive_generator.element
+        f"你的昵称是{nickname.nickname}" + passive_generator.element
     )
 
 
