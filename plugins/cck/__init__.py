@@ -91,6 +91,7 @@ start_cck = on_command(
 @start_cck.handle()
 async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
     arg_text = arg.extract_plain_text().strip()
+    gens[event.message.id] = PG(event)
 
     if arg_text == "-h":
         await start_cck.finish(
