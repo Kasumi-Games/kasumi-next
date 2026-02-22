@@ -10,7 +10,7 @@ from .models import Edge, Graph, MoveResult, Node
 from plugins.render_service.primitives import RESOURCES_DIR
 
 BG_PATH = RESOURCES_DIR / "BG"
-BGS = list(BG_PATH.glob("*.png"))
+BGS = list(BG_PATH.glob("bg[0-9][0-9][0-9][0-9][0-9].png"))
 DIRECTION_DELTAS = {
     "W": (-1, 0),
     "A": (0, -1),
