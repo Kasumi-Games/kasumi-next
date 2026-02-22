@@ -95,13 +95,20 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
     if arg_text == "-h":
         await start_cck.finish(
-            "猜卡面玩法：\n"
-            "/猜卡面：随机难度开始\n"
-            "/猜卡面 <难度>：指定难度开始\n"
-            "/猜卡面 -f：强制结束当前游戏\n"
-            f"可用难度：{available_difficulties}\n"
-            "游戏开始后，请发送你猜到的角色名称或昵称，每个人最多可猜三次\n"
-            "如果猜不出来，可以发送 bzd 查看答案" + gens[event.message.id].element
+            (
+                "猜卡面玩法：\n"
+                "/猜卡面：随机难度开始\n"
+                "/猜卡面 <难度>：指定难度开始\n"
+                "/猜卡面 -f：强制结束当前游戏\n"
+                f"可用难度：{available_difficulties}\n"
+                "游戏开始后，请发送你猜到的角色名称或昵称，每个人最多可猜三次\n"
+                "如果猜不出来，可以发送 bzd 查看答案"
+            )
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+            + gens[event.message.id].element
         )
 
     if arg_text == "-f" and event.channel.id in gamers_store.get():
