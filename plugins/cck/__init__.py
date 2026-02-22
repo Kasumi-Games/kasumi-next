@@ -54,6 +54,14 @@ gamers_store = GamersStore()
 image_cut_settings: List[Dict[str, Any]] = json.loads(
     (Path(__file__).parent / "image_cut_settings.json").read_text("utf-8")
 )
+difficulty_settings: Dict[str, List[Dict[str, Any]]] = {}
+for setting in image_cut_settings:
+    difficulty_name = setting["cut_name"].strip("[]")
+    if difficulty_name not in difficulty_settings:
+        difficulty_settings[difficulty_name] = []
+    difficulty_settings[difficulty_name].append(setting)
+available_difficulties = "、".join(difficulty_settings.keys())
+
 character_data: Dict[str, List[str]] = json.loads(
     (Path(__file__).parent / "character_data.json").read_text("utf-8")
 )
@@ -72,8 +80,8 @@ if plugin_config.enable_cck:
 
 
 start_cck = on_command(
-    "cck",
-    aliases={"猜猜看", "猜卡面"},
+    "猜卡面",
+    aliases={"猜猜看", "cck"},
     priority=10,
     block=True,
     rule=lambda: plugin_config.enable_cck,
@@ -82,28 +90,46 @@ start_cck = on_command(
 
 @start_cck.handle()
 async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
-    if (
-        arg.extract_plain_text().strip() == "-f"
-        and event.channel.id in gamers_store.get()
-    ):
-        gamers_store.remove(event.channel.id)
-        await start_cck.finish("已强制结束猜猜看")
+    arg_text = arg.extract_plain_text().strip()
 
-    if arg.extract_plain_text().strip() == "-f":
+    if arg_text == "-h":
         await start_cck.finish(
-            "没有正在进行的猜猜看，你可以直接使用 @Kasumi /猜卡面 来开始"
+            "猜卡面玩法：\n"
+            "/猜卡面：随机难度开始\n"
+            "/猜卡面 <难度>：指定难度开始\n"
+            "/猜卡面 -f：强制结束当前游戏\n"
+            f"可用难度：{available_difficulties}\n"
+            "游戏开始后，请发送你猜到的角色名称或昵称，每个人最多可猜三次\n"
+            "如果猜不出来，可以发送 bzd 查看答案"
         )
 
-    if arg.extract_plain_text().strip() != "":
-        return None
+    if arg_text == "-f" and event.channel.id in gamers_store.get():
+        gamers_store.remove(event.channel.id)
+        await start_cck.finish("已强制结束猜卡面")
+
+    if arg_text == "-f":
+        await start_cck.finish(
+            "没有正在进行的猜卡面，你可以直接使用 @Kasumi /猜卡面 来开始"
+        )
+
+    image_cut_setting: Dict[str, Any]
+    if arg_text == "":
+        image_cut_setting = random.choice(image_cut_settings)
+    elif arg_text in difficulty_settings:
+        image_cut_setting = random.choice(difficulty_settings[arg_text])
+    else:
+        await start_cck.finish(
+            f"未知难度：{arg_text}\n"
+            f"可用难度：{available_difficulties}\n"
+            "可使用 /猜卡面 -h 查看帮助"
+        )
 
     if event.channel.id in gamers_store.get():
-        await start_cck.finish("你已经在猜猜看咯")
+        await start_cck.finish("你已经在猜卡面咯")
 
     gamers_store.add(event.channel.id)
 
     character_id, card_id, image_path = await card_manager.random_card_image()
-    image_cut_setting = random.choice(image_cut_settings)
 
     character_name = character_data[character_id][0]
 
@@ -126,7 +152,7 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
     await start_cck.send(
         image
-        + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜猜看"
+        + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜卡面"
         + gens[event.message.id].element
     )
 
