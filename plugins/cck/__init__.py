@@ -100,16 +100,17 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             "/猜卡面 -f：强制结束当前游戏\n"
             f"可用难度：{available_difficulties}\n"
             "游戏开始后，请发送你猜到的角色名称或昵称，每个人最多可猜三次\n"
-            "如果猜不出来，可以发送 bzd 查看答案"
+            "如果猜不出来，可以发送 bzd 查看答案" + gens[event.message.id].element
         )
 
     if arg_text == "-f" and event.channel.id in gamers_store.get():
         gamers_store.remove(event.channel.id)
-        await start_cck.finish("已强制结束猜卡面")
+        await start_cck.finish("已强制结束猜卡面" + gens[event.message.id].element)
 
     if arg_text == "-f":
         await start_cck.finish(
             "没有正在进行的猜卡面，你可以直接使用 @Kasumi /猜卡面 来开始"
+            + gens[event.message.id].element
         )
 
     image_cut_setting: Dict[str, Any]
@@ -121,11 +122,11 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         await start_cck.finish(
             f"未知难度：{arg_text}\n"
             f"可用难度：{available_difficulties}\n"
-            "可使用 /猜卡面 -h 查看帮助"
+            "可使用 /猜卡面 -h 查看帮助" + gens[event.message.id].element
         )
 
     if event.channel.id in gamers_store.get():
-        await start_cck.finish("你已经在猜卡面咯")
+        await start_cck.finish("你已经在猜卡面咯" + gens[event.message.id].element)
 
     gamers_store.add(event.channel.id)
 
