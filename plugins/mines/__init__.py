@@ -119,7 +119,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     gens[event.message.id] = PG(event)
     latest_message_id = event.message.id
 
-    @waiter(waits=["message"], matcher=game_start, block=False, keep_session=True)
+    @waiter(waits=["message"], matcher=game_start, block=True, keep_session=True)
     async def check(event_: MessageEvent) -> MessageEvent:
         return event_
 
@@ -127,6 +127,15 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
 
     if arg_text in ["h", "--help", "help", "-h"]:
         await game_start.finish(Messages.HELP + gens[latest_message_id].element)
+
+    if arg_text in ["f", "-f"]:
+        session = game_manager.get_session(event.get_user_id())
+        if session is None:
+            await game_start.finish(
+                "没有正在进行的扫雷游戏" + gens[latest_message_id].element
+            )
+        game_manager.refund_game(event.get_user_id())
+        await game_start.finish("已强制退出扫雷游戏" + gens[latest_message_id].element)
 
     parts = [part for part in arg_text.split() if part]
     bet_amount, mines = _parse_args(arg_text)
@@ -188,6 +197,12 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             msg = str(resp.get_message()).strip()
             latest_message_id = resp.message.id
             gens[latest_message_id] = PG(resp)
+
+            if msg in ["f", "-f"]:
+                game_manager.refund_game(event.get_user_id())
+                await game_start.finish(
+                    "已强制退出扫雷游戏" + gens[latest_message_id].element
+                )
 
             if msg in {"收手", "结算", "stop", "s"}:
                 payout = session.get_payout()
