@@ -118,7 +118,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     gens[event.message.id] = PG(event)
     latest_message_id = event.message.id
 
-    @waiter(waits=["message"], matcher=game_start, block=False, keep_session=True)
+    @waiter(waits=["message"], matcher=game_start, block=True, keep_session=True)
     async def check(event_: MessageEvent) -> MessageEvent:
         return event_
 
