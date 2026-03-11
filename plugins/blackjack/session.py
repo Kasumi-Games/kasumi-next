@@ -49,18 +49,11 @@ class GameManager:
         self.renderer = renderer
 
     def _init_shoe(self) -> Shoe:
-        shoe = Shoe(6)
-        shoe.shuffle()
+        shoe = Shoe()
         return shoe
 
     def get_shoe(self, channel_id: str) -> Shoe:
         return self._shoes[channel_id]
-
-    def reshuffle_if_needed(self, channel_id: str) -> bool:
-        if len(self._shoes[channel_id].deck) < self.reshuffle_threshold:
-            self._shoes[channel_id] = self._init_shoe()
-            return True
-        return False
 
     def create_session(
         self,

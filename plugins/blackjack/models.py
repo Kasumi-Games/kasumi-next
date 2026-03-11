@@ -41,22 +41,11 @@ class Shoe:
     代表一个牌靴 (Shoe)，可以包含多副牌
     """
 
-    def __init__(self, num_decks: int = 6):
+    def __init__(self):
         """
         初始化牌靴
-
-        Args:
-            num_decks: 牌靴中包含的扑克牌副数
         """
-        self.deck = []
-        for _ in range(num_decks):
-            for suit in suits:
-                for rank in number_ranks:
-                    self.deck.append(Card(suit, rank))
-
-    def shuffle(self):
-        """洗牌"""
-        random.shuffle(self.deck)
+        pass
 
     def deal(self):
         """从牌靴中发一张牌。须确保牌靴不为空。
@@ -67,8 +56,9 @@ class Shoe:
         Returns:
             Card: 发出的牌
         """
-        assert self.deck, "牌靴为空"
-        return self.deck.pop()
+        suit = random.choice(suits)
+        rank = random.choices(number_ranks, [1 / 13] * 13)[0]
+        return Card(suit, rank)
 
 
 class Hand:

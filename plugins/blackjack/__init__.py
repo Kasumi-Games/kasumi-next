@@ -142,9 +142,6 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 + gens[latest_message_id].element
             )
 
-        if game_manager.reshuffle_if_needed(event.channel.id):
-            await game_start.send(Messages.RESHUFFLE + gens[latest_message_id].element)
-
         player_hand = Hand()
         dealer_hand = Hand()
 
