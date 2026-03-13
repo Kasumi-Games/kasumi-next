@@ -63,7 +63,7 @@ class AsyncDownloader:
                                 f"Downloader: Successfully downloaded {url} ({os.path.getsize(file_path)})"
                             )
             except Exception as e:
-                logger.error(f"Downloader: {str(e)}")
+                logger.error("Downloader: {}", e)
 
     async def download_cards(
         self, resource_ids: List[str], server_mapping: Dict[str, str]

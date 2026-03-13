@@ -244,6 +244,6 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error(f"一笔画插件发生错误: {e}", exc_info=True)
+        logger.error("一笔画插件发生错误: {}", e, exc_info=True)
         game_manager.end_game(event.get_user_id())
         await game_start.finish(Messages.ERROR + gens[latest_message_id].element)

@@ -248,7 +248,7 @@ async def handle_stats(event: MessageEvent):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error(f"获取blackjack统计信息时出错: {e}", exc_info=True)
+        logger.error("获取blackjack统计信息时出错: {}", e, exc_info=True)
         await game_stats.finish(
             "获取统计信息时出现错误，请稍后再试" + gens[event.message.id].element
         )

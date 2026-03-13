@@ -66,7 +66,7 @@ async def cleanup_expired_mails():
         if expired_count > 0:
             logger.info(f"已清理 {expired_count} 封过期邮件")
     except Exception as e:
-        logger.error(f"清理过期邮件时发生错误: {e}")
+        logger.error("清理过期邮件时发生错误: {}", e)
 
 
 @get_driver().on_startup
@@ -78,7 +78,7 @@ async def process_scheduled_mails():
         if processed_count > 0:
             logger.info(f"已发送 {processed_count} 封定时邮件")
     except Exception as e:
-        logger.exception(f"处理定时邮件时发生错误: {e}", exc_info=True)
+        logger.exception("处理定时邮件时发生错误: {}", e, exc_info=True)
 
 
 # 邮箱命令
@@ -257,7 +257,7 @@ async def handle_alconna_add(event: MessageEvent, result: Arparma):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error(f"处理 Alconna add 命令时发生错误: {e}")
+        logger.error("处理 Alconna add 命令时发生错误: {}", e)
         await schedule_mail_cmd.finish(
             f"创建定时邮件失败: {str(e)}" + passive_generator.element
         )
@@ -402,7 +402,7 @@ async def create_scheduled_mail(
             f"参数错误: {str(e)}" + passive_generator.element
         )
     except Exception as e:
-        logger.error(f"创建定时邮件时发生错误: {e}")
+        logger.error("创建定时邮件时发生错误: {}", e)
         await schedule_mail_cmd.finish(
             f"创建失败: {str(e)}" + passive_generator.element
         )
@@ -561,7 +561,7 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
             f"参数格式错误: {str(e)}" + passive_generator.element
         )
     except Exception as e:
-        logger.error(f"编辑定时邮件时发生错误: {e}")
+        logger.error("编辑定时邮件时发生错误: {}", e)
         await schedule_mail_cmd.finish(
             f"编辑失败: {str(e)}" + passive_generator.element
         )

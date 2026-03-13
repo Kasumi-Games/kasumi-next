@@ -40,7 +40,7 @@ async def handle_expire_job():
         if count > 0:
             logger.info(f"已处理 {count} 个过期红包")
     except Exception as e:
-        logger.exception(f"处理过期红包时发生错误: {e}", exc_info=True)
+        logger.exception("处理过期红包时发生错误: {}", e, exc_info=True)
 
 
 create_cmd = on_command("发红包", aliases={"红包"}, priority=10, block=True)
@@ -124,7 +124,7 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error(f"创建红包失败: {e}", exc_info=True)
+        logger.error("创建红包失败: {}", e, exc_info=True)
         monetary.add(user_id, amount, "red_envelope_create_refund")
         await create_cmd.finish(Messages.CREATE_FAILED + passive_generator.element)
 
@@ -183,7 +183,7 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error(f"抢红包时发生错误: {e}", exc_info=True)
+        logger.error("抢红包时发生错误: {}", e, exc_info=True)
         await claim_cmd.finish(Messages.CLAIM_FAILED + passive_generator.element)
 
 

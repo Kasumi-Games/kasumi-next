@@ -160,7 +160,7 @@ async def handle_start(
         chart = await Chart.get_chart_async(song_id, chart_difficulty)
         chart_statistics = chart.count()
     except Exception as e:
-        logger.error(f"猜谱面：{e}", exc_info=True)
+        logger.error("猜谱面：{}", e, exc_info=True)
         gamers_store.remove(event.channel.id)
         await game_start.finish(
             "发生错误！重新开一把吧" + gens[event.message.id].element

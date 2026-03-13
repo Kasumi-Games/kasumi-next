@@ -122,7 +122,7 @@ def create_envelope(
         return envelope
     except Exception as e:
         session.rollback()
-        logger.error(f"创建红包时发生错误: {e}")
+        logger.error("创建红包时发生错误: {}", e)
         raise
 
 
@@ -276,7 +276,7 @@ def claim_envelope(
         return ("success", amount, completion_info)
     except Exception as e:
         session.rollback()
-        logger.error(f"领取红包时发生错误: {e}")
+        logger.error("领取红包时发生错误: {}", e)
         return ("error", None, None)
 
 

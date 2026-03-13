@@ -69,7 +69,7 @@ class MailService:
 
         except Exception as e:
             session.rollback()
-            logger.error(f"发送邮件时发生错误: {e}")
+            logger.error("发送邮件时发生错误: {}", e)
             raise
         finally:
             session.close()
@@ -117,7 +117,7 @@ class MailService:
 
         except Exception as e:
             session.rollback()
-            logger.error(f"创建广播邮件时发生错误: {e}")
+            logger.error("创建广播邮件时发生错误: {}", e)
             raise
         finally:
             session.close()
@@ -215,7 +215,7 @@ class MailService:
 
         except Exception as e:
             session.rollback()
-            logger.error(f"获取用户邮件时发生错误: {e}")
+            logger.error("获取用户邮件时发生错误: {}", e)
             raise
         finally:
             session.close()
@@ -281,7 +281,7 @@ class MailService:
 
         except Exception as e:
             session.rollback()
-            logger.error(f"读取邮件时发生错误: {e}")
+            logger.error("读取邮件时发生错误: {}", e)
             raise
         finally:
             session.close()
@@ -321,7 +321,7 @@ class MailService:
 
         except Exception as e:
             session.rollback()
-            logger.error(f"清理过期邮件时发生错误: {e}")
+            logger.error("清理过期邮件时发生错误: {}", e)
             raise
         finally:
             session.close()

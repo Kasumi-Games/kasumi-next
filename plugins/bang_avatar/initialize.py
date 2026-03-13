@@ -121,7 +121,7 @@ async def initialize(src_path: Path, cache_path: Path):
         
         logger.success("BanGAvatar: SVG转PNG预处理完成")
     except Exception as e:
-        logger.error(f"BanGAvatar: SVG转PNG失败: {str(e)}")
+        logger.error("BanGAvatar: SVG转PNG失败: {}", e)
     
     # PNG图片缩放预处理
     logger.info("BanGAvatar: 开始PNG缩放预处理")
@@ -155,6 +155,6 @@ async def initialize(src_path: Path, cache_path: Path):
         
         logger.success("BanGAvatar: PNG缩放预处理完成")
     except Exception as e:
-        logger.error(f"BanGAvatar: PNG缩放失败: {str(e)}")
+        logger.error("BanGAvatar: PNG缩放失败: {}", e)
     
     logger.success("BanGAvatar: 资源初始化完成")

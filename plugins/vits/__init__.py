@@ -59,7 +59,7 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
                 url=plugin_config.bert_vits_api_url + "/speakers"
             )
         except Exception as e:
-            logger.error(f"Fetching speakers failed: {e}", exc_info=True)
+            logger.error("Fetching speakers failed: {}", e, exc_info=True)
             await vits.finish("TTS 服务出现故障，待会再来试试吧…")
 
     for seg in arg:

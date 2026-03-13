@@ -83,12 +83,12 @@ class AsyncDownloader:
                         await asyncio.sleep(retry_delay)
                     continue
                 except Exception as e:
-                    logger.error(f"Downloader: 未知错误 - URL: {url} - 错误类型: {type(e).__name__} - 详情: {str(e)}")
+                    logger.error("Downloader: 未知错误 - URL: {} - 错误类型: {} - 详情: {}", url, type(e).__name__, e)
                     return
 
             if last_error:
                 error_type = type(last_error).__name__
-                logger.error(f"Downloader: 下载失败 (超过最大重试次数 {max_retries}) - URL: {url} - 最后错误: {error_type}: {str(last_error)}")
+                logger.error("Downloader: 下载失败 (超过最大重试次数 {}) - URL: {} - 最后错误: {}: {}", max_retries, url, error_type, str(last_error))
 
     async def download_cards(
         self, urls: List[str], folder_name: str, file_names: List[str]

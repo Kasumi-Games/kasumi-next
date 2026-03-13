@@ -40,7 +40,7 @@ def migrate_add_level_column():
         )
 
     except sqlite3.Error as e:
-        logger.error(f"Migration failed: {e}", exc_info=True)
+        logger.error("Migration failed: {}", e, exc_info=True)
         conn.rollback()
         raise
 
@@ -84,7 +84,7 @@ def migrate_fix_balance_column():
 
     except sqlite3.Error as e:
         conn.rollback()
-        logger.error(f"余额字段修复迁移失败: {e}", exc_info=True)
+        logger.error("余额字段修复迁移失败: {}", e, exc_info=True)
         raise
     finally:
         conn.close()

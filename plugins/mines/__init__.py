@@ -290,7 +290,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     except MatcherException:
         raise
     except Exception as e:
-        logger.error(f"扫雷游戏发生错误: {e}", exc_info=True)
+        logger.error("扫雷游戏发生错误: {}", e, exc_info=True)
         game_manager.refund_game(event.get_user_id())
         await game_start.finish(Messages.ERROR + gens[latest_message_id].element)
 
@@ -335,7 +335,7 @@ async def handle_stats(event: MessageEvent):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error(f"扫雷统计发生错误: {e}", exc_info=True)
+        logger.error("扫雷统计发生错误: {}", e, exc_info=True)
         await game_stats.finish(
             "统计查询失败，请稍后再试" + gens[event.message.id].element
         )
