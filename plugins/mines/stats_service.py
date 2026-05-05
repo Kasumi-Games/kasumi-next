@@ -12,7 +12,9 @@ from .models import MinesGame
 from .database import get_session
 
 
-font_path = Path(__file__).parent / "resources" / "Fonts" / "old.ttf"
+font_path = (
+    Path(__file__).parent.parent / "render_service" / "resources" / "Fonts" / "old.ttf"
+)
 font = fm.FontProperties(fname=font_path)
 
 
@@ -91,10 +93,10 @@ def get_mines_stats(user_id: str) -> MinesStats:
         完整的mines统计数据
     """
     db_session = get_session()
-    
+
     try:
         games = db_session.query(MinesGame).filter(MinesGame.user_id == user_id).all()
-        
+
         if not games:
             return MinesStats(
                 user_id=user_id,
