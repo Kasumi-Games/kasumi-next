@@ -1,8 +1,7 @@
 # coding = utf-8
-import cairosvg
-from PIL import Image, ImageDraw, ImageFilter
 from io import BytesIO
 from aiohttp import ClientSession
+from PIL import Image, ImageDraw, ImageFilter
 from nonebot.adapters.satori import MessageSegment
 
 
@@ -51,32 +50,36 @@ def circle_corner(img: Image, radii: int) -> Image:
     width, height = img.size
     radii = min(radii, min(width, height) // 2)
 
-    circle = Image.new('L', (radii * 2, radii * 2), 0)
+    circle = Image.new("L", (radii * 2, radii * 2), 0)
     draw = ImageDraw.Draw(circle)
     draw.ellipse((0, 0, radii * 2, radii * 2), fill=255)
 
-    alpha = Image.new('L', img.size, 255)
+    alpha = Image.new("L", img.size, 255)
     positions = [
         (0, 0),  # 左上
         (width - radii, 0),  # 右上
         (width - radii, height - radii),  # 右下
-        (0, height - radii)  # 左下
+        (0, height - radii),  # 左下
     ]
 
     for i, (x, y) in enumerate(positions):
-        quadrant = circle.crop((
-            0 if i in [0, 3] else radii,
-            0 if i in [0, 1] else radii,
-            radii if i in [0, 3] else radii * 2,
-            radii if i in [0, 1] else radii * 2
-        ))
+        quadrant = circle.crop(
+            (
+                0 if i in [0, 3] else radii,
+                0 if i in [0, 1] else radii,
+                radii if i in [0, 3] else radii * 2,
+                radii if i in [0, 1] else radii * 2,
+            )
+        )
         alpha.paste(quadrant, (x, y))
 
     img.putalpha(alpha)
     return img
 
 
-async def get_group_member_head(app_id: str, user_id: str, avatar_url: str = None, mode: int = 5) -> Image:
+async def get_group_member_head(
+    app_id: str, user_id: str, avatar_url: str = None, mode: int = 5
+) -> Image:
     """获取用户头像图片。
 
     Args:
@@ -122,11 +125,10 @@ def svg_to_png(svg_path: str, output_path: str, width: int, height: int) -> None
         width: 输出宽度
         height: 输出高度
     """
+    import cairosvg
+
     png_data = cairosvg.svg2png(
-        url=svg_path,
-        output_width=width,
-        output_height=height,
-        dpi=300
+        url=svg_path, output_width=width, output_height=height, dpi=300
     )
-    with open(output_path, 'wb') as f:
+    with open(output_path, "wb") as f:
         f.write(png_data)
