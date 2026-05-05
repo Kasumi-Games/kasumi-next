@@ -221,7 +221,6 @@ def create_win_loss_chart(stats: BlackjackStats) -> Optional[bytes]:
         alpha=0.3,
         interpolate=True,
         label="盈利区域",
-        fontproperties=font,
     )
     ax2.fill_between(
         game_numbers,
@@ -232,13 +231,12 @@ def create_win_loss_chart(stats: BlackjackStats) -> Optional[bytes]:
         alpha=0.3,
         interpolate=True,
         label="亏损区域",
-        fontproperties=font,
     )
     ax2.set_title("累计收益趋势", fontsize=14, fontweight="bold", fontproperties=font)
     ax2.set_xlabel("游戏局数", fontproperties=font)
     ax2.set_ylabel("累计收益 (碎片)", fontproperties=font)
     ax2.grid(True, alpha=0.3)
-    ax2.legend()
+    ax2.legend(prop=font)
 
     # 添加统计信息
     info_text = f"胜率: {stats.win_rate:.1%} | 净收益: {stats.net_profit} | 平均赌注: {stats.avg_bet:.1f}"
