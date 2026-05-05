@@ -99,6 +99,8 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
         await create_cmd.finish(Messages.INVALID_AMOUNT + passive_generator.element)
     if count <= 0:
         await create_cmd.finish(Messages.INVALID_COUNT + passive_generator.element)
+    if count > 10000:
+        await create_cmd.finish(Messages.MAX_COUNT_EXCEEDED + passive_generator.element)
     if amount < count:
         await create_cmd.finish(Messages.AMOUNT_TOO_SMALL + passive_generator.element)
 

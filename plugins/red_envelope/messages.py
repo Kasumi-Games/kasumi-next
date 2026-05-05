@@ -9,6 +9,7 @@ class Messages:
     INVALID_AMOUNT = "红包金额必须是正整数"
     INVALID_COUNT = "红包份数必须是正整数"
     AMOUNT_TOO_SMALL = "红包总金额必须不少于份数（每份至少 1 个星之碎片）"
+    MAX_COUNT_EXCEEDED = "红包份数不能超过 10000"
     INSUFFICIENT_BALANCE = "余额不足！你当前有 {balance} 个星之碎片"
     CREATE_FAILED = "创建红包失败，请稍后再试"
     CREATE_SUCCESS = "红包已创建！ID: {envelope_id}，标题: {title}，金额: {amount}，份数: {count}，有效期 24 小时"

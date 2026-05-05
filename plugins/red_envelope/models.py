@@ -4,7 +4,6 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    Text,
     UniqueConstraint,
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -28,9 +27,6 @@ class RedEnvelope(Base):
     remaining_amount = Column(Integer, nullable=False)
     total_count = Column(Integer, nullable=False)
     remaining_count = Column(Integer, nullable=False)
-    pending_amounts = Column(
-        Text, nullable=False
-    )  # JSON array of pre-generated amounts
     created_at = Column(Integer, nullable=False)
     expires_at = Column(Integer, nullable=False)
     is_expired = Column(Boolean, nullable=False, default=False)

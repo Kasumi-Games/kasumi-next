@@ -1,8 +1,7 @@
-import json
 import random
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from nonebot.log import logger
 
@@ -22,57 +21,24 @@ class EnvelopeCompletionInfo:
 
 
 EXPIRE_SECONDS = 24 * 60 * 60
+MAX_ENVELOPE_COUNT = 10_000
 
 
-def _generate_random_distribution(total_amount: int, count: int) -> List[int]:
+def _generate_next_amount(remaining_amount: int, remaining_count: int) -> int:
     """
-    Pre-generate a random distribution of coins using "random cut" algorithm.
-    Creates exciting variance - some get a lot, some get little!
-    Each recipient gets at least 1 coin.
+    WeChat-style double-average algorithm. O(1) per claim.
+    Each claim generates a random integer between 1 and
+    floor(2 * remaining_amount / remaining_count), except the last claim
+    which takes the full remaining amount.
     """
-    if count <= 0 or total_amount < count:
+    if remaining_count <= 0 or remaining_amount < remaining_count:
         raise ValueError("Invalid amount or count")
 
-    if count == 1:
-        return [total_amount]
+    if remaining_count == 1:
+        return remaining_amount
 
-    # Reserve 1 coin per person to ensure minimum
-    reserved = count
-    pool = total_amount - reserved
-
-    if pool <= 0:
-        # Everyone gets exactly 1 coin
-        return [1] * count
-
-    # "Random cut" algorithm: imagine a line of length `pool`
-    # Generate (count - 1) random cut points, then calculate segment lengths
-    cuts = sorted(random.random() for _ in range(count - 1))
-
-    # Calculate segment lengths based on cut points
-    amounts = []
-    prev = 0.0
-    for cut in cuts:
-        segment = cut - prev
-        amounts.append(segment)
-        prev = cut
-    amounts.append(1.0 - prev)  # Last segment
-
-    # Convert proportions to actual coin amounts
-    # Use a multiplier to amplify variance
-    raw_amounts = [max(0, int(proportion * pool)) for proportion in amounts]
-
-    # Distribute any rounding remainder randomly
-    remainder = pool - sum(raw_amounts)
-    for _ in range(remainder):
-        idx = random.randint(0, count - 1)
-        raw_amounts[idx] += 1
-
-    # Add the reserved 1 coin per person
-    final_amounts = [amt + 1 for amt in raw_amounts]
-
-    # Shuffle for extra randomness in claim order
-    random.shuffle(final_amounts)
-    return final_amounts
+    max_amount = (2 * remaining_amount) // remaining_count
+    return random.randint(1, max_amount)
 
 
 def _get_next_channel_index(session, channel_id: str) -> int:
@@ -94,10 +60,12 @@ def create_envelope(
     total_amount: int,
     total_count: int,
 ) -> RedEnvelope:
+    if total_count > MAX_ENVELOPE_COUNT:
+        raise ValueError(f"红包数量不能超过 {MAX_ENVELOPE_COUNT}")
+
     session = get_session()
     now = int(time.time())
     channel_index = _get_next_channel_index(session, channel_id)
-    pending_amounts = _generate_random_distribution(total_amount, total_count)
     envelope = RedEnvelope(
         creator_id=creator_id,
         channel_id=channel_id,
@@ -107,7 +75,6 @@ def create_envelope(
         remaining_amount=total_amount,
         total_count=total_count,
         remaining_count=total_count,
-        pending_amounts=json.dumps(pending_amounts),
         created_at=now,
         expires_at=now + EXPIRE_SECONDS,
         is_expired=False,
@@ -126,7 +93,7 @@ def create_envelope(
         raise
 
 
-def get_active_envelopes(channel_id: str) -> List[RedEnvelope]:
+def get_active_envelopes(channel_id: str) -> list[RedEnvelope]:
     session = get_session()
     now = int(time.time())
     return (
@@ -232,14 +199,12 @@ def claim_envelope(
     if already_claimed:
         return ("already", None, None)
 
-    # Pop the next pre-generated amount
-    pending = json.loads(envelope.pending_amounts)
-    if not pending:
-        return ("empty", None, None)
-    amount = pending.pop(0)
+    # Generate amount on-the-fly using WeChat double-average algorithm
+    amount = _generate_next_amount(
+        envelope.remaining_amount, envelope.remaining_count
+    )
 
     try:
-        envelope.pending_amounts = json.dumps(pending)
         envelope.remaining_amount -= amount
         envelope.remaining_count -= 1
         is_last_claim = envelope.remaining_count == 0
