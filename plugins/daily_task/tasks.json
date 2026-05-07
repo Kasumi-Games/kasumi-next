@@ -1,0 +1,53 @@
+{
+  "tasks": [
+    {
+      "id": "blackjack_win",
+      "name": "概率学博士",
+      "description": "在黑香澄中赢得一局",
+      "reward": 80,
+      "type": "blackjack_win",
+      "conditions": []
+    },
+    {
+      "id": "cck_first_try",
+      "name": "一眼看穿",
+      "description": "在猜卡面中第一次猜测就猜中",
+      "reward": 80,
+      "type": "cck_first_try",
+      "conditions": [
+        {"field": "attempt", "op": "==", "value": 1}
+      ]
+    },
+    {
+      "id": "guess_chart_easy",
+      "name": "太谱达人",
+      "description": "在简单/普通难度中猜中一次谱面",
+      "reward": 80,
+      "type": "guess_chart_win",
+      "conditions": [
+        {"field": "difficulty", "op": "in", "value": ["easy", "normal"]}
+      ]
+    },
+    {
+      "id": "mines_cashout_2x",
+      "name": "见好就收",
+      "description": "在探险中带着≥2倍碎片撤退",
+      "reward": 80,
+      "type": "mines_cashout",
+      "conditions": [
+        {"field": "multiplier", "op": ">=", "value": 2.0}
+      ]
+    },
+    {
+      "id": "one_stroke_normal_60s",
+      "name": "笔走飞星",
+      "description": "在普通难度的一笔画中于60秒内通关",
+      "reward": 80,
+      "type": "one_stroke_time",
+      "conditions": [
+        {"field": "difficulty", "op": "==", "value": "普通"},
+        {"field": "time", "op": "<=", "value": 60}
+      ]
+    }
+  ]
+}
