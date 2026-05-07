@@ -102,9 +102,12 @@ async def handle_mailbox(event: MessageEvent, arg: Message = CommandArg()):
         mail_list = []
         for i, mail in enumerate(mails, 1):
             status_icon = "📖" if mail.is_read else "📩"
-            reward_info = (
-                f" (+{mail.star_kakeras}星之碎片)" if mail.star_kakeras > 0 else ""
-            )
+            reward_parts = []
+            if mail.star_kakeras > 0:
+                reward_parts.append(f"+{mail.star_kakeras}星之碎片")
+            if mail.star_stickers > 0:
+                reward_parts.append(f"+{mail.star_stickers}星星贴纸")
+            reward_info = f" ({'，'.join(reward_parts)})" if reward_parts else ""
 
             # 格式化过期时间
             expires_str = mail.expire_time.strftime("%Y-%m-%d")
@@ -136,9 +139,15 @@ async def handle_mailbox(event: MessageEvent, arg: Message = CommandArg()):
 
         # 标记为已读并领取奖励
         reward_message = ""
-        if not mail.is_read and mail.star_kakeras > 0:
-            monetary.add(user_id, mail.star_kakeras, f"mail_reward_{mail.id}")
-            reward_message = f"\n\n🎁 你获得了 {mail.star_kakeras} 个星之碎片！"
+        if not mail.is_read:
+            if mail.star_kakeras > 0:
+                monetary.add(user_id, mail.star_kakeras, f"mail_reward_{mail.id}")
+                reward_message += f"\n\n🎁 你获得了 {mail.star_kakeras} 个星之碎片！"
+            if mail.star_stickers > 0:
+                monetary.add_star_stickers(
+                    user_id, mail.star_stickers, f"mail_reward_{mail.id}"
+                )
+                reward_message += f"\n\n⭐ 你获得了 {mail.star_stickers} 个星星贴纸！"
 
         mail_service.read_mail(user_id, mail.id)
 
@@ -177,6 +186,9 @@ schedule_alc = Alconna(
         ),
         Option("-e|--expire", Args["expire_days", int], help_text="过期天数 (1-30)"),
         Option("-k|--kakeras", Args["star_kakeras", int], help_text="星之碎片奖励数量"),
+        Option(
+            "-s|--stickers", Args["star_stickers", int], help_text="星星贴纸奖励数量"
+        ),
         Option("-t|--title", Args["title", str], help_text="邮件标题"),
         Option("-c|--content", Args["content", str], help_text="邮件内容"),
         Option("--name", Args["name", str], help_text="自定义邮件名称（可选）"),
@@ -191,6 +203,7 @@ schedule_alc = Alconna(
         Option("-c|--content", Args["new_content", str], help_text="新内容"),
         Option("-w|--when", Args["new_time", str], help_text="新预定时间"),
         Option("-k|--kakeras", Args["new_kakeras", int], help_text="新星之碎片数量"),
+        Option("-s|--stickers", Args["new_stickers", int], help_text="新星星贴纸数量"),
         Option("-e|--expire", Args["new_expire", int], help_text="新过期天数"),
         Option("-r|--recipients", Args["new_recipients", str], help_text="新接收者"),
         help_text="修改定时邮件",
@@ -223,7 +236,8 @@ async def handle_alconna_add(event: MessageEvent, result: Arparma):
         recipients = other_args.get("recipients")
         time_str = other_args.get("time")
         expire_days = other_args.get("expire_days")
-        star_kakeras = other_args.get("star_kakeras")
+        star_kakeras = other_args.get("star_kakeras", 0)
+        star_stickers = other_args.get("star_stickers", 0)
         title = other_args.get("title")
         content = other_args.get("content")
         name = other_args.get("name")  # 可选参数
@@ -240,7 +254,7 @@ async def handle_alconna_add(event: MessageEvent, result: Arparma):
             ]
         ):
             await schedule_mail_cmd.finish(
-                "参数不完整！请使用: /schedulemail add -r <接收者> -w <时间> -e <过期天数> -k <星之碎片> -t <标题> -c <内容>"
+                "参数不完整！请使用: /schedulemail add -r <接收者> -w <时间> -e <过期天数> -k <星之碎片> -s <星星贴纸> -t <标题> -c <内容>"
                 + passive_generator.element
             )
 
@@ -250,6 +264,7 @@ async def handle_alconna_add(event: MessageEvent, result: Arparma):
             time_str,
             expire_days,
             star_kakeras,
+            star_stickers,
             title,
             content,
             name,
@@ -308,6 +323,8 @@ async def handle_alconna_edit(event: MessageEvent, result: Arparma):
         updates["time"] = new_time
     if new_kakeras := other_args.get("new_kakeras"):
         updates["kakeras"] = new_kakeras
+    if new_stickers := other_args.get("new_stickers"):
+        updates["stickers"] = new_stickers
     if new_expire := other_args.get("new_expire"):
         updates["expire"] = new_expire
     if new_recipients := other_args.get("new_recipients"):
@@ -342,6 +359,7 @@ async def create_scheduled_mail(
     time_str: str,
     expire_days: int,
     star_kakeras: int,
+    star_stickers: int,
     title: str,
     content: str,
     name: str = None,
@@ -376,6 +394,7 @@ async def create_scheduled_mail(
             content=content,
             scheduled_time=scheduled_time,
             star_kakeras=star_kakeras,
+            star_stickers=star_stickers,
             expire_days=expire_days,
             created_by=event.get_user_id(),
             name=name,  # 可以为 None，会自动生成
@@ -467,6 +486,7 @@ async def handle_schedule_info(event: MessageEvent, name: str):
 标题: {mail.title}
 内容: {mail.content}
 星之碎片: {mail.star_kakeras}
+星星贴纸: {mail.star_stickers}
 过期天数: {mail.expire_days}
 预定时间: {scheduled_time_str}
 创建时间: {created_time_str}
@@ -529,6 +549,16 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
                     name, star_kakeras=kakeras
                 )
                 updated_fields.append(f"星之碎片: {kakeras}")
+            elif field == "stickers":
+                stickers = int(new_value)
+                if stickers < 0:
+                    await schedule_mail_cmd.finish(
+                        "星星贴纸数量不能为负数！" + passive_generator.element
+                    )
+                success = scheduled_service.update_scheduled_mail(
+                    name, star_stickers=stickers
+                )
+                updated_fields.append(f"星星贴纸: {stickers}")
             elif field == "expire":
                 expire_days = int(new_value)
                 if expire_days < 1 or expire_days > 30:

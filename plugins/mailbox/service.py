@@ -23,6 +23,7 @@ class MailService:
         title: str,
         content: str,
         star_kakeras: int = 0,
+        star_stickers: int = 0,
         expire_days: int = 7,
         sender_id: str = "system",
     ) -> int:
@@ -34,6 +35,7 @@ class MailService:
             title: 邮件标题
             content: 邮件内容
             star_kakeras: 星之碎片奖励
+            star_stickers: 星星贴纸奖励
             expire_days: 过期天数
             sender_id: 发送者用户ID
 
@@ -48,6 +50,7 @@ class MailService:
                 title=title,
                 content=content,
                 star_kakeras=star_kakeras,
+                star_stickers=star_stickers,
                 expire_days=expire_days,
                 sender_id=sender_id,
                 is_broadcast=False,
@@ -79,6 +82,7 @@ class MailService:
         title: str,
         content: str,
         star_kakeras: int = 0,
+        star_stickers: int = 0,
         expire_days: int = 7,
         sender_id: str = "system",
     ) -> int:
@@ -90,6 +94,7 @@ class MailService:
             title: 邮件标题
             content: 邮件内容
             star_kakeras: 星之碎片奖励
+            star_stickers: 星星贴纸奖励
             expire_days: 过期天数
             sender_id: 发送者用户ID
 
@@ -104,6 +109,7 @@ class MailService:
                 title=title,
                 content=content,
                 star_kakeras=star_kakeras,
+                star_stickers=star_stickers,
                 expire_days=expire_days,
                 sender_id=sender_id,
                 is_broadcast=True,  # 标记为广播邮件
@@ -198,6 +204,7 @@ class MailService:
                     title=mail.title,
                     content=mail.content,
                     star_kakeras=mail.star_kakeras,
+                    star_stickers=mail.star_stickers,
                     sender_id=mail.sender_id,
                     created_at=datetime.datetime.fromtimestamp(mail.created_at),
                     expire_time=datetime.datetime.fromtimestamp(expire_time),
@@ -269,6 +276,7 @@ class MailService:
                 title=mail.title,
                 content=mail.content,
                 star_kakeras=mail.star_kakeras,
+                star_stickers=mail.star_stickers,
                 sender_id=mail.sender_id,
                 created_at=datetime.datetime.fromtimestamp(mail.created_at),
                 expire_time=datetime.datetime.fromtimestamp(expire_time),

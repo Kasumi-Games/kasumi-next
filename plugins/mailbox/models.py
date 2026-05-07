@@ -21,6 +21,7 @@ class Mail(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     star_kakeras: Mapped[int] = mapped_column(default=0)
+    star_stickers: Mapped[int] = mapped_column(Integer, default=0)
     expire_days: Mapped[int] = mapped_column(default=7)
     created_at: Mapped[int] = mapped_column(
         nullable=False, default=lambda: int(time.time())
@@ -62,6 +63,7 @@ class ScheduledMail(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)  # 邮件标题
     content: Mapped[str] = mapped_column(Text, nullable=False)  # 邮件内容
     star_kakeras: Mapped[int] = mapped_column(Integer, default=0)  # 星之碎片奖励
+    star_stickers: Mapped[int] = mapped_column(Integer, default=0)  # 星星贴纸奖励
     expire_days: Mapped[int] = mapped_column(Integer, default=7)  # 过期天数
     scheduled_time: Mapped[int] = mapped_column(
         Integer, nullable=False
@@ -84,6 +86,7 @@ class ServiceMail(BaseModel):
     title: str
     content: str
     star_kakeras: int
+    star_stickers: int = 0
     sender_id: str
     created_at: datetime.datetime
     expire_time: datetime.datetime

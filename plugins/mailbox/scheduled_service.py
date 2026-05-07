@@ -25,6 +25,7 @@ class ScheduledMailService:
         content: str,
         scheduled_time: int,  # Unix时间戳
         star_kakeras: int = 0,
+        star_stickers: int = 0,
         expire_days: int = 7,
         created_by: str = "system",
         name: str = None,  # 如果不提供则自动生成
@@ -71,6 +72,7 @@ class ScheduledMailService:
             title=title,
             content=content,
             star_kakeras=star_kakeras,
+            star_stickers=star_stickers,
             expire_days=expire_days,
             scheduled_time=scheduled_time,
             created_at=int(time.time()),
@@ -123,6 +125,7 @@ class ScheduledMailService:
         content: Optional[str] = None,
         scheduled_time: Optional[int] = None,
         star_kakeras: Optional[int] = None,
+        star_stickers: Optional[int] = None,
         expire_days: Optional[int] = None,
         recipients: Optional[str] = None,
     ) -> bool:
@@ -162,6 +165,8 @@ class ScheduledMailService:
             scheduled_mail.scheduled_time = scheduled_time
         if star_kakeras is not None:
             scheduled_mail.star_kakeras = star_kakeras
+        if star_stickers is not None:
+            scheduled_mail.star_stickers = star_stickers
         if expire_days is not None:
             scheduled_mail.expire_days = expire_days
         if recipients is not None:
@@ -231,6 +236,7 @@ class ScheduledMailService:
                         title=scheduled_mail.title,
                         content=scheduled_mail.content,
                         star_kakeras=scheduled_mail.star_kakeras,
+                        star_stickers=scheduled_mail.star_stickers,
                         expire_days=scheduled_mail.expire_days,
                         sender_id=scheduled_mail.created_by,
                     )
@@ -246,6 +252,7 @@ class ScheduledMailService:
                                 title=scheduled_mail.title,
                                 content=scheduled_mail.content,
                                 star_kakeras=scheduled_mail.star_kakeras,
+                                star_stickers=scheduled_mail.star_stickers,
                                 expire_days=scheduled_mail.expire_days,
                                 sender_id=scheduled_mail.created_by,
                             )
