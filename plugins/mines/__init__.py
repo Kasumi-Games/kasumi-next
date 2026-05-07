@@ -10,10 +10,12 @@ from nonebot.exception import MatcherException
 from nonebot import get_driver, on_command, require
 from nonebot.adapters.satori import Message, MessageEvent, MessageSegment
 
+require("daily_task")
 require("nonebot_plugin_waiter")
 
 from nonebot_plugin_waiter import waiter  # noqa: E402
 
+from ..daily_task import check_progress  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
@@ -206,11 +208,14 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
 
             if msg in {"收手", "结算", "stop", "s"}:
                 payout = session.get_payout()
+                cashout_multiplier = session.multiplier  # Save before end_game
                 game_manager.end_game(
                     event.get_user_id(), GameResult.CASHOUT, payout=payout
                 )
                 session.field.reveal_all_mines()
-                await game_start.finish(
+
+                # Plugin message first
+                await game_start.send(
                     _render_field_image(session.field)
                     + MessageSegment.text(
                         Messages.CASHOUT
@@ -220,6 +225,25 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     )
                     + gens[latest_message_id].element
                 )
+
+                # Daily task
+                task_msg = await check_progress(
+                    event.get_user_id(),
+                    "mines_cashout",
+                    {"multiplier": cashout_multiplier},
+                )
+                if task_msg:
+                    await game_start.send(task_msg + gens[latest_message_id].element)
+
+                # XP only when multiplier >= 2.0
+                if cashout_multiplier >= 2.0:
+                    level_msg = await monetary.add_xp(event.get_user_id(), 5)
+                    if level_msg:
+                        await game_start.send(
+                            level_msg + gens[latest_message_id].element
+                        )
+
+                await game_start.finish()
 
             if not msg.isdigit():
                 await game_start.send(
@@ -260,11 +284,14 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
 
             if session.revealed_count >= session.safe_cells:
                 payout = session.get_payout()
+                win_multiplier = session.multiplier
                 game_manager.end_game(
                     event.get_user_id(), GameResult.WIN, payout=payout
                 )
                 session.field.reveal_all_mines()
-                await game_start.finish(
+
+                # Plugin message first
+                await game_start.send(
                     _render_field_image(session.field)
                     + MessageSegment.text(
                         Messages.CASHOUT
@@ -274,6 +301,25 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     )
                     + gens[latest_message_id].element
                 )
+
+                # Daily task
+                task_msg = await check_progress(
+                    event.get_user_id(),
+                    "mines_cashout",
+                    {"multiplier": win_multiplier},
+                )
+                if task_msg:
+                    await game_start.send(task_msg + gens[latest_message_id].element)
+
+                # XP only when multiplier >= 2.0
+                if win_multiplier >= 2.0:
+                    level_msg = await monetary.add_xp(event.get_user_id(), 5)
+                    if level_msg:
+                        await game_start.send(
+                            level_msg + gens[latest_message_id].element
+                        )
+
+                await game_start.finish()
 
             await game_start.send(
                 _render_field_image(session.field)

@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Union
 from nonebot import on_command, get_driver, require
 from nonebot.adapters.satori import MessageEvent, Message
 
+require("daily_task")
 require("nonebot_plugin_waiter")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
@@ -18,6 +19,7 @@ import nonebot_plugin_localstore as localstore  # noqa: E402
 
 from .. import monetary  # noqa: E402
 from utils import get_today_birthday  # noqa: E402
+from ..daily_task import check_progress  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
@@ -240,6 +242,24 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         else:
             msg += f"正确！答案是———{character_name}，奖励你 {amount} 个星之碎片！card_id: {card_id}"
         monetary.add(user_id, amount, "cck")
+
+        # Plugin messages first
         await start_cck.send(msg + gens[msg_id].element)
         await start_cck.send(full_image + gens[msg_id].element)
+
+        # Daily task callback (first-try win is checked via conditions)
+        player_counts[user_id] += 1
+        task_msg = await check_progress(
+            user_id,
+            "cck_first_try",
+            {"attempt": player_counts[user_id]},
+        )
+        if task_msg:
+            await start_cck.send(task_msg + gens[msg_id].element)
+
+        # Level-up
+        level_msg = await monetary.add_xp(user_id, amount)
+        if level_msg:
+            await start_cck.send(level_msg + gens[msg_id].element)
+
         break

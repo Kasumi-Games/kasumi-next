@@ -11,8 +11,10 @@ from nonebot.exception import MatcherException
 from nonebot.adapters.satori import Message, MessageEvent, MessageSegment
 
 require("nonebot_plugin_waiter")
+require("daily_task")
 from nonebot_plugin_waiter import waiter  # noqa: E402
 
+from ..daily_task import check_progress  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
@@ -203,6 +205,7 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 )
                 db.commit()
                 monetary.add(event.get_user_id(), final_reward, "one_stroke")
+
                 balance = monetary.get(event.get_user_id())
                 if birthday_characters:
                     win_message = Messages.BIRTHDAY_WIN.format(
@@ -219,11 +222,28 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                         balance=balance,
                     )
                 game_manager.end_game(event.get_user_id())
-                await game_start.finish(
+
+                # Plugin message first
+                await game_start.send(
                     _render_image(session)
                     + MessageSegment.text(win_message)
                     + gens[latest_message_id].element
                 )
+
+                # Daily task
+                task_msg = await check_progress(
+                    event.get_user_id(), "one_stroke_time",
+                    {"difficulty": session.difficulty_name, "time": elapsed_seconds},
+                )
+                if task_msg:
+                    await game_start.send(task_msg + gens[latest_message_id].element)
+
+                # Level-up
+                level_msg = await monetary.add_xp(event.get_user_id(), final_reward)
+                if level_msg:
+                    await game_start.send(level_msg + gens[latest_message_id].element)
+
+                await game_start.finish()
 
             status_text = (
                 Messages.PROGRESS.format(

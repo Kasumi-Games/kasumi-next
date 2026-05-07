@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, Tuple
 
+from nonebot import require
 from nonebot.matcher import Matcher
 from nonebot_plugin_waiter import Waiter
 from nonebot.adapters.satori import Message, MessageEvent, MessageSegment
@@ -11,10 +12,14 @@ from utils.passive_generator import generators as gens
 from utils.passive_generator import PassiveGenerator as PG
 
 from .. import monetary
+from .utils import get_action
 from .messages import Messages
 from .models import Hand, Card, GameResult
 from .session import GameManager, GameSession
-from .utils import get_action
+
+require("daily_task")
+
+from ..daily_task import check_progress  # noqa: E402
 
 
 def get_card_image(card: Card, renderer) -> MessageSegment:
@@ -431,7 +436,8 @@ async def handle_initial_blackjack(
                 win_msg = Messages.BLACKJACK_WIN.format(
                     bet=bet_amount, amount=actual_winnings
                 )
-            await matcher.finish(
+            # Plugin message first
+            await matcher.send(
                 MessageSegment.image(
                     raw=image_to_bytes(
                         game_manager.renderer.generate_table(
@@ -444,6 +450,18 @@ async def handle_initial_blackjack(
                 + f"你现在有 {monetary.get(session.user_id)} 个碎片！"
                 + gens[latest_message_id].element
             )
+            # Daily task
+            task_msg = await check_progress(
+                session.user_id,
+                "blackjack_win",
+            )
+            if task_msg:
+                await matcher.send(task_msg + gens[latest_message_id].element)
+            # Level-up
+            level_msg = await monetary.add_xp(session.user_id, 5)
+            if level_msg:
+                await matcher.send(level_msg + gens[latest_message_id].element)
+            await matcher.finish()
         return True
     return False
 
@@ -592,6 +610,14 @@ async def handle_split_game(
         )
     result_messages += f"你现在有 {monetary.get(event.get_user_id())} 个碎片"
     await matcher.send(result_messages + gens[latest_message_id].element)
+    # Daily task and XP for blackjack win
+    if actual_winnings > 0:
+        task_msg = await check_progress(event.get_user_id(), "blackjack_win")
+        if task_msg:
+            await matcher.send(task_msg + gens[latest_message_id].element)
+        level_msg = await monetary.add_xp(event.get_user_id(), 5)
+        if level_msg:
+            await matcher.send(level_msg + gens[latest_message_id].element)
 
 
 async def handle_normal_game(
@@ -658,3 +684,12 @@ async def handle_normal_game(
     )
 
     await matcher.send(result_messages + gens[latest_message_id].element)
+
+    # Daily task and XP for blackjack win
+    if actual_winnings > 0:
+        task_msg = await check_progress(event.get_user_id(), "blackjack_win")
+        if task_msg:
+            await matcher.send(task_msg + gens[latest_message_id].element)
+        level_msg = await monetary.add_xp(event.get_user_id(), 5)
+        if level_msg:
+            await matcher.send(level_msg + gens[latest_message_id].element)

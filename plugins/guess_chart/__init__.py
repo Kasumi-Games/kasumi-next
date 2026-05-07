@@ -11,6 +11,7 @@ from nonebot.params import Depends, CommandArg
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageSegment, MessageEvent, Message
 
+require("daily_task")
 require("nonebot_plugin_waiter")
 require("nonebot_plugin_apscheduler")
 
@@ -19,6 +20,7 @@ from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from .. import monetary  # noqa: E402
 from utils import get_today_birthday  # noqa: E402
+from ..daily_task import check_progress  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
@@ -302,10 +304,27 @@ async def handle_start(
                 msg += f"回答正确！奖励你 {amount} 个星之碎片\n"
 
             monetary.add(user_id, amount, "guess_chart")
+
+            # Plugin message first
             await game_start.send(
                 msg + f"谱面：{song_name} "
                 f"{diff.upper()} LV.{level}" + gens[message_id].element
             )
+
+            # Daily task callback for guess_chart win
+            task_msg = await check_progress(
+                user_id,
+                "guess_chart_win",
+                {"difficulty": game_difficulty},
+            )
+            if task_msg:
+                await game_start.send(task_msg + gens[message_id].element)
+
+            # Level-up
+            level_msg = await monetary.add_xp(user_id, amount)
+            if level_msg:
+                await game_start.send(level_msg + gens[message_id].element)
+
             await game_start.send(
                 MessageSegment.image(raw=jacket_image, mime="image/png")
                 + gens[message_id].element
