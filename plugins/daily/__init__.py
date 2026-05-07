@@ -1,27 +1,33 @@
+import time
 import random
+from datetime import datetime
+
+from nonebot import require
 from nonebot.matcher import Matcher
 from nonebot.params import CommandArg
 from nonebot.permission import SUPERUSER
-from nonebot import on_command, get_driver, require
+from nonebot import on_command, get_driver
 from nonebot.adapters.satori import MessageEvent, Message
 
-require("nonebot_plugin_waiter")
+require("mailbox")
+require("daily_task")
 
-from nonebot_plugin_waiter import waiter  # noqa: E402
-
+from .utils import is_number  # noqa: E402
 from ..nickname import nickname  # noqa: E402
-from .utils import is_number, get_amount_for_level  # noqa: E402
+from ..mailbox import mail_service  # noqa: E402
+from ..daily_task import get_today_task  # noqa: E402
 from utils import has_no_argument, PassiveGenerator  # noqa: E402
 from ..monetary import (  # noqa: E402
     get,
     add,
-    daily,
+    add_xp,
     transfer,
+    get_user,
     get_top_users,
     get_user_rank,
-    increase_level,
-    decrease_level,
-    get_user_stats,
+    add_star_stickers,
+    xp_to_next_level,
+    total_xp_for_level,
     set as set_balance,
 )
 
@@ -31,11 +37,18 @@ from ..monetary import (  # noqa: E402
 ).handle()
 async def balance(matcher: Matcher, event: MessageEvent):
     user_id = event.get_user_id()
-    user = get_user_stats(user_id)
+    user = get_user(user_id)
     passive_generator = PassiveGenerator(event)
+
+    xp_needed, next_level_total = xp_to_next_level(user.xp)
+    current_level_base = total_xp_for_level(user.level)
+    progress_xp = user.xp - current_level_base
+    level_xp_range = next_level_total - current_level_base
+
     await matcher.send(
-        f"你有 {user.level} 个星星 和 {user.balance} 个星之碎片"
-        + passive_generator.element
+        f"Lv.{user.level} | XP: {progress_xp}/{level_xp_range} (还需 {xp_needed})\n"
+        f"星之碎片: {user.balance}\n"
+        f"星星贴纸: {user.star_stickers}" + passive_generator.element
     )
 
 
@@ -45,15 +58,51 @@ async def balance(matcher: Matcher, event: MessageEvent):
 async def handle_daily(matcher: Matcher, event: MessageEvent):
     user_id = event.get_user_id()
     passive_generator = PassiveGenerator(event)
-    if daily(user_id):
-        # 使用正态分布，均值5.5，标准差2，确保在1-10范围内
-        amount = max(1, min(10, round(random.gauss(5.5, 2))))
-        add(user_id, amount, "daily")
-        await matcher.send(
-            f"签到成功，获得 {amount} 个星之碎片" + passive_generator.element
+
+    user = get_user(user_id)
+    today = datetime.now().date()
+
+    # Broken streak detection and duplicate check (must use old last_daily_time)
+    if user.last_daily_time:
+        last_date = datetime.fromtimestamp(user.last_daily_time).date()
+        if last_date == today:
+            await matcher.finish("今天已经签到过了" + passive_generator.element)
+        days_diff = (today - last_date).days
+        if days_diff > 1:
+            user.consecutive_checkins = 0
+
+    # Mark today's check-in
+    user.last_daily_time = int(time.time())
+
+    # Shard reward (normal distribution 1-10)
+    amount = max(1, min(10, round(random.gauss(5.5, 2))))
+    add(user_id, amount, "daily")
+    level_msg = await add_xp(user_id, amount)
+
+    # Update consecutive check-in
+    user.consecutive_checkins += 1
+
+    msg = f"签到成功，获得 {amount} 个星之碎片\n"
+    msg += f"当前连续签到：{user.consecutive_checkins} 天\n"
+
+    # Every 7th day bonus stickers
+    if user.consecutive_checkins % 7 == 0:
+        add_star_stickers(user_id, 120, f"checkin_day_{user.consecutive_checkins}")
+        msg += (
+            f"🎉 连续签到 {user.consecutive_checkins} 天！额外获得 120 个星星贴纸！\n"
         )
-    else:
-        await matcher.send("今天已经签到过了" + passive_generator.element)
+
+    task = get_today_task(user_id)
+    msg += f"今日任务：【{task.name}】{task.description}\n"
+    msg += f"奖励：{task.reward} 个星星贴纸\n"
+
+    if mails := mail_service.get_user_mails(user_id):
+        msg += f"你有 {len(mails)} 封邮件，记得查看哦～\n"
+
+    await matcher.send(msg + passive_generator.element)
+    if level_msg:
+        await matcher.send(level_msg + passive_generator.element)
+    await matcher.finish()
 
 
 @on_command("transfer", aliases={"转账"}, priority=10, block=True).handle()
@@ -107,175 +156,30 @@ async def handle_transfer(
     )
 
 
-@on_command("upgrade", aliases={"升级", "摘星"}, priority=10, block=True).handle()
-async def handle_upgrade(matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()):
-    user_id = event.get_user_id()
-    user = get_user_stats(user_id)
-    passive_generator = PassiveGenerator(event)
-
-    text = arg.extract_plain_text().strip()
-    if text.isdigit():
-        levels = int(text)
-        if levels <= 0:
-            await matcher.finish("摘星数量必须大于 0" + passive_generator.element)
-    else:
-        levels = 1
-
-    amount = 0
-    for i in range(levels):
-        amount += get_amount_for_level(user.level + i + 1)
-
-    if user.balance < amount:
-        if levels == 1:
-            await matcher.finish(
-                f"余额不足，摘星需要 {amount} 个星之碎片" + passive_generator.element
-            )
-        else:
-            await matcher.finish(
-                f"余额不足，摘 {levels} 颗星需要 {amount} 个星之碎片"
-                + passive_generator.element
-            )
-    else:
-        add(user_id, -amount, f"upgrade_{user.level}_{levels}")
-        increase_level(user_id, levels)
-        await matcher.finish(
-            f"摘星成功，消耗了 {amount} 个星之碎片。你现在有 {user.level + levels} 颗星星 和 {user.balance - amount} 个星之碎片哦~"
-            + passive_generator.element
-        )
-
-
-@on_command("watch", aliases={"观星"}, priority=10, block=True).handle()
-async def handle_watch(matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()):
-    user_id = event.get_user_id()
-    user = get_user_stats(user_id)
-    passive_generator = PassiveGenerator(event)
-
-    text = arg.extract_plain_text().strip()
-    if text.isdigit():
-        levels = int(text)
-        if levels <= 0:
-            await matcher.finish("观星数量必须大于 0" + passive_generator.element)
-    else:
-        levels = 1
-
-    amount = 0
-    for i in range(levels):
-        amount += get_amount_for_level(user.level + i + 1)
-
-    if levels == 1:
-        await matcher.finish(
-            f"观测到下一个星需要 {amount} 个星之碎片" + passive_generator.element
-        )
-    else:
-        await matcher.finish(
-            f"观测到之后的 {levels} 颗星需要 {amount} 个星之碎片"
-            + passive_generator.element
-        )
-
-
-shatter = on_command("shatter", aliases={"碎星"}, priority=10, block=True)
-
-
-@shatter.handle()
-async def handle_shatter(event: MessageEvent, arg: Message = CommandArg()):
-    user_id = event.get_user_id()
-    user = get_user_stats(user_id)
-    passive_generator = PassiveGenerator(event)
-
-    text = arg.extract_plain_text().strip()
-    if text.isdigit():
-        levels = int(text)
-        if levels <= 0:
-            await shatter.finish("碎星数量必须大于 0" + passive_generator.element)
-    else:
-        levels = 1
-
-    if user.level < levels:
-        await shatter.finish(
-            f"你只有 {user.level} 颗星星，无法碎 {levels} 颗星"
-            + passive_generator.element
-        )
-
-    # 计算碎星可以获得的碎片数量（减半）
-    full_amount = 0
-    for i in range(levels):
-        full_amount += get_amount_for_level(user.level - i)
-
-    refund_amount = full_amount // 2
-
-    if levels == 1:
-        await shatter.send(
-            f"碎星将会获得 {refund_amount} 个星之碎片（原价 {full_amount} 的一半），确定要碎星吗？回复「确认」继续"
-            + passive_generator.element
-        )
-    else:
-        await shatter.send(
-            f"碎 {levels} 颗星将会获得 {refund_amount} 个星之碎片（原价 {full_amount} 的一半），确定要碎星吗？回复「确认」继续"
-            + passive_generator.element
-        )
-
-    @waiter(waits=["message"], matcher=shatter, block=False, keep_session=True)
-    async def check(event_: MessageEvent) -> str:
-        return event_.get_message().extract_plain_text().strip()
-
-    resp = await check.wait(timeout=30)
-
-    if resp is None:
-        await shatter.finish("操作超时，已取消碎星" + passive_generator.element)
-
-    if resp not in ["确认", "确定", "是", "yes", "y"]:
-        await shatter.finish("已取消碎星" + passive_generator.element)
-
-    # 执行碎星
-    decrease_level(user_id, levels)
-    add(user_id, refund_amount, f"shatter_{user.level}_{levels}")
-    await shatter.finish(
-        f"碎星成功，获得 {refund_amount} 个星之碎片。你现在有 {user.level - levels} 颗星星 和 {user.balance + refund_amount} 个星之碎片"
-        + passive_generator.element
-    )
-
-
 @on_command(
-    "balancerank",
-    aliases={"余额排行", "余额排行榜", "rank", "排行榜", "排行"},
+    "levelrank",
+    aliases={"等级排行", "等级排行榜", "rank", "排行榜", "排行"},
     priority=10,
     block=True,
 ).handle()
-async def handle_balancerank(matcher: Matcher, event: MessageEvent):
+async def handle_levelrank(matcher: Matcher, event: MessageEvent):
     top_users = get_top_users(10)
     user_id = event.get_user_id()
     rank_info = get_user_rank(user_id)
     passive_generator = PassiveGenerator(event)
 
-    # 构建排名信息
     rank_message = f"\n你当前的排名是第 {rank_info.rank} 名"
 
-    # 添加距离信息（第一名不显示额外信息）
     if rank_info.rank != 1:
-        distance_parts = []
-
-        # 距离下一等级的等级差距
-        if rank_info.distance_to_next_level > 0:
-            distance_parts.append(f"{rank_info.distance_to_next_level} 个星星")
-
-        # 距离下一名的余额差距（只在等级相同时显示）
-        if rank_info.distance_to_next_rank > 0:
-            distance_parts.append(f"{rank_info.distance_to_next_rank} 个星之碎片")
-
-        # 根据差距情况组合消息
-        if distance_parts:
-            if len(distance_parts) == 1:
-                rank_message += f"，离上一名还差 {distance_parts[0]}"
-            else:
-                rank_message += f"，离上一名还差 {' 和 '.join(distance_parts)}"
+        if rank_info.xp_gap > 0:
+            rank_message += f"，离上一名还差 {rank_info.xp_gap} XP"
         else:
-            # 如果两个差距都为0，说明与上一名等级和余额一样
             rank_message += "，与上一名相同"
 
     await matcher.send(
         "\n".join(
             [
-                f"{i + 1}. {nickname.get(user.user_id) or 'Unknown'}: {user.level} 星 {user.balance} 碎片"
+                f"{i + 1}. {nickname.get(user.user_id) or 'Unknown'}: Lv.{user.level} (XP: {user.xp}) "
                 for i, user in enumerate(top_users)
             ]
         )
