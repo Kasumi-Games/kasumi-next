@@ -18,7 +18,15 @@ def get_user(user_id: str) -> User:
 
     user = session.query(User).filter(User.user_id == user_id).first()
     if not user:
-        user = User(user_id=user_id, balance=0, last_daily_time=0, level=0)
+        user = User(
+            user_id=user_id,
+            balance=0,
+            last_daily_time=0,
+            level=1,
+            xp=0,
+            star_stickers=0,
+            consecutive_checkins=0,
+        )
         session.add(user)
         session.commit()
     return user
@@ -110,13 +118,13 @@ def increase_level(user_id: str, levels: int = 1):
 
 
 def decrease_level(user_id: str, levels: int = 1):
-    """Decrease user's level by specified amount (minimum level is 0)"""
+    """Decrease user's level by specified amount (minimum level is 1)"""
     if levels < 0:
         raise ValueError("Level decrease must be positive")
 
     session = get_session()
     user = get_user(user_id)
-    user.level = max(0, user.level - levels)  # Ensure level never goes below 0
+    user.level = max(1, user.level - levels)
     session.commit()
 
 

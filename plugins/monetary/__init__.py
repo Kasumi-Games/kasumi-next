@@ -22,6 +22,20 @@ from .user_service import (
     daily_checkin as daily,
     transfer_balance as transfer,
 )
+from .level_service import (
+    add_xp,
+    xp_per_level,
+    level_for_xp,
+    admin_set_xp,
+    xp_to_next_level,
+    total_xp_for_level,
+)
+from .star_sticker_service import (
+    add_star_stickers,
+    get_star_stickers,
+    cost_star_stickers,
+    admin_add_stickers,
+)
 
 
 @get_driver().on_startup
@@ -49,4 +63,14 @@ __all__ = [
     "UserRank",
     "UserStats",
     "get_user_transactions",
+    "add_xp",
+    "xp_per_level",
+    "total_xp_for_level",
+    "level_for_xp",
+    "xp_to_next_level",
+    "admin_set_xp",
+    "add_star_stickers",
+    "get_star_stickers",
+    "cost_star_stickers",
+    "admin_add_stickers",
 ]

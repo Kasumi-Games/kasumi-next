@@ -8,6 +8,8 @@ import nonebot_plugin_localstore as store  # noqa: E402
 
 from .models import Base, TransactionBase  # noqa: E402
 from .migration import (  # noqa: E402
+    migrate_data,
+    migrate_schema,
     migrate_add_level_column,
     migrate_fix_balance_column,
 )
@@ -29,6 +31,7 @@ def init_database():
     # Run migrations first (before creating tables with SQLAlchemy)
     migrate_add_level_column()
     migrate_fix_balance_column()
+    migrate_schema()  # v2 schema migration (adds columns, creates new tables)
 
     # Initialize main database
     engine = create_engine(f"sqlite:///{database_path.resolve()}")
@@ -39,6 +42,9 @@ def init_database():
     transaction_engine = create_engine(f"sqlite:///{transaction_path.resolve()}")
     TransactionBase.metadata.create_all(transaction_engine)
     transaction_session = sessionmaker(bind=transaction_engine)()
+
+    # Run data migration after tables are guaranteed to exist
+    migrate_data()
 
 
 def get_session():

@@ -5,19 +5,19 @@ from .models import User, UserRank, UserStats
 
 
 def get_top_users(limit: int = 10) -> List[User]:
-    """Get top users by level (primary) and balance (secondary)
+    """Get top users by level (primary) and xp (secondary)
 
     Args:
         limit: Maximum number of users to return
 
     Returns:
-        List of TopUser dataclasses with user_id, level, and balance
+        List of User objects
     """
     session = get_session()
 
     users = (
         session.query(User)
-        .order_by(User.level.desc(), User.balance.desc())
+        .order_by(User.level.desc(), User.xp.desc())
         .limit(limit)
         .all()
     )
@@ -25,64 +25,42 @@ def get_top_users(limit: int = 10) -> List[User]:
 
 
 def get_user_rank(user_id: str) -> UserRank:
-    """Get user's rank and distances to next rank/level (based on level first, then balance)
+    """Get user's rank and XP gap to next rank
 
     Args:
         user_id: User ID to get rank for
 
     Returns:
-        UserRank dataclass with rank, distance_to_next_rank, and distance_to_next_level
+        UserRank dataclass with rank and xp_gap
     """
     session = get_session()
     user = get_user(user_id)
 
-    # Count users with higher level, or same level but higher balance
+    # Count users with higher level, or same level but higher xp
     rank = (
         session.query(User)
         .filter(
             (User.level > user.level)
-            | ((User.level == user.level) & (User.balance > user.balance))
+            | ((User.level == user.level) & (User.xp > user.xp))
         )
         .count()
         + 1
     )
 
-    # Get user with next higher rank (considering level first, then balance)
+    # Get user with next higher rank
     next_rank_user = (
         session.query(User)
         .filter(
             (User.level > user.level)
-            | ((User.level == user.level) & (User.balance > user.balance))
+            | ((User.level == user.level) & (User.xp > user.xp))
         )
-        .order_by(User.level.asc(), User.balance.asc())
+        .order_by(User.level.asc(), User.xp.asc())
         .first()
     )
 
-    # Calculate distance to next rank: if same level, return balance difference; otherwise 0
-    if next_rank_user is not None and next_rank_user.level == user.level:
-        distance_to_next_rank = next_rank_user.balance - user.balance
-    else:
-        distance_to_next_rank = 0
+    xp_gap = (next_rank_user.xp - user.xp) if next_rank_user else 0
 
-    # Get user with next higher level
-    next_level_user = (
-        session.query(User)
-        .filter(User.level > user.level)
-        .order_by(User.level.asc())
-        .first()
-    )
-
-    # Calculate distance to next level
-    if next_level_user is not None:
-        distance_to_next_level = next_level_user.level - user.level
-    else:
-        distance_to_next_level = 0
-
-    return UserRank(
-        rank=rank,
-        distance_to_next_rank=distance_to_next_rank,
-        distance_to_next_level=distance_to_next_level,
-    )
+    return UserRank(rank=rank, xp_gap=xp_gap)
 
 
 def get_user_stats(user_id: str) -> UserStats:
@@ -92,7 +70,7 @@ def get_user_stats(user_id: str) -> UserStats:
         user_id: User ID to get stats for
 
     Returns:
-        UserStats dataclass containing balance, level, rank, distances, and last_daily_time
+        UserStats dataclass containing balance, level, xp, star_stickers, rank, and last_daily_time
     """
     user = get_user(user_id)
     rank_info = get_user_rank(user_id)
@@ -101,8 +79,9 @@ def get_user_stats(user_id: str) -> UserStats:
         user_id=user.user_id,
         balance=user.balance,
         level=user.level,
+        xp=user.xp,
+        star_stickers=user.star_stickers,
         rank=rank_info.rank,
-        distance_to_next_rank=rank_info.distance_to_next_rank,
-        distance_to_next_level=rank_info.distance_to_next_level,
+        xp_gap=rank_info.xp_gap,
         last_daily_time=user.last_daily_time,
     )
