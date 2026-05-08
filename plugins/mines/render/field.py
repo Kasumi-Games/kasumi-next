@@ -10,7 +10,7 @@ from plugins.render_service import (
     load_font,
     draw_rounded_rectangle,
 )
-from .utils import get_random_kasumi, get_random_arisa
+
 from plugins.render_service.primitives import RESOURCES_DIR
 
 if TYPE_CHECKING:
@@ -206,7 +206,7 @@ def render(field: "Field") -> Image.Image:
                 )
             elif block == BlockType.EMPTY_SHOWN:
                 image = generate_revealed_field(
-                    get_random_kasumi(),
+                    field.kasumi_stamps[i][j],
                     (255, 124, 85),
                 )
                 field_layer.paste(
@@ -215,7 +215,7 @@ def render(field: "Field") -> Image.Image:
                 )
             elif block == BlockType.MINE_SHOWN:
                 image = generate_revealed_field(
-                    get_random_arisa(),
+                    field.arisa_stamps[i][j],
                     (184, 130, 225),
                 )
                 field_layer.paste(

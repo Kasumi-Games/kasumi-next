@@ -4,6 +4,8 @@ from enum import Enum, StrEnum
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
+from .render.utils import get_random_kasumi, get_random_arisa
+
 
 class BlockType(Enum):
     EMPTY = 0
@@ -18,6 +20,12 @@ class Field:
         self.height = height
         self.mines = mines
         self.field = [[BlockType.EMPTY for _ in range(width)] for _ in range(height)]
+        self.kasumi_stamps = [
+            [get_random_kasumi() for _ in range(self.width)] for _ in range(self.height)
+        ]
+        self.arisa_stamps = [
+            [get_random_arisa() for _ in range(self.width)] for _ in range(self.height)
+        ]
 
         mine_positions = random.sample(range(width * height), mines)
         for position in mine_positions:
