@@ -96,7 +96,9 @@ async def handle_daily(matcher: Matcher, event: MessageEvent):
     msg += f"今日任务：【{task.name}】{task.description}\n"
     msg += f"奖励：{task.reward} 个星星贴纸\n"
 
-    if mails := mail_service.get_user_mails(user_id):
+    if mails := [
+        mail for mail in mail_service.get_user_mails(user_id) if not mail.is_read
+    ]:
         msg += f"你有 {len(mails)} 封邮件，记得查看哦～\n"
 
     await matcher.send(msg + passive_generator.element)
