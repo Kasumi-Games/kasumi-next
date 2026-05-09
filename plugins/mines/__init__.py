@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 from PIL import Image
 from nonebot.log import logger
 from nonebot.params import CommandArg
+from utils.error_handler import handle_error
 from nonebot.exception import MatcherException
 from nonebot import get_driver, on_command, require
 from nonebot.adapters.satori import Message, MessageEvent, MessageSegment
@@ -336,9 +337,13 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     except MatcherException:
         raise
     except Exception as e:
-        logger.error("扫雷游戏发生错误: {}", e, exc_info=True)
         game_manager.refund_game(event.get_user_id())
-        await game_start.finish(Messages.ERROR + gens[latest_message_id].element)
+        code = handle_error(e, context="mines", user_id=event.get_user_id())
+        await game_start.finish(
+            MessageSegment.text("错误码：{}\n".format(code))
+            + Messages.ERROR
+            + gens[latest_message_id].element
+        )
 
 
 @game_stats.handle()
@@ -381,7 +386,8 @@ async def handle_stats(event: MessageEvent):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error("扫雷统计发生错误: {}", e, exc_info=True)
+        code = handle_error(e, context="mines_stats", user_id=event.get_user_id())
         await game_stats.finish(
-            "统计查询失败，请稍后再试" + gens[event.message.id].element
+            "统计查询失败，请稍后再试\n错误码：{}".format(code)
+            + gens[event.message.id].element
         )

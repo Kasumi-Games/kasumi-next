@@ -1,9 +1,10 @@
 import cv2
 import json
 from pathlib import Path
+from typing import Optional
 from nonebot.log import logger
 from nonebot.params import CommandArg
-from typing import Optional
+from utils.error_handler import handle_error
 from nonebot.exception import MatcherException
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageEvent, Message, MessageSegment
@@ -199,10 +200,11 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     except Exception as e:
         # 发生错误时退还下注金额
         game_manager.refund_half_game(event.get_user_id())
-        logger.error("Blackjack error: " + str(e), exc_info=True)
-        logger.exception(e)
+        code = handle_error(e, context="blackjack", user_id=event.get_user_id())
         await game_start.finish(
-            "发生意外错误！已退回一半的下注碎片给你，再试一次吧？"
+            "发生意外错误！已退回一半的下注碎片给你，再试一次吧？\n错误码：{}".format(
+                code
+            )
             + gens[latest_message_id].element
         )
 
@@ -248,7 +250,8 @@ async def handle_stats(event: MessageEvent):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error("获取blackjack统计信息时出错: {}", e, exc_info=True)
+        code = handle_error(e, context="blackjack_stats", user_id=event.get_user_id())
         await game_stats.finish(
-            "获取统计信息时出现错误，请稍后再试" + gens[event.message.id].element
+            "获取统计信息时出现错误，请稍后再试\n错误码：{}".format(code)
+            + gens[event.message.id].element
         )

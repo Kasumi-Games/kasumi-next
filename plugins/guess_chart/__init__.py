@@ -7,6 +7,7 @@ from bestdori.charts import Chart
 from bestdori.render import render
 from nonebot import get_plugin_config
 from typing import Optional, List, Union
+from utils.error_handler import handle_error
 from nonebot.params import Depends, CommandArg
 from nonebot import on_command, require, get_driver
 from nonebot.adapters.satori import MessageSegment, MessageEvent, Message
@@ -162,10 +163,11 @@ async def handle_start(
         chart = await Chart.get_chart_async(song_id, chart_difficulty)
         chart_statistics = chart.count()
     except Exception as e:
-        logger.error("猜谱面：{}", e, exc_info=True)
         gamers_store.remove(event.channel.id)
+        code = handle_error(e, context="guess_chart", user_id=event.get_user_id())
         await game_start.finish(
-            "发生错误！重新开一把吧" + gens[event.message.id].element
+            "发生错误！重新开一把吧\n错误码：{}".format(code)
+            + gens[event.message.id].element
         )
 
     try:

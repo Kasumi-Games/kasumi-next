@@ -175,3 +175,6 @@ ntsilk.exe
 **/.DS_Store
 
 .claude
+
+# log files
+logs/

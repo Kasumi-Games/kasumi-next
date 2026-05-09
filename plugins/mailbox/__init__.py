@@ -10,6 +10,7 @@ from nonebot.permission import SUPERUSER
 from nonebot.exception import MatcherException
 from nonebot import get_driver, on_command, require
 from nonebot.adapters.satori import MessageEvent, Message
+from utils.error_handler import handle_error, log_error, generate_error_code
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
@@ -66,7 +67,7 @@ async def cleanup_expired_mails():
         if expired_count > 0:
             logger.info(f"已清理 {expired_count} 封过期邮件")
     except Exception as e:
-        logger.error("清理过期邮件时发生错误: {}", e)
+        log_error(generate_error_code(), e, context="mailbox_cleanup")
 
 
 @get_driver().on_startup
@@ -78,7 +79,7 @@ async def process_scheduled_mails():
         if processed_count > 0:
             logger.info(f"已发送 {processed_count} 封定时邮件")
     except Exception as e:
-        logger.exception("处理定时邮件时发生错误: {}", e, exc_info=True)
+        log_error(generate_error_code(), e, context="mailbox_scheduler")
 
 
 # 邮箱命令
@@ -272,9 +273,11 @@ async def handle_alconna_add(event: MessageEvent, result: Arparma):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error("处理 Alconna add 命令时发生错误: {}", e)
+        code = handle_error(
+            e, context="mailbox_alconna_add", user_id=event.get_user_id()
+        )
         await schedule_mail_cmd.finish(
-            f"创建定时邮件失败: {str(e)}" + passive_generator.element
+            f"创建定时邮件失败\n错误码：{code}" + passive_generator.element
         )
 
 
@@ -421,9 +424,9 @@ async def create_scheduled_mail(
             f"参数错误: {str(e)}" + passive_generator.element
         )
     except Exception as e:
-        logger.error("创建定时邮件时发生错误: {}", e)
+        code = handle_error(e, context="mailbox_create", user_id=event.get_user_id())
         await schedule_mail_cmd.finish(
-            f"创建失败: {str(e)}" + passive_generator.element
+            f"创建失败\n错误码：{code}" + passive_generator.element
         )
 
 
@@ -591,9 +594,9 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
             f"参数格式错误: {str(e)}" + passive_generator.element
         )
     except Exception as e:
-        logger.error("编辑定时邮件时发生错误: {}", e)
+        code = handle_error(e, context="mailbox_edit", user_id=event.get_user_id())
         await schedule_mail_cmd.finish(
-            f"编辑失败: {str(e)}" + passive_generator.element
+            f"编辑失败\n错误码：{code}" + passive_generator.element
         )
 
 

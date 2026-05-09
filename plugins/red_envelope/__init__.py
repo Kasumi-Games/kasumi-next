@@ -1,27 +1,28 @@
 from typing import Optional
 
-from nonebot import get_driver, on_command, require
-from nonebot.adapters.satori import Message, MessageEvent
-from nonebot.exception import MatcherException
 from nonebot.log import logger
 from nonebot.params import CommandArg
+from nonebot.exception import MatcherException
+from nonebot import get_driver, on_command, require
+from nonebot.adapters.satori import Message, MessageEvent
+from utils.error_handler import handle_error, log_error, generate_error_code
 
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
 
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
-from utils import PassiveGenerator  # noqa: E402
 from .. import monetary  # noqa: E402
+from utils import PassiveGenerator  # noqa: E402
 
 from .database import init_database  # noqa: E402
 from .messages import Messages  # noqa: E402
 from .service import (  # noqa: E402
-    EnvelopeCompletionInfo,  # noqa: F401
     claim_envelope,
     create_envelope,
-    expire_overdue_envelopes,
     get_active_envelopes,
+    EnvelopeCompletionInfo,  # noqa: F401
+    expire_overdue_envelopes,
 )
 from ..nickname import nickname  # noqa: E402
 
@@ -40,7 +41,7 @@ async def handle_expire_job():
         if count > 0:
             logger.info(f"已处理 {count} 个过期红包")
     except Exception as e:
-        logger.exception("处理过期红包时发生错误: {}", e, exc_info=True)
+        log_error(generate_error_code(), e, context="red_envelope_expire")
 
 
 create_cmd = on_command("发红包", aliases={"红包"}, priority=10, block=True)
@@ -126,9 +127,13 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error("创建红包失败: {}", e, exc_info=True)
         monetary.add(user_id, amount, "red_envelope_create_refund")
-        await create_cmd.finish(Messages.CREATE_FAILED + passive_generator.element)
+        code = handle_error(e, context="red_envelope_create", user_id=user_id)
+        await create_cmd.finish(
+            "错误码：{}\n".format(code)
+            + Messages.CREATE_FAILED
+            + passive_generator.element
+        )
 
 
 @claim_cmd.handle()
@@ -185,8 +190,12 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error("抢红包时发生错误: {}", e, exc_info=True)
-        await claim_cmd.finish(Messages.CLAIM_FAILED + passive_generator.element)
+        code = handle_error(e, context="red_envelope_claim", user_id=user_id)
+        await claim_cmd.finish(
+            "错误码：{}\n".format(code)
+            + Messages.CLAIM_FAILED
+            + passive_generator.element
+        )
 
 
 @list_cmd.handle()

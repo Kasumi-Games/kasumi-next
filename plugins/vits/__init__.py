@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 from typing import Dict, List
-from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot import on_command, get_driver, get_plugin_config, require
 from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
+from utils.error_handler import handle_error, log_error, generate_error_code
 
 require("nonebot_plugin_waiter")
 
@@ -43,11 +43,8 @@ async def get_available_speakers():
             url=plugin_config.bert_vits_api_url + "/speakers"
         )
         # key: speaker_id, value: speaker_name
-    except Exception:
-        logger.error(
-            "Speaker list fetching failed, will try again when next called",
-            exc_info=True,
-        )
+    except Exception as e:
+        log_error(generate_error_code(), e, context="vits_speaker_startup")
 
 
 @vits.handle()
@@ -59,8 +56,12 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
                 url=plugin_config.bert_vits_api_url + "/speakers"
             )
         except Exception as e:
-            logger.error("Fetching speakers failed: {}", e, exc_info=True)
-            await vits.finish("TTS 服务出现故障，待会再来试试吧…")
+            code = handle_error(
+                e, context="vits_speaker_fetch", user_id=event.get_user_id()
+            )
+            await vits.finish(
+                "TTS 服务出现故障，待会再来试试吧…\n错误码：{}".format(code)
+            )
 
     for seg in arg:
         if seg.type != "text":
@@ -154,7 +155,10 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
         )
     except Exception as e:
         monetary.add(event.get_user_id(), required_amount, "vits_error")
-        await vits.finish("请求失败：" + str(e) + passive_generator.element)
+        code = handle_error(e, context="vits_synthesize", user_id=event.get_user_id())
+        await vits.finish(
+            "请求失败\n错误码：{}".format(code) + passive_generator.element
+        )
 
     await vits.send(
         MessageSegment.audio(

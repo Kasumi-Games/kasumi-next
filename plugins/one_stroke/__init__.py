@@ -4,9 +4,9 @@ import io
 import time
 
 from PIL import Image
-from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot import on_command, require
+from utils.error_handler import handle_error
 from nonebot.exception import MatcherException
 from nonebot.adapters.satori import Message, MessageEvent, MessageSegment
 
@@ -232,7 +232,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
 
                 # Daily task
                 task_msg = await check_progress(
-                    event.get_user_id(), "one_stroke_time",
+                    event.get_user_id(),
+                    "one_stroke_time",
                     {"difficulty": session.difficulty_name, "time": elapsed_seconds},
                 )
                 if task_msg:
@@ -264,6 +265,10 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
     except MatcherException:
         raise
     except Exception as e:
-        logger.error("一笔画插件发生错误: {}", e, exc_info=True)
         game_manager.end_game(event.get_user_id())
-        await game_start.finish(Messages.ERROR + gens[latest_message_id].element)
+        code = handle_error(e, context="one_stroke", user_id=event.get_user_id())
+        await game_start.finish(
+            MessageSegment.text("错误码：{}\n".format(code))
+            + Messages.ERROR
+            + gens[latest_message_id].element
+        )
