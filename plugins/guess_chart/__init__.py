@@ -38,7 +38,7 @@ from .utils import (  # noqa: E402
     sort_by_difficulty,
     pil_image_to_bytes,
     get_value_from_list,
-    compare_origin_songname,
+    build_enriched_dictionary,
 )
 
 
@@ -259,7 +259,7 @@ async def handle_start(
                     await game_start.send(tips[0] + gens[message_id].element)
                     tips.pop(0)
                 continue
-            elif msg == "bzd":
+            elif msg == "bzd" or msg == "不知道":
                 gamers_store.remove(event.channel.id)
                 await game_start.send(
                     "要再试一次吗？\n"
@@ -272,9 +272,8 @@ async def handle_start(
                 )
                 break
 
-            guessed_chart_id = fuzzy_match(msg, nickname_song)
-            if guessed_chart_id is None:
-                guessed_chart_id = compare_origin_songname(msg.strip(), song_raw_data)
+            enriched_song = build_enriched_dictionary(nickname_song, song_raw_data)
+            guessed_chart_id = fuzzy_match(msg, enriched_song)
 
         if guessed_chart_id == correct_chart_id:
             gamers_store.remove(event.channel.id)

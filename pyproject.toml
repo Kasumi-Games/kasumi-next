@@ -10,7 +10,6 @@ dependencies = [
     "nonebot-plugin-waiter>=0.6.2",
     "bestdori-api>=2.0.0",
     "bestdori-render>=0.1.3",
-    "fuzzywuzzy>=0.18.0",
     "Pillow>=10.3.0",
     "aiohttp>=3.9.5",
     "nonebot-plugin-apscheduler>=0.4.0",
@@ -25,6 +24,7 @@ dependencies = [
     "nonebot-plugin-alconna>=0.59.4",
     "matplotlib>=3.9.4",
     "nonebot-plugin-manosaba-memes>=0.1.2",
+    "rapidfuzz>=3.13.0",
 ]
 requires-python = ">=3.10"
 readme = "README.md"

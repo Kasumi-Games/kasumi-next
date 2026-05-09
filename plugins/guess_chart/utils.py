@@ -1,8 +1,9 @@
+import re
 import io
 import csv
 import random
 import aiohttp
-from fuzzywuzzy import process
+from rapidfuzz import process
 from PIL import Image, ImageDraw
 from bestdori.charts import Chart
 from nonebot.adapters import Message
@@ -100,19 +101,44 @@ def read_csv_to_dict(file_path: str):
     return result
 
 
-def fuzzy_match(query: str, dictionary: dict):
-    max_ratio = 0
-    matched_key = None
+def fuzzy_match(query: str, dictionary: dict, threshold: int = 75):
+    query_lower = query.lower()
+
+    # 1. Exact match fast path (case-insensitive)
     for key, value in dictionary.items():
-        if query in value:
+        if any(query_lower == nick.lower() for nick in value):
             return key
-        if not is_valid_query(query):
-            continue
-        _, ratio = process.extractOne(query, value) or (0, 0)
-        if ratio > max_ratio:
-            max_ratio = ratio
-            matched_key = key
-    return matched_key
+
+    if not is_valid_query(query):
+        return None
+
+    # 2. Flatten to single list, one global extract (case-insensitive)
+    flat = [(nick.lower(), kid) for kid, nicks in dictionary.items() for nick in nicks]
+    if not flat:
+        return None
+    results = process.extract(query_lower, [n for n, _ in flat], limit=5)
+
+    # 3. Dynamic threshold: lower for CJK queries where one-char typos are common
+    effective_threshold = threshold
+    if any("一" <= c <= "鿿" or "㐀" <= c <= "䶿" for c in query):
+        effective_threshold = max(threshold - 10, 60)
+
+    best_song = None
+    best_score = 0
+    for matched_str, score, _ in results:
+        if score < effective_threshold:
+            break
+        for nick, sid in flat:
+            if nick == matched_str:
+                if score > best_score:
+                    best_score = score
+                    best_song = sid
+                elif score == best_score and best_song is not None:
+                    if len(dictionary[sid]) > len(dictionary[best_song]):
+                        best_song = sid
+                break
+
+    return best_song
 
 
 def get_difficulty(args: Message = CommandArg()) -> str:
@@ -154,11 +180,135 @@ def render_to_slices(chart: list, game_difficulty: str) -> Image.Image:
     return slices
 
 
-def compare_origin_songname(guessed_name: str, song_data: Dict[str, Dict[str, Any]]):
-    for key, data in song_data.items():
-        if guessed_name in data["musicTitle"]:
-            return key
-    return None
+# Japanese shinjitai → Simplified Chinese mapping.
+# Source: Chu, Nakazawa & Kurohashi (LREC 2012)
+# "Chinese Characters Mapping Table of Japanese, Traditional Chinese and Simplified Chinese"
+# https://aclanthology.org/L12-1070/
+def _load_shinjitai_mapping() -> Dict[str, str]:
+    """Load the LREC 2012 kanji mapping table, returning shinjitai→simplified dict."""
+    import os as _os
+
+    _path = _os.path.join(_os.path.dirname(__file__), "kanji_mapping_table.txt")
+    _mapping: Dict[str, str] = {}
+    with open(_path, "r", encoding="utf-8") as _f:
+        for _line in _f:
+            if _line.startswith("-") or not _line.strip():
+                continue
+            _parts = _line.rstrip("\n").split("\t")
+            if len(_parts) < 3:
+                continue
+            _kanji = _parts[0]
+            _sc_first = _parts[2].split(",")[0]
+            if _kanji != _sc_first:
+                _mapping[_kanji] = _sc_first
+    return _mapping
+
+
+_SHINJITAI_TO_SIMPLIFIED: Dict[str, str] = _load_shinjitai_mapping()
+
+
+def _convert_shinjitai(text: str) -> str:
+    """Convert Japanese shinjitai kanji to simplified Chinese."""
+    result = []
+    for ch in text:
+        result.append(_SHINJITAI_TO_SIMPLIFIED.get(ch, ch))
+    return "".join(result)
+
+
+def build_enriched_dictionary(
+    nickname_dict: Dict[str, List[str]],
+    song_raw_data: Dict[str, Dict[str, Any]],
+) -> Dict[str, List[str]]:
+    """
+    Enrich nickname dictionary with auto-generated nicknames from song titles.
+    - Strips hiragana/katakana from Japanese titles to extract kanji/English parts
+    - Finds unique distinguishing English words from English-titled songs
+    - Adds original musicTitle entries for direct title matching
+    """
+    enriched: Dict[str, List[str]] = {}
+    for song_id, nicks in nickname_dict.items():
+        enriched[song_id] = list(nicks)
+
+    # Build song_id -> primary title mapping
+    id_to_title: Dict[str, str] = {}
+    for song_id, data in song_raw_data.items():
+        if (
+            data.get("musicTitle")
+            and isinstance(data["musicTitle"], list)
+            and data["musicTitle"]
+        ):
+            title = get_value_from_list(data["musicTitle"])
+            if title:
+                id_to_title[song_id] = title
+
+    hiragana = set(chr(c) for c in range(0x3040, 0x309F + 1))
+    katakana = set(chr(c) for c in range(0x30A0, 0x30FF + 1))
+    kana = hiragana | katakana
+
+    english_words_across_all: Dict[str, int] = {}
+
+    for song_id, title in id_to_title.items():
+        # --- Strip kana ---
+        stripped = "".join(c for c in title if c not in kana)
+        stripped = re.sub(r"[〜～\s_]+", " ", stripped).strip()
+        stripped = re.sub(r"[「」『』【】()\[\]{}『』]", "", stripped)
+        if stripped and len(stripped) >= 1:
+            existing = {n.lower() for n in enriched.get(song_id, [])}
+            if stripped.lower() not in existing:
+                enriched.setdefault(song_id, []).append(stripped)
+
+        # --- Aggressively clean: no symbols, no spaces, then shinjitai→simplified ---
+        raw = "".join(c for c in title if c not in kana)
+        raw = re.sub(r"[^\w一-鿿]", "", raw)
+        raw_simplified = _convert_shinjitai(raw)
+        if raw_simplified and len(raw_simplified) >= 1:
+            existing = {n.lower() for n in enriched.get(song_id, [])}
+            if raw_simplified.lower() not in existing:
+                enriched.setdefault(song_id, []).append(raw_simplified)
+        # Also add the unsimplified clean form if different
+        if raw and raw != raw_simplified and len(raw) >= 1:
+            existing = {n.lower() for n in enriched.get(song_id, [])}
+            if raw.lower() not in existing:
+                enriched.setdefault(song_id, []).append(raw)
+
+        # --- Collect English words ---
+        words = re.findall(r"[a-zA-Z]{2,}", title)
+        for w in words:
+            english_words_across_all[w.lower()] = (
+                english_words_across_all.get(w.lower(), 0) + 1
+            )
+
+    # --- Add distinguishing English words ---
+    for song_id, title in id_to_title.items():
+        words = re.findall(r"[a-zA-Z]{2,}", title)
+        unique_words = [
+            w for w in words if english_words_across_all.get(w.lower(), 0) <= 2
+        ]
+        existing = {n.lower() for n in enriched.get(song_id, [])}
+        if unique_words:
+            distinctive = " ".join(unique_words)
+            if distinctive.lower() not in existing:
+                enriched.setdefault(song_id, []).append(distinctive)
+        # Also add each unique word individually as a standalone nickname
+        for w in unique_words:
+            if w.lower() not in existing:
+                enriched.setdefault(song_id, []).append(w)
+
+    # --- Add original musicTitle entries ---
+    for song_id, data in song_raw_data.items():
+        if song_id not in enriched:
+            enriched[song_id] = []
+        if (
+            data.get("musicTitle")
+            and isinstance(data["musicTitle"], list)
+            and data["musicTitle"]
+        ):
+            existing = {n.lower() for n in enriched[song_id]}
+            for t in data["musicTitle"]:
+                if t and isinstance(t, str) and t.lower() not in existing:
+                    enriched[song_id].append(t)
+
+    return enriched
 
 
 def num_to_range(num: int):
@@ -202,8 +352,10 @@ def pil_image_to_bytes(image: Image.Image):
 
 
 def is_valid_query(query: str):
-    # 去除空白后非空，且含有至少一个字母数字字符
-    return bool(query.strip()) and any(char.isalnum() for char in query)
+    stripped = query.strip()
+    return (
+        bool(stripped) and len(stripped) >= 2 and any(char.isalnum() for char in query)
+    )
 
 
 def _get_song_server(song_info: Dict[str, Any]) -> str:
@@ -264,7 +416,7 @@ def flatten_song_data(song_data: Dict[str, Dict[str, Any]]):
 
 
 def sort_by_difficulty(
-    flattened_song_data: List[Dict[str, Any]]
+    flattened_song_data: List[Dict[str, Any]],
 ) -> Dict[int, Dict[str, Any]]:
     result = {}
     for song in flattened_song_data:
