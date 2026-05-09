@@ -25,17 +25,21 @@ from ..monetary import (  # noqa: E402
     get_user,
     get_top_users,
     get_user_rank,
-    add_star_stickers,
     xp_to_next_level,
+    add_star_stickers,
     total_xp_for_level,
     set as set_balance,
 )
 
 
 @on_command(
-    "balance", aliases={"余额"}, priority=10, block=True, rule=has_no_argument
+    "info",
+    aliases={"balance", "余额", "信息", "个人信息", "我的信息"},
+    priority=10,
+    block=True,
+    rule=has_no_argument,
 ).handle()
-async def balance(matcher: Matcher, event: MessageEvent):
+async def info(matcher: Matcher, event: MessageEvent):
     user_id = event.get_user_id()
     user = get_user(user_id)
     passive_generator = PassiveGenerator(event)
