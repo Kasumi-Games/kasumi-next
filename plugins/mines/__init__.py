@@ -236,9 +236,10 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 if task_msg:
                     await game_start.send(task_msg + gens[latest_message_id].element)
 
-                # XP only when multiplier >= 2.0
+                # XP scales with multiplier: starts at 5 at 2.0x
                 if cashout_multiplier >= 2.0:
-                    level_msg = await monetary.add_xp(event.get_user_id(), 5)
+                    xp = int(cashout_multiplier * 2.5)
+                    level_msg = await monetary.add_xp(event.get_user_id(), xp)
                     if level_msg:
                         await game_start.send(
                             level_msg + gens[latest_message_id].element
@@ -312,9 +313,10 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 if task_msg:
                     await game_start.send(task_msg + gens[latest_message_id].element)
 
-                # XP only when multiplier >= 2.0
+                # XP scales with multiplier: starts at 5 at 2.0x
                 if win_multiplier >= 2.0:
-                    level_msg = await monetary.add_xp(event.get_user_id(), 5)
+                    xp = int(win_multiplier * 2.5)
+                    level_msg = await monetary.add_xp(event.get_user_id(), xp)
                     if level_msg:
                         await game_start.send(
                             level_msg + gens[latest_message_id].element
