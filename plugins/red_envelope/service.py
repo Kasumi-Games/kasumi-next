@@ -38,6 +38,8 @@ def _generate_next_amount(remaining_amount: int, remaining_count: int) -> int:
         return remaining_amount
 
     max_amount = (2 * remaining_amount) // remaining_count
+    # Ensure each remaining claim gets at least 1
+    max_amount = min(max_amount, remaining_amount - remaining_count + 1)
     return random.randint(1, max_amount)
 
 
