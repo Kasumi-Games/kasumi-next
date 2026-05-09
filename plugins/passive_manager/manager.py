@@ -31,28 +31,26 @@ class PassiveManager:
 
         current_time = datetime.now()
 
-        # 筛选满足条件的数据
-        passive_data = sorted(
-            [
-                data
-                for data in self._data
-                if data.event.channel.id == channel_id
-                and data.event.timestamp + timedelta(minutes=5) > current_time
-                and data.seq <= 5
-            ],
-            key=lambda data: data.event.timestamp.timestamp(),
-        )
+        # 筛选满足条件的数据，记录在 self._data 中的索引
+        candidates = [
+            (i, data)
+            for i, data in enumerate(self._data)
+            if data.event.channel.id == channel_id
+            and data.event.timestamp + timedelta(minutes=5) > current_time
+            and data.seq <= 5
+        ]
 
-        if not passive_data:
+        if not candidates:
             return None
 
-        # 增加 seq
-        for i, data in enumerate(self._data):
-            if data.message_id == passive_data[-1].message_id:
-                self._data[i].seq += 1
-                break
+        # 按时间戳排序，选最新的
+        candidates.sort(key=lambda item: item[1].event.timestamp.timestamp())
+        idx = candidates[-1][0]
 
-        return passive_data[-1]
+        # 增加 seq
+        self._data[idx].seq += 1
+
+        return self._data[idx]
 
     def clear_timeout_data(self) -> None:
         current_time = datetime.now()

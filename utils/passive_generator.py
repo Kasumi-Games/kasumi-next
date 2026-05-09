@@ -3,17 +3,27 @@ from datetime import datetime, timedelta
 from nonebot.adapters.satori import MessageEvent, MessageSegment
 
 
+class SeqCounter:
+    def __init__(self):
+        self.value = 0
+
+    def next(self) -> int:
+        self.value += 1
+        return self.value
+
+
 class PassiveGenerator:
     def __init__(self, event: MessageEvent):
         self.event = event
-        self.seq = 0
+        if event.message.id not in _seq_counters:
+            _seq_counters[event.message.id] = SeqCounter()
 
     @property
     def element(self):
-        self.seq += 1
+        seq = _seq_counters[self.event.message.id].next()
         return MessageSegment(
             type="qq:passive",
-            data={"id": self.event.message.id, "seq": self.seq},
+            data={"id": self.event.message.id, "seq": seq},
         )
 
 
@@ -77,4 +87,5 @@ class ExpiringDict:
             return default
 
 
+_seq_counters: Dict[str, SeqCounter] = ExpiringDict(5)
 generators: Dict[str, PassiveGenerator] = ExpiringDict(5)
