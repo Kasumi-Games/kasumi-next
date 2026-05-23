@@ -80,36 +80,55 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
     user_id = event.get_user_id()
     channel_id = _get_channel_id(event)
     if not channel_id:
-        await create_cmd.finish(Messages.NOT_IN_CHANNEL)
+        await create_cmd.finish(Messages.NOT_IN_CHANNEL, referrer=event.referrer)
 
     text = arg.extract_plain_text().strip()
     passive_generator = PassiveGenerator(event)
 
     parts = text.split()
     if len(parts) < 2:
-        await create_cmd.finish(Messages.CREATE_USAGE + passive_generator.element)
+        await create_cmd.finish(
+            Messages.CREATE_USAGE + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     try:
         amount = int(parts[-2])
         count = int(parts[-1])
         title = " ".join(parts[:-2]).strip() or "红包"
     except ValueError:
-        await create_cmd.finish(Messages.CREATE_USAGE + passive_generator.element)
+        await create_cmd.finish(
+            Messages.CREATE_USAGE + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     if amount <= 0:
-        await create_cmd.finish(Messages.INVALID_AMOUNT + passive_generator.element)
+        await create_cmd.finish(
+            Messages.INVALID_AMOUNT + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
     if count <= 0:
-        await create_cmd.finish(Messages.INVALID_COUNT + passive_generator.element)
+        await create_cmd.finish(
+            Messages.INVALID_COUNT + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
     if count > 10000:
-        await create_cmd.finish(Messages.MAX_COUNT_EXCEEDED + passive_generator.element)
+        await create_cmd.finish(
+            Messages.MAX_COUNT_EXCEEDED + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
     if amount < count:
-        await create_cmd.finish(Messages.AMOUNT_TOO_SMALL + passive_generator.element)
+        await create_cmd.finish(
+            Messages.AMOUNT_TOO_SMALL + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     balance = monetary.get(user_id)
     if balance < amount:
         await create_cmd.finish(
             Messages.INSUFFICIENT_BALANCE.format(balance=balance)
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     try:
@@ -122,7 +141,8 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
                 amount=amount,
                 count=count,
             )
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
     except MatcherException:
         raise
@@ -132,7 +152,8 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
         await create_cmd.finish(
             "错误码：{}\n".format(code)
             + Messages.CREATE_FAILED
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
 
@@ -141,7 +162,7 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
     user_id = event.get_user_id()
     channel_id = _get_channel_id(event)
     if not channel_id:
-        await claim_cmd.finish(Messages.NOT_IN_CHANNEL)
+        await claim_cmd.finish(Messages.NOT_IN_CHANNEL, referrer=event.referrer)
 
     text = arg.extract_plain_text().strip()
     passive_generator = PassiveGenerator(event)
@@ -149,7 +170,10 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
     channel_index = None
     if text:
         if not text.isdigit():
-            await claim_cmd.finish(Messages.CLAIM_USAGE + passive_generator.element)
+            await claim_cmd.finish(
+                Messages.CLAIM_USAGE + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
         channel_index = int(text)
 
     try:
@@ -157,20 +181,40 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
             user_id, channel_id, channel_index
         )
         if status == "no_active":
-            await claim_cmd.finish(Messages.CLAIM_NO_ACTIVE + passive_generator.element)
+            await claim_cmd.finish(
+                Messages.CLAIM_NO_ACTIVE + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
         if status == "not_found":
-            await claim_cmd.finish(Messages.CLAIM_NOT_FOUND + passive_generator.element)
+            await claim_cmd.finish(
+                Messages.CLAIM_NOT_FOUND + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
         if status == "expired":
-            await claim_cmd.finish(Messages.CLAIM_EXPIRED + passive_generator.element)
+            await claim_cmd.finish(
+                Messages.CLAIM_EXPIRED + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
         if status == "empty":
-            await claim_cmd.finish(Messages.CLAIM_EMPTY + passive_generator.element)
+            await claim_cmd.finish(
+                Messages.CLAIM_EMPTY + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
         if status == "already":
-            await claim_cmd.finish(Messages.CLAIM_ALREADY + passive_generator.element)
+            await claim_cmd.finish(
+                Messages.CLAIM_ALREADY + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
         if status == "error":
-            await claim_cmd.finish(Messages.CLAIM_FAILED + passive_generator.element)
+            await claim_cmd.finish(
+                Messages.CLAIM_FAILED + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
         if status == "success":
             await claim_cmd.send(
-                Messages.CLAIM_SUCCESS.format(amount=amount) + passive_generator.element
+                Messages.CLAIM_SUCCESS.format(amount=amount)
+                + passive_generator.element,
+                referrer=passive_generator.event.referrer,
             )
 
             # Add completion message if this was the last claim
@@ -185,7 +229,8 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
                         lucky_king=lucky_king_name,
                         lucky_amount=completion_info.lucky_king_amount,
                     )
-                    + passive_generator.element
+                    + passive_generator.element,
+                    referrer=passive_generator.event.referrer,
                 )
     except MatcherException:
         raise
@@ -194,7 +239,8 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
         await claim_cmd.finish(
             "错误码：{}\n".format(code)
             + Messages.CLAIM_FAILED
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
 
@@ -202,12 +248,15 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
 async def handle_list(event: MessageEvent):
     channel_id = _get_channel_id(event)
     if not channel_id:
-        await list_cmd.finish(Messages.NOT_IN_CHANNEL)
+        await list_cmd.finish(Messages.NOT_IN_CHANNEL, referrer=event.referrer)
 
     passive_generator = PassiveGenerator(event)
     envelopes = get_active_envelopes(channel_id)
     if not envelopes:
-        await list_cmd.finish(Messages.LIST_EMPTY + passive_generator.element)
+        await list_cmd.finish(
+            Messages.LIST_EMPTY + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     items = []
     for envelope in envelopes:
@@ -226,5 +275,6 @@ async def handle_list(event: MessageEvent):
         Messages.LIST_HEADER.format(count=len(items))
         + "\n"
         + "\n".join(items)
-        + passive_generator.element
+        + passive_generator.element,
+        referrer=passive_generator.event.referrer,
     )

@@ -34,11 +34,6 @@ async def _(bot: Bot, api: str, data: Dict[str, Any]):
         if api != "message_create":
             return None
 
-        # 已存在 passive 标签，不再添加
-        if re.search(r"<qq:passive\s+[^>]*?\/?>", data["content"]):
-            logger.debug("Already has passive tag, skip")
-            return None
-
         passive_data = passive_manager.get_available_data(api, data)
 
         if passive_data is None:
@@ -46,6 +41,15 @@ async def _(bot: Bot, api: str, data: Dict[str, Any]):
                 f"No available passive data, failed to send passive message: {data}"
             )
             raise Exception("No available passive data")
+
+        # 注入 referrer 以支持 Satori 标准回复协议
+        if hasattr(passive_data.event, "referrer") and passive_data.event.referrer:
+            data["referer"] = passive_data.event.referrer
+
+        # 已存在 passive 标签，不再添加
+        if re.search(r"<qq:passive\s+[^>]*?\/?>", data["content"]):
+            logger.debug("Already has passive tag, skip")
+            return None
 
         data["content"] += (
             "<qq:passive "

@@ -52,7 +52,8 @@ async def info(matcher: Matcher, event: MessageEvent):
     await matcher.send(
         f"Lv.{user.level} | XP: {progress_xp}/{level_xp_range} (还需 {xp_needed})\n"
         f"星之碎片: {user.balance}\n"
-        f"星星贴纸: {user.star_stickers}" + passive_generator.element
+        f"星星贴纸: {user.star_stickers}" + passive_generator.element,
+        referrer=passive_generator.event.referrer,
     )
 
 
@@ -70,7 +71,10 @@ async def handle_daily(matcher: Matcher, event: MessageEvent):
     if user.last_daily_time:
         last_date = datetime.fromtimestamp(user.last_daily_time).date()
         if last_date == today:
-            await matcher.finish("今天已经签到过了" + passive_generator.element)
+            await matcher.finish(
+                "今天已经签到过了" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
         days_diff = (today - last_date).days
         if days_diff > 1:
             user.consecutive_checkins = 0
@@ -105,10 +109,15 @@ async def handle_daily(matcher: Matcher, event: MessageEvent):
     ]:
         msg += f"你有 {len(mails)} 封邮件，记得查看哦～\n"
 
-    await matcher.send(msg + passive_generator.element)
+    await matcher.send(
+        msg + passive_generator.element, referrer=passive_generator.event.referrer
+    )
     if level_msg:
-        await matcher.send(level_msg + passive_generator.element)
-    await matcher.finish()
+        await matcher.send(
+            level_msg + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+    await matcher.finish(referrer=event.referrer)
 
 
 @on_command("transfer", aliases={"转账"}, priority=10, block=True).handle()
@@ -123,7 +132,8 @@ async def handle_transfer(
     to_user_segs = text.split(" ")
     if len(to_user_segs) != 2:
         await matcher.finish(
-            "转账格式错误！示例：转账 &lt;昵称&gt; 10" + passive_generator.element
+            "转账格式错误！示例：转账 &lt;昵称&gt; 10" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     to_user_nick = (
@@ -135,30 +145,42 @@ async def handle_transfer(
         )
     except ValueError:
         await matcher.finish(
-            "格式错误！示例：转账 &lt;昵称&gt; 10" + passive_generator.element
+            "格式错误！示例：转账 &lt;昵称&gt; 10" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     to_user_id = nickname.get_id(to_user_nick)
 
     if to_user_id is None:
         await matcher.finish(
-            f"Kasumi 不认识{to_user_nick}呢..." + passive_generator.element
+            f"Kasumi 不认识{to_user_nick}呢..." + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     if to_user_id == user_id:
-        await matcher.finish("不能给自己转账哦！" + passive_generator.element)
+        await matcher.finish(
+            "不能给自己转账哦！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     if amount <= 0:
-        await matcher.finish("转账金额必须大于 0" + passive_generator.element)
+        await matcher.finish(
+            "转账金额必须大于 0" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     if get(user_id) < amount:
-        await matcher.finish("余额不足！" + passive_generator.element)
+        await matcher.finish(
+            "余额不足！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     transfer(user_id, to_user_id, amount, "transfer_by_command")
 
     await matcher.finish(
         f"转账成功，已转账 {amount} 个星之碎片给{to_user_nick}"
-        + passive_generator.element
+        + passive_generator.element,
+        referrer=passive_generator.event.referrer,
     )
 
 
@@ -190,7 +212,8 @@ async def handle_levelrank(matcher: Matcher, event: MessageEvent):
             ]
         )
         + rank_message
-        + passive_generator.element
+        + passive_generator.element,
+        referrer=passive_generator.event.referrer,
     )
 
 
@@ -201,7 +224,7 @@ async def set_balance_handler(
     matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()
 ):
     if event.get_user_id() not in get_driver().config.superusers:
-        await matcher.finish()
+        await matcher.finish(referrer=event.referrer)
 
     passive_generator = PassiveGenerator(event)
 
@@ -212,10 +235,12 @@ async def set_balance_handler(
         set_balance(user_id, int(amount), description)
 
         await matcher.finish(
-            f"已设置用户 {user_id} 的余额为 {amount}" + passive_generator.element
+            f"已设置用户 {user_id} 的余额为 {amount}" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
     except Exception:
         await matcher.finish(
             "设置余额失败，请检查参数格式：设置余额 <用户ID> <金额> <描述>"
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )

@@ -28,11 +28,17 @@ async def handle_daily_task(matcher: Matcher, event: MessageEvent):
         task = daily_task_service.ensure_daily_task(user_id)
 
     if task is None:
-        await matcher.finish("任务系统暂时不可用" + passive_generator.element)
+        await matcher.finish(
+            "任务系统暂时不可用" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     cfg = daily_task_service.task_configs.get(task.task_id)
     if not cfg:
-        await matcher.finish("任务配置异常" + passive_generator.element)
+        await matcher.finish(
+            "任务配置异常" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     if task.is_completed:
         completed_time = ""
@@ -45,13 +51,15 @@ async def handle_daily_task(matcher: Matcher, event: MessageEvent):
         await matcher.finish(
             f"【{cfg['name']}】{cfg['description']}\n"
             f"奖励：{cfg['reward']} 张星星贴纸\n"
-            f"完成时间：{completed_time}" + passive_generator.element
+            f"完成时间：{completed_time}" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
     else:
         await matcher.finish(
             "你还没有完成每日任务，快来完成吧！\n"
             f"【{cfg['name']}】{cfg['description']}\n"
-            f"奖励：{cfg['reward']} 张星星贴纸" + passive_generator.element
+            f"奖励：{cfg['reward']} 张星星贴纸" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
 

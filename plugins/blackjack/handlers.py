@@ -133,7 +133,8 @@ async def handle_player_bust(
             if game_manager.get_split_state(user_id) == 0
             else ""
         )
-        + gens[latest_message_id].element
+        + gens[latest_message_id].element,
+        referrer=gens[latest_message_id].event.referrer,
     )
 
 
@@ -162,7 +163,8 @@ async def handle_surrender(
             if game_manager.get_split_state(user_id) == 0
             else ""
         )
-        + gens[latest_message_id].element
+        + gens[latest_message_id].element,
+        referrer=gens[latest_message_id].event.referrer,
     )
 
 
@@ -199,7 +201,8 @@ async def play_player_turn(
                 mime="image/jpeg",
             )
             + prompt
-            + gens[latest_message_id].element
+            + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
         )
 
     while playing:
@@ -210,7 +213,8 @@ async def play_player_turn(
                     event.get_user_id(), GameResult.TIMEOUT, winnings=-bet_amount
                 )
                 await matcher.finish(
-                    Messages.TIMEOUT_LOSE + gens[latest_message_id].element
+                    Messages.TIMEOUT_LOSE + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
             else:
                 msg = str(resp.get_message()).strip()
@@ -226,7 +230,10 @@ async def play_player_turn(
                         error_msg = Messages.ACTION_INVALID.format(
                             double_part=double_part
                         )
-                    await matcher.send(error_msg + gens[latest_message_id].element)
+                    await matcher.send(
+                        error_msg + gens[latest_message_id].element,
+                        referrer=gens[latest_message_id].event.referrer,
+                    )
                     continue
 
                 if action == "h":
@@ -248,7 +255,8 @@ async def play_player_turn(
                             mime="image/jpeg",
                         )
                         + next_prompt
-                        + gens[latest_message_id].element
+                        + gens[latest_message_id].element,
+                        referrer=gens[latest_message_id].event.referrer,
                     )
 
                     play_round += 1
@@ -273,12 +281,14 @@ async def play_player_turn(
                     if game_manager.get_split_state(event.get_user_id()) > 0:
                         await matcher.send(
                             Messages.DOUBLE_AFTER_SPLIT
-                            + gens[latest_message_id].element
+                            + gens[latest_message_id].element,
+                            referrer=gens[latest_message_id].event.referrer,
                         )
                         continue
                     if play_round != 1:
                         await matcher.send(
-                            Messages.DOUBLE_NOT_FIRST + gens[latest_message_id].element
+                            Messages.DOUBLE_NOT_FIRST + gens[latest_message_id].element,
+                            referrer=gens[latest_message_id].event.referrer,
                         )
                         continue
 
@@ -287,7 +297,8 @@ async def play_player_turn(
                             Messages.DOUBLE_NOT_ENOUGH.format(
                                 amount=monetary.get(event.get_user_id())
                             )
-                            + gens[latest_message_id].element
+                            + gens[latest_message_id].element,
+                            referrer=gens[latest_message_id].event.referrer,
                         )
                         continue
 
@@ -304,7 +315,8 @@ async def play_player_turn(
                             ),
                             mime="image/jpeg",
                         )
-                        + gens[latest_message_id].element
+                        + gens[latest_message_id].element,
+                        referrer=gens[latest_message_id].event.referrer,
                     )
 
                     if player_hand.value > 21:
@@ -348,10 +360,16 @@ async def get_bet_amount(
         bet_amount = None
 
     if bet_amount is None:
-        await matcher.send(Messages.BET_PROMPT + gens[latest_message_id].element)
+        await matcher.send(
+            Messages.BET_PROMPT + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
         resp = await check.wait(timeout=60)
         if resp is None:
-            await matcher.finish(Messages.BET_TIMEOUT + gens[latest_message_id].element)
+            await matcher.finish(
+                Messages.BET_TIMEOUT + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
         else:
             gens[resp.message.id] = PG(resp)
             latest_message_id = resp.message.id
@@ -359,16 +377,21 @@ async def get_bet_amount(
                 bet_amount = int(str(resp.get_message()).strip())
             except ValueError:
                 await matcher.finish(
-                    Messages.BET_INVALID + gens[latest_message_id].element
+                    Messages.BET_INVALID + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
             if bet_amount <= 0:
                 await matcher.finish(
-                    Messages.BET_TOO_SMALL + gens[latest_message_id].element
+                    Messages.BET_TOO_SMALL + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
     elif bet_amount <= 0:
-        await matcher.finish(Messages.BET_TOO_SMALL + gens[latest_message_id].element)
+        await matcher.finish(
+            Messages.BET_TOO_SMALL + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
 
     return bet_amount, latest_message_id
 
@@ -394,7 +417,8 @@ async def handle_initial_blackjack(
                 )
                 + Messages.BLACKJACK_PUSH
                 + f"你现在有 {monetary.get(session.user_id)} 个碎片"
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
         else:
             blackjack_winnings = int(bet_amount * 1.5)
@@ -418,7 +442,8 @@ async def handle_initial_blackjack(
                 )
                 + win_msg
                 + f"你现在有 {monetary.get(session.user_id)} 个碎片！"
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
             # Daily task
             task_msg = await check_progress(
@@ -426,11 +451,17 @@ async def handle_initial_blackjack(
                 "blackjack_win",
             )
             if task_msg:
-                await matcher.send(task_msg + gens[latest_message_id].element)
+                await matcher.send(
+                    task_msg + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
+                )
             # Level-up
             level_msg = await monetary.add_xp(session.user_id, 5)
             if level_msg:
-                await matcher.send(level_msg + gens[latest_message_id].element)
+                await matcher.send(
+                    level_msg + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
+                )
             await matcher.finish()
         return True
     return False
@@ -463,12 +494,16 @@ async def handle_split_decision(
             )
             + sentence
             + Messages.SPLIT_CHOICE
-            + gens[latest_message_id].element
+            + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
         )
         resp = await check.wait(timeout=60)
 
         if resp is None:
-            await matcher.send(Messages.SPLIT_TIMEOUT + gens[latest_message_id].element)
+            await matcher.send(
+                Messages.SPLIT_TIMEOUT + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
             split_card = False
         else:
             msg = str(resp.get_message()).strip()
@@ -477,7 +512,8 @@ async def handle_split_decision(
 
             if msg not in ["是", "否"]:
                 await matcher.send(
-                    Messages.SPLIT_INVALID + gens[latest_message_id].element
+                    Messages.SPLIT_INVALID + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
                 split_card = False
             else:
@@ -486,7 +522,8 @@ async def handle_split_decision(
         if (amount := monetary.get(event.get_user_id())) < bet_amount:
             await matcher.send(
                 Messages.SPLIT_NOT_ENOUGH.format(amount=amount)
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
             split_card = False
         elif split_card:
@@ -527,7 +564,8 @@ async def handle_split_game(
                     mime="image/jpeg",
                 )
                 + f"【第 {idx + 1} 幅牌】"
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
         else:
             latest_message_id, game_ended, _ = await play_player_turn(
@@ -546,7 +584,7 @@ async def handle_split_game(
     dealer_result = play_dealer_turn(
         session.dealer_hand, event.channel.id, latest_message_id, game_manager
     )
-    await matcher.send(dealer_result)
+    await matcher.send(dealer_result, referrer=event.referrer)
     result_messages = Message()
 
     total_winnings = 0
@@ -575,15 +613,24 @@ async def handle_split_game(
         winnings=total_winnings,
     )
     result_messages += f"你现在有 {monetary.get(event.get_user_id())} 个碎片"
-    await matcher.send(result_messages + gens[latest_message_id].element)
+    await matcher.send(
+        result_messages + gens[latest_message_id].element,
+        referrer=gens[latest_message_id].event.referrer,
+    )
     # Daily task and XP for blackjack win
     if actual_winnings > 0:
         task_msg = await check_progress(event.get_user_id(), "blackjack_win")
         if task_msg:
-            await matcher.send(task_msg + gens[latest_message_id].element)
+            await matcher.send(
+                task_msg + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
         level_msg = await monetary.add_xp(event.get_user_id(), 5)
         if level_msg:
-            await matcher.send(level_msg + gens[latest_message_id].element)
+            await matcher.send(
+                level_msg + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
 
 
 async def handle_normal_game(
@@ -611,7 +658,7 @@ async def handle_normal_game(
     dealer_result = play_dealer_turn(
         session.dealer_hand, event.channel.id, latest_message_id, game_manager
     )
-    await matcher.send(dealer_result)
+    await matcher.send(dealer_result, referrer=event.referrer)
     result_messages = Message()
 
     # 先计算原始奖金确定游戏结果类型
@@ -645,13 +692,22 @@ async def handle_normal_game(
         hand_result + f"，你现在有 {monetary.get(event.get_user_id())} 个碎片"
     )
 
-    await matcher.send(result_messages + gens[latest_message_id].element)
+    await matcher.send(
+        result_messages + gens[latest_message_id].element,
+        referrer=gens[latest_message_id].event.referrer,
+    )
 
     # Daily task and XP for blackjack win
     if actual_winnings > 0:
         task_msg = await check_progress(event.get_user_id(), "blackjack_win")
         if task_msg:
-            await matcher.send(task_msg + gens[latest_message_id].element)
+            await matcher.send(
+                task_msg + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
         level_msg = await monetary.add_xp(event.get_user_id(), 5)
         if level_msg:
-            await matcher.send(level_msg + gens[latest_message_id].element)
+            await matcher.send(
+                level_msg + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )

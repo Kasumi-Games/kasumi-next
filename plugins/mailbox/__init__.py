@@ -98,7 +98,10 @@ async def handle_mailbox(event: MessageEvent, arg: Message = CommandArg()):
         # 显示邮箱列表
         mails = mail_service.get_user_mails(user_id)
         if not mails:
-            await mailbox_cmd.finish("你的邮箱是空的呢~" + passive_generator.element)
+            await mailbox_cmd.finish(
+                "你的邮箱是空的呢~" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
 
         mail_list = []
         for i, mail in enumerate(mails, 1):
@@ -121,7 +124,8 @@ async def handle_mailbox(event: MessageEvent, arg: Message = CommandArg()):
             f"📮 你的邮箱 ({len(mails)}封邮件):\n"
             + "\n".join(mail_list)
             + escape_text("\n\n发送 '邮件 <编号>' 查看详情")
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     # 读取特定邮件
@@ -130,13 +134,19 @@ async def handle_mailbox(event: MessageEvent, arg: Message = CommandArg()):
         mails = mail_service.get_user_mails(user_id)
 
         if mail_index < 0 or mail_index >= len(mails):
-            await mailbox_cmd.finish("邮件编号无效！" + passive_generator.element)
+            await mailbox_cmd.finish(
+                "邮件编号无效！" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
 
         mail = mails[mail_index]
 
         # 检查邮件是否过期
         if time.time() > mail.expire_time.timestamp():
-            await mailbox_cmd.finish("这封邮件已经过期了！" + passive_generator.element)
+            await mailbox_cmd.finish(
+                "这封邮件已经过期了！" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
 
         # 标记为已读并领取奖励
         reward_message = ""
@@ -161,12 +171,15 @@ async def handle_mailbox(event: MessageEvent, arg: Message = CommandArg()):
         content += reward_message
         content += passive_generator.element
 
-        await mailbox_cmd.finish(content)
+        await mailbox_cmd.finish(content, referrer=event.referrer)
 
     except MatcherException:
         raise
     except ValueError:
-        await mailbox_cmd.finish("请输入有效的邮件编号！" + passive_generator.element)
+        await mailbox_cmd.finish(
+            "请输入有效的邮件编号！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
 
 # schedulemail add -r all -w +1m -e 1 -k 10 -t "This Is A Test Mail Title" -c "Oh no"
@@ -227,7 +240,7 @@ schedule_mail_cmd = on_alconna(
 async def handle_alconna_add(event: MessageEvent, result: Arparma):
     """处理 Alconna add 命令"""
     if event.get_user_id() not in get_driver().config.superusers:
-        await schedule_mail_cmd.finish()
+        await schedule_mail_cmd.finish(referrer=event.referrer)
 
     passive_generator = PassiveGenerator(event)
 
@@ -256,7 +269,8 @@ async def handle_alconna_add(event: MessageEvent, result: Arparma):
         ):
             await schedule_mail_cmd.finish(
                 "参数不完整！请使用: /schedulemail add -r <接收者> -w <时间> -e <过期天数> -k <星之碎片> -s <星星贴纸> -t <标题> -c <内容>"
-                + passive_generator.element
+                + passive_generator.element,
+                referrer=passive_generator.event.referrer,
             )
 
         await create_scheduled_mail(
@@ -277,7 +291,8 @@ async def handle_alconna_add(event: MessageEvent, result: Arparma):
             e, context="mailbox_alconna_add", user_id=event.get_user_id()
         )
         await schedule_mail_cmd.finish(
-            f"创建定时邮件失败\n错误码：{code}" + passive_generator.element
+            f"创建定时邮件失败\n错误码：{code}" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
 
@@ -285,7 +300,7 @@ async def handle_alconna_add(event: MessageEvent, result: Arparma):
 async def handle_alconna_list(event: MessageEvent):
     """处理 Alconna list 命令"""
     if event.get_user_id() not in get_driver().config.superusers:
-        await schedule_mail_cmd.finish()
+        await schedule_mail_cmd.finish(referrer=event.referrer)
     await handle_schedule_list(event)
 
 
@@ -293,13 +308,16 @@ async def handle_alconna_list(event: MessageEvent):
 async def handle_alconna_info(event: MessageEvent, result: Arparma):
     """处理 Alconna info 命令"""
     if event.get_user_id() not in get_driver().config.superusers:
-        await schedule_mail_cmd.finish()
+        await schedule_mail_cmd.finish(referrer=event.referrer)
 
     passive_generator = PassiveGenerator(event)
 
     name = result.query("info.name")
     if not name:
-        await schedule_mail_cmd.finish("请提供邮件名称！" + passive_generator.element)
+        await schedule_mail_cmd.finish(
+            "请提供邮件名称！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
     await handle_schedule_info(event, name)
 
 
@@ -307,14 +325,17 @@ async def handle_alconna_info(event: MessageEvent, result: Arparma):
 async def handle_alconna_edit(event: MessageEvent, result: Arparma):
     """处理 Alconna edit 命令"""
     if event.get_user_id() not in get_driver().config.superusers:
-        await schedule_mail_cmd.finish()
+        await schedule_mail_cmd.finish(referrer=event.referrer)
 
     passive_generator = PassiveGenerator(event)
 
     other_args = result.other_args
     name = other_args.get("name")
     if not name:
-        await schedule_mail_cmd.finish("请提供邮件名称！" + passive_generator.element)
+        await schedule_mail_cmd.finish(
+            "请提供邮件名称！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     # 检查哪些字段需要更新
     updates = {}
@@ -335,7 +356,8 @@ async def handle_alconna_edit(event: MessageEvent, result: Arparma):
 
     if not updates:
         await schedule_mail_cmd.finish(
-            "请至少提供一个要修改的字段！" + passive_generator.element
+            "请至少提供一个要修改的字段！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     await handle_schedule_edit_alconna(event, name, updates)
@@ -345,14 +367,17 @@ async def handle_alconna_edit(event: MessageEvent, result: Arparma):
 async def handle_alconna_delete(event: MessageEvent, result: Arparma):
     """处理 Alconna delete 命令"""
     if event.get_user_id() not in get_driver().config.superusers:
-        await schedule_mail_cmd.finish()
+        await schedule_mail_cmd.finish(referrer=event.referrer)
 
     passive_generator = PassiveGenerator(event)
 
     other_args = result.other_args
     name = other_args.get("name")
     if not name:
-        await schedule_mail_cmd.finish("请提供邮件名称！" + passive_generator.element)
+        await schedule_mail_cmd.finish(
+            "请提供邮件名称！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
     await handle_schedule_delete(event, name)
 
 
@@ -376,18 +401,21 @@ async def create_scheduled_mail(
         if scheduled_time is None:
             await schedule_mail_cmd.finish(
                 "时间格式错误！支持格式: '2024-01-15 18:00' 或 '+1h' (+1小时后)"
-                + passive_generator.element
+                + passive_generator.element,
+                referrer=passive_generator.event.referrer,
             )
 
         # 验证参数
         if expire_days < 1 or expire_days > 30:
             await schedule_mail_cmd.finish(
-                "过期天数必须在1-30之间！" + passive_generator.element
+                "过期天数必须在1-30之间！" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
             )
 
         if star_kakeras < 0:
             await schedule_mail_cmd.finish(
-                "星之碎片数量不能为负数！" + passive_generator.element
+                "星之碎片数量不能为负数！" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
             )
 
         # 创建定时邮件
@@ -414,19 +442,22 @@ async def create_scheduled_mail(
         name_info = f" (ID: {created_mail.name})" if created_mail else ""
         await schedule_mail_cmd.finish(
             f"✅ 定时邮件创建成功{name_info}！预定发送时间: {time_str_formatted}"
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     except MatcherException:
         raise
     except ValueError as e:
         await schedule_mail_cmd.finish(
-            f"参数错误: {str(e)}" + passive_generator.element
+            f"参数错误: {str(e)}" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
     except Exception as e:
         code = handle_error(e, context="mailbox_create", user_id=event.get_user_id())
         await schedule_mail_cmd.finish(
-            f"创建失败\n错误码：{code}" + passive_generator.element
+            f"创建失败\n错误码：{code}" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
 
@@ -438,7 +469,8 @@ async def handle_schedule_list(event: MessageEvent):
 
     if not mails:
         await schedule_mail_cmd.finish(
-            "📭 当前没有待发送的定时邮件。" + passive_generator.element
+            "📭 当前没有待发送的定时邮件。" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     mail_list = []
@@ -459,7 +491,9 @@ async def handle_schedule_list(event: MessageEvent):
     result = f"📋 定时邮件列表 ({len(mails)}封):\n" + "\n".join(mail_list)
     result += "\n\n使用 '/schedulemail info <名称>' 查看详情"
 
-    await schedule_mail_cmd.finish(result + passive_generator.element)
+    await schedule_mail_cmd.finish(
+        result + passive_generator.element, referrer=passive_generator.event.referrer
+    )
 
 
 async def handle_schedule_info(event: MessageEvent, name: str):
@@ -470,7 +504,8 @@ async def handle_schedule_info(event: MessageEvent, name: str):
 
     if not mail:
         await schedule_mail_cmd.finish(
-            f"❌ 找不到名为 '{name}' 的定时邮件。" + passive_generator.element
+            f"❌ 找不到名为 '{name}' 的定时邮件。" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     status = "✅ 已发送" if mail.is_sent else "⏰ 待发送"
@@ -499,7 +534,9 @@ async def handle_schedule_info(event: MessageEvent, name: str):
         sent_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mail.sent_at))
         info += f"\n实际发送时间: {sent_time_str}"
 
-    await schedule_mail_cmd.finish(info + passive_generator.element)
+    await schedule_mail_cmd.finish(
+        info + passive_generator.element, referrer=passive_generator.event.referrer
+    )
 
 
 async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: dict):
@@ -509,12 +546,14 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
     mail = scheduled_service.get_scheduled_mail_by_name(name)
     if not mail:
         await schedule_mail_cmd.finish(
-            f"❌ 找不到名为 '{name}' 的定时邮件。" + passive_generator.element
+            f"❌ 找不到名为 '{name}' 的定时邮件。" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     if mail.is_sent:
         await schedule_mail_cmd.finish(
-            f"❌ 邮件 '{name}' 已发送，无法修改。" + passive_generator.element
+            f"❌ 邮件 '{name}' 已发送，无法修改。" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     try:
@@ -535,7 +574,8 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
                 new_time = parse_time_string(new_value)
                 if new_time is None:
                     await schedule_mail_cmd.finish(
-                        f"时间格式错误: {new_value}" + passive_generator.element
+                        f"时间格式错误: {new_value}" + passive_generator.element,
+                        referrer=passive_generator.event.referrer,
                     )
                 success = scheduled_service.update_scheduled_mail(
                     name, scheduled_time=new_time
@@ -546,7 +586,8 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
                 kakeras = int(new_value)
                 if kakeras < 0:
                     await schedule_mail_cmd.finish(
-                        "星之碎片数量不能为负数！" + passive_generator.element
+                        "星之碎片数量不能为负数！" + passive_generator.element,
+                        referrer=passive_generator.event.referrer,
                     )
                 success = scheduled_service.update_scheduled_mail(
                     name, star_kakeras=kakeras
@@ -556,7 +597,8 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
                 stickers = int(new_value)
                 if stickers < 0:
                     await schedule_mail_cmd.finish(
-                        "星星贴纸数量不能为负数！" + passive_generator.element
+                        "星星贴纸数量不能为负数！" + passive_generator.element,
+                        referrer=passive_generator.event.referrer,
                     )
                 success = scheduled_service.update_scheduled_mail(
                     name, star_stickers=stickers
@@ -566,7 +608,8 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
                 expire_days = int(new_value)
                 if expire_days < 1 or expire_days > 30:
                     await schedule_mail_cmd.finish(
-                        "过期天数必须在1-30之间！" + passive_generator.element
+                        "过期天数必须在1-30之间！" + passive_generator.element,
+                        referrer=passive_generator.event.referrer,
                     )
                 success = scheduled_service.update_scheduled_mail(
                     name, expire_days=expire_days
@@ -580,23 +623,27 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
 
             if not success:
                 await schedule_mail_cmd.finish(
-                    f"❌ 更新字段 '{field}' 失败。" + passive_generator.element
+                    f"❌ 更新字段 '{field}' 失败。" + passive_generator.element,
+                    referrer=passive_generator.event.referrer,
                 )
 
         await schedule_mail_cmd.finish(
-            f"✅ 已更新定时邮件 '{name}':\n" + "\n".join(updated_fields)
+            f"✅ 已更新定时邮件 '{name}':\n" + "\n".join(updated_fields),
+            referrer=event.referrer,
         )
 
     except MatcherException:
         raise
     except ValueError as e:
         await schedule_mail_cmd.finish(
-            f"参数格式错误: {str(e)}" + passive_generator.element
+            f"参数格式错误: {str(e)}" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
     except Exception as e:
         code = handle_error(e, context="mailbox_edit", user_id=event.get_user_id())
         await schedule_mail_cmd.finish(
-            f"编辑失败\n错误码：{code}" + passive_generator.element
+            f"编辑失败\n错误码：{code}" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
 
@@ -608,11 +655,13 @@ async def handle_schedule_delete(event: MessageEvent, name: str):
 
     if success:
         await schedule_mail_cmd.finish(
-            f"✅ 已删除定时邮件 '{name}'。" + passive_generator.element
+            f"✅ 已删除定时邮件 '{name}'。" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
     else:
         await schedule_mail_cmd.finish(
-            f"❌ 找不到名为 '{name}' 的定时邮件。" + passive_generator.element
+            f"❌ 找不到名为 '{name}' 的定时邮件。" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
 

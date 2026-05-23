@@ -60,12 +60,15 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
                 e, context="vits_speaker_fetch", user_id=event.get_user_id()
             )
             await vits.finish(
-                "TTS 服务出现故障，待会再来试试吧…\n错误码：{}".format(code)
+                "TTS 服务出现故障，待会再来试试吧…\n错误码：{}".format(code),
+                referrer=event.referrer,
             )
 
     for seg in arg:
         if seg.type != "text":
-            await vits.finish("Kasumi不太能理解怎么把这个转成语音呢...")
+            await vits.finish(
+                "Kasumi不太能理解怎么把这个转成语音呢...", referrer=event.referrer
+            )
 
     args = arg.extract_plain_text().split(maxsplit=1)
 
@@ -99,20 +102,25 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
     if character is None:
         await vits.send(
             "未获取到角色信息，把你要的角色名字告诉我吧~\n邦邦的角色支持使用别名哦，比如“香澄”可以写成“ksm”"
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
         # 使用 speaker_list 作为角色列表
         await vits.send(
             "角色列表：\n"
             + "\n".join([f"{k}: {', '.join(v)}" for k, v in speaker_dict.items()])
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
         resp = await check.wait(timeout=60)
 
         if resp is None:
-            await vits.finish("时间到了哦，流程已结束" + passive_generator.element)
+            await vits.finish(
+                "时间到了哦，流程已结束" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
 
         passive_generator = PG(resp)
 
@@ -124,15 +132,24 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
             character = input_text
 
         if character is None:
-            await vits.finish("Kasumi不太认识这个角色呢..." + passive_generator.element)
+            await vits.finish(
+                "Kasumi不太认识这个角色呢..." + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
 
     if text is None:
-        await vits.send("请告诉我你想让角色说的话吧~" + passive_generator.element)
+        await vits.send(
+            "请告诉我你想让角色说的话吧~" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
         resp = await check.wait(timeout=60)
 
         if resp is None:
-            await vits.finish("时间到了哦，流程已结束" + passive_generator.element)
+            await vits.finish(
+                "时间到了哦，流程已结束" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
 
         text = resp.get_message().extract_plain_text()
 
@@ -141,7 +158,8 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
     if has_amount < required_amount:
         await vits.finish(
             f"你现在共有 {has_amount} 个星之碎片，但语音生成需要 {required_amount} 个星之碎片，去玩游戏赚取碎片吧"
-            + passive_generator.element
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     monetary.cost(event.get_user_id(), required_amount, "vits")
@@ -157,17 +175,20 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
         monetary.add(event.get_user_id(), required_amount, "vits_error")
         code = handle_error(e, context="vits_synthesize", user_id=event.get_user_id())
         await vits.finish(
-            "请求失败\n错误码：{}".format(code) + passive_generator.element
+            "请求失败\n错误码：{}".format(code) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     await vits.send(
         MessageSegment.audio(
             raw=encode_with_ntsilk(response, "wav", "ntsilk"), mime="audio/silk"
         )
-        + passive_generator.element
+        + passive_generator.element,
+        referrer=passive_generator.event.referrer,
     )
 
     await vits.finish(
         f"本次语音合成消耗了 {required_amount} 个星之碎片，你还有 {monetary.get(event.get_user_id())} 个星之碎片"
-        + passive_generator.element
+        + passive_generator.element,
+        referrer=passive_generator.event.referrer,
     )

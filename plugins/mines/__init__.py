@@ -100,19 +100,31 @@ async def _get_bet_amount(
     matcher,
 ) -> Tuple[int, str]:
     if bet_amount is None:
-        await matcher.send(Messages.BET_PROMPT + gens[latest_message_id].element)
+        await matcher.send(
+            Messages.BET_PROMPT + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
         resp = await check.wait(timeout=60)
         if resp is None:
-            await matcher.finish(Messages.BET_TIMEOUT + gens[latest_message_id].element)
+            await matcher.finish(
+                Messages.BET_TIMEOUT + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
         latest_message_id = resp.message.id
         gens[latest_message_id] = PG(resp)
         try:
             bet_amount = int(str(resp.get_message()).strip())
         except ValueError:
-            await matcher.finish(Messages.BET_INVALID + gens[latest_message_id].element)
+            await matcher.finish(
+                Messages.BET_INVALID + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
 
     if bet_amount <= 0:
-        await matcher.finish(Messages.BET_TOO_SMALL + gens[latest_message_id].element)
+        await matcher.finish(
+            Messages.BET_TOO_SMALL + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
 
     return bet_amount, latest_message_id
 
@@ -129,16 +141,23 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     arg_text = arg.extract_plain_text().strip()
 
     if arg_text in ["h", "--help", "help", "-h"]:
-        await game_start.finish(Messages.HELP + gens[latest_message_id].element)
+        await game_start.finish(
+            Messages.HELP + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
 
     if arg_text in ["f", "-f"]:
         session = game_manager.get_session(event.get_user_id())
         if session is None:
             await game_start.finish(
-                "没有正在进行的扫雷游戏" + gens[latest_message_id].element
+                "没有正在进行的扫雷游戏" + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
         game_manager.refund_game(event.get_user_id())
-        await game_start.finish("已强制退出扫雷游戏" + gens[latest_message_id].element)
+        await game_start.finish(
+            "已强制退出扫雷游戏" + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
 
     parts = [part for part in arg_text.split() if part]
     bet_amount, mines = _parse_args(arg_text)
@@ -150,27 +169,32 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
 
         if len(parts) >= 2 and mines is None:
             await game_start.finish(
-                Messages.MINES_INVALID + gens[latest_message_id].element
+                Messages.MINES_INVALID + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
         if mines is None:
             mines = 5
         if mines <= 0:
             await game_start.finish(
-                Messages.MINES_TOO_SMALL + gens[latest_message_id].element
+                Messages.MINES_TOO_SMALL + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
         if mines >= 25:
             await game_start.finish(
-                Messages.MINES_TOO_LARGE + gens[latest_message_id].element
+                Messages.MINES_TOO_LARGE + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
 
         if not game_manager.start_game(event.get_user_id(), bet_amount):
             if game_manager.is_in_game(event.get_user_id()):
                 await game_start.finish(
-                    Messages.ALREADY_IN_GAME + gens[latest_message_id].element
+                    Messages.ALREADY_IN_GAME + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
             await game_start.finish(
                 Messages.BET_NOT_ENOUGH.format(amount=monetary.get(event.get_user_id()))
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
 
         session = game_manager.create_session(
@@ -186,7 +210,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 + "\n"
                 + Messages.PROMPT
             )
-            + gens[latest_message_id].element
+            + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
         )
 
         while True:
@@ -194,7 +219,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             if resp is None:
                 game_manager.end_game(event.get_user_id(), GameResult.TIMEOUT, payout=0)
                 await game_start.finish(
-                    Messages.TIMEOUT + gens[latest_message_id].element
+                    Messages.TIMEOUT + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
             msg = str(resp.get_message()).strip()
@@ -204,7 +230,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             if msg in ["f", "-f"]:
                 game_manager.refund_game(event.get_user_id())
                 await game_start.finish(
-                    "已强制退出扫雷游戏" + gens[latest_message_id].element
+                    "已强制退出扫雷游戏" + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
             if msg in {"收手", "结算", "stop", "s"}:
@@ -224,7 +251,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                         + f"获得 {payout} 个星之碎片，"
                         + f"现在有 {monetary.get(event.get_user_id())} 个碎片"
                     )
-                    + gens[latest_message_id].element
+                    + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
                 # Daily task
@@ -234,7 +262,10 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     {"multiplier": cashout_multiplier},
                 )
                 if task_msg:
-                    await game_start.send(task_msg + gens[latest_message_id].element)
+                    await game_start.send(
+                        task_msg + gens[latest_message_id].element,
+                        referrer=gens[latest_message_id].event.referrer,
+                    )
 
                 # XP scales with multiplier: starts at 5 at 2.0x
                 if cashout_multiplier >= 2.0:
@@ -242,27 +273,31 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     level_msg = await monetary.add_xp(event.get_user_id(), xp)
                     if level_msg:
                         await game_start.send(
-                            level_msg + gens[latest_message_id].element
+                            level_msg + gens[latest_message_id].element,
+                            referrer=gens[latest_message_id].event.referrer,
                         )
 
-                await game_start.finish()
+                await game_start.finish(referrer=event.referrer)
 
             if not msg.isdigit():
                 await game_start.send(
-                    Messages.INPUT_INVALID + gens[latest_message_id].element
+                    Messages.INPUT_INVALID + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
                 continue
 
             index = int(msg) - 1
             if index < 0 or index >= 25:
                 await game_start.send(
-                    Messages.INPUT_INVALID + gens[latest_message_id].element
+                    Messages.INPUT_INVALID + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
                 continue
 
             if index in session.revealed_indices:
                 await game_start.send(
-                    Messages.ALREADY_REVEALED + gens[latest_message_id].element
+                    Messages.ALREADY_REVEALED + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
                 continue
 
@@ -278,7 +313,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                         + f"损失 {session.bet_amount} 个星之碎片，"
                         + f"现在有 {monetary.get(event.get_user_id())} 个碎片"
                     )
-                    + gens[latest_message_id].element
+                    + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
             session.revealed_indices.add(index)
@@ -301,7 +337,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                         + f"获得 {payout} 个星之碎片，"
                         + f"现在有 {monetary.get(event.get_user_id())} 个碎片"
                     )
-                    + gens[latest_message_id].element
+                    + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
                 # Daily task
@@ -311,7 +348,10 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     {"multiplier": win_multiplier},
                 )
                 if task_msg:
-                    await game_start.send(task_msg + gens[latest_message_id].element)
+                    await game_start.send(
+                        task_msg + gens[latest_message_id].element,
+                        referrer=gens[latest_message_id].event.referrer,
+                    )
 
                 # XP scales with multiplier: starts at 5 at 2.0x
                 if win_multiplier >= 2.0:
@@ -319,10 +359,11 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     level_msg = await monetary.add_xp(event.get_user_id(), xp)
                     if level_msg:
                         await game_start.send(
-                            level_msg + gens[latest_message_id].element
+                            level_msg + gens[latest_message_id].element,
+                            referrer=gens[latest_message_id].event.referrer,
                         )
 
-                await game_start.finish()
+                await game_start.finish(referrer=event.referrer)
 
             await game_start.send(
                 _render_field_image(session.field)
@@ -333,7 +374,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     + "\n"
                     + Messages.PROMPT
                 )
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
 
     except MatcherException:
@@ -344,7 +386,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         await game_start.finish(
             MessageSegment.text("错误码：{}\n".format(code))
             + Messages.ERROR
-            + gens[latest_message_id].element
+            + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
         )
 
 
@@ -360,7 +403,8 @@ async def handle_stats(event: MessageEvent):
 
         if stats.total_games == 0:
             await game_stats.finish(
-                Messages.STATS_EMPTY + gens[event.message.id].element
+                Messages.STATS_EMPTY + gens[event.message.id].element,
+                referrer=gens[event.message.id].event.referrer,
             )
 
         # 构建统计信息文本
@@ -383,7 +427,7 @@ async def handle_stats(event: MessageEvent):
             response_message += MessageSegment.text("\n📊 图表生成需要至少2局游戏记录")
 
         response_message += gens[event.message.id].element
-        await game_stats.finish(response_message)
+        await game_stats.finish(response_message, referrer=event.referrer)
 
     except MatcherException:
         raise
@@ -391,5 +435,6 @@ async def handle_stats(event: MessageEvent):
         code = handle_error(e, context="mines_stats", user_id=event.get_user_id())
         await game_stats.finish(
             "统计查询失败，请稍后再试\n错误码：{}".format(code)
-            + gens[event.message.id].element
+            + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
         )

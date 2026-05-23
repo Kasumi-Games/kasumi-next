@@ -126,7 +126,10 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
     arg_text = arg.extract_plain_text().strip()
 
     if arg_text in ["h", "-h", "--help", "help"]:
-        await game_start.finish(HELP_MESSAGE + gens[latest_message_id].element)
+        await game_start.finish(
+            HELP_MESSAGE + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
 
     try:
         bet_amount, latest_message_id = await get_bet_amount(
@@ -136,11 +139,13 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         if not game_manager.start_game(event.get_user_id(), bet_amount):
             if game_manager.is_in_game(event.get_user_id()):
                 await game_start.finish(
-                    Messages.ALREADY_IN_GAME + gens[latest_message_id].element
+                    Messages.ALREADY_IN_GAME + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
             await game_start.finish(
                 Messages.BET_NOT_ENOUGH.format(amount=monetary.get(event.get_user_id()))
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
 
         player_hand = Hand()
@@ -205,7 +210,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             "发生意外错误！已退回一半的下注碎片给你，再试一次吧？\n错误码：{}".format(
                 code
             )
-            + gens[latest_message_id].element
+            + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
         )
 
 
@@ -222,7 +228,8 @@ async def handle_stats(event: MessageEvent):
         if stats.total_games == 0:
             await game_stats.finish(
                 "你还没有玩过黑香澄游戏哦，快来试试吧！"
-                + gens[event.message.id].element
+                + gens[event.message.id].element,
+                referrer=gens[event.message.id].event.referrer,
             )
 
         # 构建统计信息文本
@@ -245,7 +252,7 @@ async def handle_stats(event: MessageEvent):
             response_message += MessageSegment.text("\n📊 图表生成失败")
 
         response_message += gens[event.message.id].element
-        await game_stats.finish(response_message)
+        await game_stats.finish(response_message, referrer=event.referrer)
 
     except MatcherException:
         raise
@@ -253,5 +260,6 @@ async def handle_stats(event: MessageEvent):
         code = handle_error(e, context="blackjack_stats", user_id=event.get_user_id())
         await game_stats.finish(
             "获取统计信息时出现错误，请稍后再试\n错误码：{}".format(code)
-            + gens[event.message.id].element
+            + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
         )

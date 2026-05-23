@@ -70,14 +70,17 @@ async def handle_bang_avatar(event: MessageEvent):
                 )
                 + f"娶到 {get_user_nickname(wife.id) or 'Ta'} 了哦~"
                 + f"你手里还有 {monetary.get(user_id)} 个碎片"
-                + passive_generator.element
+                + passive_generator.element,
+                referrer=passive_generator.event.referrer,
             )
         else:
             await bang_avatar.finish(
                 f"余额不足，你手里只有 {monetary.get(user_id)} 个碎片哦，先赚些星之碎片吧~"
-                + passive_generator.element
+                + passive_generator.element,
+                referrer=passive_generator.event.referrer,
             )
     else:
         await bang_avatar.finish(
-            "群里暂时没有人能被你娶到哦~" + passive_generator.element
+            "群里暂时没有人能被你娶到哦~" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )

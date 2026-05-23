@@ -110,17 +110,22 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             .replace("<", "&lt;")
             .replace(">", "&gt;")
             .replace('"', "&quot;")
-            + gens[event.message.id].element
+            + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
         )
 
     if arg_text == "-f" and event.channel.id in gamers_store.get():
         gamers_store.remove(event.channel.id)
-        await start_cck.finish("已强制结束猜卡面" + gens[event.message.id].element)
+        await start_cck.finish(
+            "已强制结束猜卡面" + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
+        )
 
     if arg_text == "-f":
         await start_cck.finish(
             "没有正在进行的猜卡面，你可以直接使用 @Kasumi /猜卡面 来开始"
-            + gens[event.message.id].element
+            + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
         )
 
     image_cut_setting: Dict[str, Any]
@@ -132,11 +137,15 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         await start_cck.finish(
             f"未知难度：{arg_text}\n"
             f"可用难度：{available_difficulties}\n"
-            "可使用 /猜卡面 -h 查看帮助" + gens[event.message.id].element
+            "可使用 /猜卡面 -h 查看帮助" + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
         )
 
     if event.channel.id in gamers_store.get():
-        await start_cck.finish("你已经在猜卡面咯" + gens[event.message.id].element)
+        await start_cck.finish(
+            "你已经在猜卡面咯" + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
+        )
 
     gamers_store.add(event.channel.id)
 
@@ -164,7 +173,8 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
     await start_cck.send(
         image
         + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜卡面"
-        + gens[event.message.id].element
+        + gens[event.message.id].element,
+        referrer=gens[event.message.id].event.referrer,
     )
 
     @waiter(waits=["message"], matcher=start_cck, block=False)
@@ -186,9 +196,13 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             gamers_store.remove(event.channel.id)
             await start_cck.send(
                 f"时间到！答案是———{character_name}card_id: {card_id}"
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
-            await start_cck.send(full_image + gens[latest_message_id].element)
+            await start_cck.send(
+                full_image + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
             break
 
         msg, user_id, msg_id = (
@@ -202,9 +216,12 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         if msg == "bzd":
             gamers_store.remove(event.channel.id)
             await start_cck.send(
-                f"答案是———{character_name}card_id: {card_id}" + gens[msg_id].element
+                f"答案是———{character_name}card_id: {card_id}" + gens[msg_id].element,
+                referrer=gens[msg_id].event.referrer,
             )
-            await start_cck.send(full_image + gens[msg_id].element)
+            await start_cck.send(
+                full_image + gens[msg_id].element, referrer=gens[msg_id].event.referrer
+            )
             break
 
         found_characters = [
@@ -219,7 +236,8 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
         if player_counts[user_id] >= 3:
             await start_cck.send(
-                "你已经回答三次啦，可以回复 bzd 查看答案～" + gens[msg_id].element
+                "你已经回答三次啦，可以回复 bzd 查看答案～" + gens[msg_id].element,
+                referrer=gens[msg_id].event.referrer,
             )
             continue
 
@@ -244,8 +262,12 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         monetary.add(user_id, amount, "cck")
 
         # Plugin messages first
-        await start_cck.send(msg + gens[msg_id].element)
-        await start_cck.send(full_image + gens[msg_id].element)
+        await start_cck.send(
+            msg + gens[msg_id].element, referrer=gens[msg_id].event.referrer
+        )
+        await start_cck.send(
+            full_image + gens[msg_id].element, referrer=gens[msg_id].event.referrer
+        )
 
         # Daily task callback (first-try win is checked via conditions)
         player_counts[user_id] += 1
@@ -255,11 +277,15 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             {"attempt": player_counts[user_id]},
         )
         if task_msg:
-            await start_cck.send(task_msg + gens[msg_id].element)
+            await start_cck.send(
+                task_msg + gens[msg_id].element, referrer=gens[msg_id].event.referrer
+            )
 
         # Level-up
         level_msg = await monetary.add_xp(user_id, amount)
         if level_msg:
-            await start_cck.send(level_msg + gens[msg_id].element)
+            await start_cck.send(
+                level_msg + gens[msg_id].element, referrer=gens[msg_id].event.referrer
+            )
 
         break

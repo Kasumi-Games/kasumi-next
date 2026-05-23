@@ -86,7 +86,10 @@ async def handle_leaderboard(event: MessageEvent):
     normal_rows = _build_leaderboard_rows("普通")
     hard_rows = _build_leaderboard_rows("困难")
     image = render_leaderboard(easy_rows, normal_rows, hard_rows)
-    await leaderboard_cmd.finish(_image_segment(image) + passive_generator.element)
+    await leaderboard_cmd.finish(
+        _image_segment(image) + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )
 
 
 @game_start.handle()
@@ -101,7 +104,10 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
     difficulty_text = arg.extract_plain_text().strip()
 
     if difficulty_text.lower() in {"h", "--help", "help", "-h"}:
-        await game_start.finish(Messages.HELP + gens[latest_message_id].element)
+        await game_start.finish(
+            Messages.HELP + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
 
     config = parse_difficulty(difficulty_text)
 
@@ -117,7 +123,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
         )
         if session is None:
             await game_start.finish(
-                "你已经在进行一笔画挑战了。" + gens[latest_message_id].element
+                "你已经在进行一笔画挑战了。" + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
 
         await game_start.send(
@@ -129,7 +136,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 + "\n"
                 + Messages.PROMPT
             )
-            + gens[latest_message_id].element
+            + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
         )
         session.restart_timer()
 
@@ -138,7 +146,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
             if resp is None:
                 game_manager.end_game(event.get_user_id())
                 await game_start.finish(
-                    Messages.TIMEOUT + gens[latest_message_id].element
+                    Messages.TIMEOUT + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
             latest_message_id = resp.message.id
@@ -148,7 +157,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
             if msg == "Q":
                 game_manager.end_game(event.get_user_id())
                 await game_start.finish(
-                    Messages.GIVE_UP + gens[latest_message_id].element
+                    Messages.GIVE_UP + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
             if msg == "R":
@@ -156,13 +166,15 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 await game_start.send(
                     _render_image(session)
                     + MessageSegment.text(Messages.RESET + "\n" + Messages.PROMPT)
-                    + gens[latest_message_id].element
+                    + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
                 continue
 
             if not msg or any(ch not in {"W", "A", "S", "D"} for ch in msg):
                 await game_start.send(
-                    Messages.INVALID_INPUT + gens[latest_message_id].element
+                    Messages.INVALID_INPUT + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
                 continue
 
@@ -227,7 +239,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 await game_start.send(
                     _render_image(session)
                     + MessageSegment.text(win_message)
-                    + gens[latest_message_id].element
+                    + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
                 )
 
                 # Daily task
@@ -237,14 +250,20 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                     {"difficulty": session.difficulty_name, "time": elapsed_seconds},
                 )
                 if task_msg:
-                    await game_start.send(task_msg + gens[latest_message_id].element)
+                    await game_start.send(
+                        task_msg + gens[latest_message_id].element,
+                        referrer=gens[latest_message_id].event.referrer,
+                    )
 
                 # Level-up
                 level_msg = await monetary.add_xp(event.get_user_id(), final_reward)
                 if level_msg:
-                    await game_start.send(level_msg + gens[latest_message_id].element)
+                    await game_start.send(
+                        level_msg + gens[latest_message_id].element,
+                        referrer=gens[latest_message_id].event.referrer,
+                    )
 
-                await game_start.finish()
+                await game_start.finish(referrer=event.referrer)
 
             status_text = (
                 Messages.PROGRESS.format(
@@ -259,7 +278,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
             await game_start.send(
                 _render_image(session)
                 + MessageSegment.text(status_text)
-                + gens[latest_message_id].element
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
             )
 
     except MatcherException:
@@ -270,5 +290,6 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
         await game_start.finish(
             MessageSegment.text("错误码：{}\n".format(code))
             + Messages.ERROR
-            + gens[latest_message_id].element
+            + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
         )

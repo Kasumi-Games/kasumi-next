@@ -28,16 +28,22 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
 
     if text == "":
         await set_nickname.finish(
-            "格式错误！正确使用方法：/设置昵称 &lt;昵称&gt;" + passive_generator.element
+            "格式错误！正确使用方法：/设置昵称 &lt;昵称&gt;"
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     if len(text) > 20:
         await set_nickname.finish(
-            "昵称长度不能超过 20 个字符" + passive_generator.element
+            "昵称长度不能超过 20 个字符" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     if "\n" in text:
-        await set_nickname.finish("昵称不能包含换行符" + passive_generator.element)
+        await set_nickname.finish(
+            "昵称不能包含换行符" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     nickname = (
         session.query(Nickname).filter(Nickname.user_id == event.get_user_id()).first()
@@ -45,7 +51,8 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
     # Check if nickname is changed
     if nickname is not None and nickname.nickname == text:
         await set_nickname.finish(
-            f"你一直是{text}啊，我知道的，不用修改啦" + passive_generator.element
+            f"你一直是{text}啊，我知道的，不用修改啦" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     # Check if nickname is unique
@@ -57,24 +64,29 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
         is not None
     ):
         await set_nickname.finish(
-            f"昵称 {text} 已经被其他人使用啦，换一个试试吧" + passive_generator.element
+            f"昵称 {text} 已经被其他人使用啦，换一个试试吧" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     if nickname is None:
         nickname = Nickname(user_id=event.get_user_id(), nickname=text)
         session.add(nickname)
         await set_nickname.send(
-            f"设置成功！以后 Kasumi 就会叫你{text}啦~" + passive_generator.element
+            f"设置成功！以后 Kasumi 就会叫你{text}啦~" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
         await set_nickname.send(
-            "首次设置昵称免费，下次修改需要 30 个星之碎片哦" + passive_generator.element
+            "首次设置昵称免费，下次修改需要 30 个星之碎片哦"
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
     else:
         # Update nickname cost 30 coins
         balance = monetary.get(user_id=event.get_user_id())
         if balance < 30:
             await set_nickname.finish(
-                "余额不足！修改昵称需要 30 个星之碎片" + passive_generator.element
+                "余额不足！修改昵称需要 30 个星之碎片" + passive_generator.element,
+                referrer=passive_generator.event.referrer,
             )
         monetary.cost(
             user_id=event.get_user_id(), amount=30, description="change nickname"
@@ -82,7 +94,8 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
         nickname.nickname = text
 
         await set_nickname.send(
-            f"修改成功！以后 Kasumi 就会叫你{text}啦~" + passive_generator.element
+            f"修改成功！以后 Kasumi 就会叫你{text}啦~" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     session.commit()
@@ -97,10 +110,14 @@ async def handle_get_nickname(event: MessageEvent):
     passive_generator = PassiveGenerator(event)
 
     if nickname is None:
-        await get_nickname.finish("你还没有设置昵称哦！" + passive_generator.element)
+        await get_nickname.finish(
+            "你还没有设置昵称哦！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     await get_nickname.finish(
-        f"你的昵称是{nickname.nickname}" + passive_generator.element
+        f"你的昵称是{nickname.nickname}" + passive_generator.element,
+        referrer=passive_generator.event.referrer,
     )
 
 

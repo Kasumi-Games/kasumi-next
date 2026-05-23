@@ -180,7 +180,9 @@ async def _(bot: Bot, event: MessageEvent, plugin: Message = CommandArg()):  # t
             "需要帮助时请加入 QQ 群 908979461"
         )
 
-        await help.finish(msg + passive_generator.element)
+        await help.finish(
+            msg + passive_generator.element, referrer=passive_generator.event.referrer
+        )
     elif plugin in plugin_data:
         msg = (
             f"插件 {plugin} 的使用方法：\n"
@@ -197,6 +199,11 @@ async def _(bot: Bot, event: MessageEvent, plugin: Message = CommandArg()):  # t
         if bot.adapter.get_name() == "Satori":
             msg = escape_text(msg)
 
-        await help.finish(msg + passive_generator.element)
+        await help.finish(
+            msg + passive_generator.element, referrer=passive_generator.event.referrer
+        )
     else:
-        await help.finish("未找到该插件！" + passive_generator.element)
+        await help.finish(
+            "未找到该插件！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
