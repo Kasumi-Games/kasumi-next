@@ -42,9 +42,9 @@ async def _(bot: Bot, api: str, data: Dict[str, Any]):
             )
             raise Exception("No available passive data")
 
-        # 注入 referrer 以支持 Satori 标准回复协议
-        if hasattr(passive_data.event, "referrer") and passive_data.event.referrer:
-            data["referer"] = passive_data.event.referrer
+        # 注入 referrer 以支持 Satori 标准回复协议（仅在未显式传入时）
+        if "referrer" not in data and hasattr(passive_data.event, "referrer") and passive_data.event.referrer:
+            data["referrer"] = passive_data.event.referrer
 
         # 已存在 passive 标签，不再添加
         if re.search(r"<qq:passive\s+[^>]*?\/?>", data["content"]):
