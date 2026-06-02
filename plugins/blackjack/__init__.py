@@ -108,8 +108,8 @@ async def init_blackjack():
 
 @get_driver().on_shutdown
 async def shutdown_blackjack():
-    # 返还正在进行游戏中的玩家碎片
-    logger.info("返还正在进行游戏中的玩家碎片")
+    # 返还正在进行游戏中的玩家Pt
+    logger.info("返还正在进行游戏中的玩家Pt")
     for user_id in game_manager.get_active_players():
         game_manager.refund_game(user_id)
 
@@ -207,7 +207,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         game_manager.refund_half_game(event.get_user_id())
         code = handle_error(e, context="blackjack", user_id=event.get_user_id())
         await game_start.finish(
-            "发生意外错误！已退回一半的下注碎片给你，再试一次吧？\n错误码：{}".format(
+            "发生意外错误！已退回一半的下注Pt给你，再试一次吧？\n错误码：{}".format(
                 code
             )
             + gens[latest_message_id].element,

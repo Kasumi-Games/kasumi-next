@@ -129,7 +129,7 @@ async def handle_player_bust(
     await matcher.send(
         Messages.BUST_LOSE.format(amount=bet_amount)
         + (
-            f"，你现在还有 {monetary.get(user_id)} 个碎片"
+            f"，你现在还有 {monetary.get(user_id)} 个Pt"
             if game_manager.get_split_state(user_id) == 0
             else ""
         )
@@ -159,7 +159,7 @@ async def handle_surrender(
         )
         + Messages.SURRENDER_LOSE.format(amount=loss_amount)
         + (
-            f"，你现在还有 {monetary.get(user_id)} 个碎片"
+            f"，你现在还有 {monetary.get(user_id)} 个Pt"
             if game_manager.get_split_state(user_id) == 0
             else ""
         )
@@ -416,7 +416,7 @@ async def handle_initial_blackjack(
                     mime="image/jpeg",
                 )
                 + Messages.BLACKJACK_PUSH
-                + f"你现在有 {monetary.get(session.user_id)} 个碎片"
+                + f"你现在有 {monetary.get(session.user_id)} 个Pt"
                 + gens[latest_message_id].element,
                 referrer=gens[latest_message_id].event.referrer,
             )
@@ -441,7 +441,7 @@ async def handle_initial_blackjack(
                     mime="image/jpeg",
                 )
                 + win_msg
-                + f"你现在有 {monetary.get(session.user_id)} 个碎片！"
+                + f"你现在有 {monetary.get(session.user_id)} 个Pt！"
                 + gens[latest_message_id].element,
                 referrer=gens[latest_message_id].event.referrer,
             )
@@ -612,7 +612,7 @@ async def handle_split_game(
         split_result,
         winnings=total_winnings,
     )
-    result_messages += f"你现在有 {monetary.get(event.get_user_id())} 个碎片"
+    result_messages += f"你现在有 {monetary.get(event.get_user_id())} 个Pt"
     await matcher.send(
         result_messages + gens[latest_message_id].element,
         referrer=gens[latest_message_id].event.referrer,
@@ -689,7 +689,7 @@ async def handle_normal_game(
     )
 
     result_messages += (
-        hand_result + f"，你现在有 {monetary.get(event.get_user_id())} 个碎片"
+        hand_result + f"，你现在有 {monetary.get(event.get_user_id())} 个Pt"
     )
 
     await matcher.send(

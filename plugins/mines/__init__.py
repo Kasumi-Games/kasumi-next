@@ -68,7 +68,7 @@ def _format_status(session) -> str:
     payout = session.get_payout()
     return (
         f"已翻开 {session.revealed_count}/{session.safe_cells} | "
-        f"当前倍率 {session.multiplier:.4f}x | 可结算 {payout} 个星之碎片"
+        f"当前倍率 {session.multiplier:.4f}x | 可结算 {payout} 个Pt"
     )
 
 
@@ -248,8 +248,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     + MessageSegment.text(
                         Messages.CASHOUT
                         + "\n"
-                        + f"获得 {payout} 个星之碎片，"
-                        + f"现在有 {monetary.get(event.get_user_id())} 个碎片"
+                        + f"获得 {payout} 个Pt，"
+                        + f"现在有 {monetary.get(event.get_user_id())} 个Pt"
                     )
                     + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
@@ -310,8 +310,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     + MessageSegment.text(
                         Messages.HIT_MINE
                         + "\n"
-                        + f"损失 {session.bet_amount} 个星之碎片，"
-                        + f"现在有 {monetary.get(event.get_user_id())} 个碎片"
+                        + f"损失 {session.bet_amount} 个Pt，"
+                        + f"现在有 {monetary.get(event.get_user_id())} 个Pt"
                     )
                     + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
@@ -334,8 +334,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     + MessageSegment.text(
                         Messages.CASHOUT
                         + "\n"
-                        + f"获得 {payout} 个星之碎片，"
-                        + f"现在有 {monetary.get(event.get_user_id())} 个碎片"
+                        + f"获得 {payout} 个Pt，"
+                        + f"现在有 {monetary.get(event.get_user_id())} 个Pt"
                     )
                     + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,

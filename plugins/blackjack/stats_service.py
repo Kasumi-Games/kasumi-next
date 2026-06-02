@@ -186,7 +186,7 @@ def create_win_loss_chart(stats: BlackjackStats) -> Optional[bytes]:
         fontproperties=font,
     )
     ax1.set_xlabel("游戏局数", fontproperties=font)
-    ax1.set_ylabel("输赢金额 (碎片)", fontproperties=font)
+    ax1.set_ylabel("输赢金额 (Pt)", fontproperties=font)
     ax1.grid(True, alpha=0.3)
 
     # 添加数值标签
@@ -234,7 +234,7 @@ def create_win_loss_chart(stats: BlackjackStats) -> Optional[bytes]:
     )
     ax2.set_title("累计收益趋势", fontsize=14, fontweight="bold", fontproperties=font)
     ax2.set_xlabel("游戏局数", fontproperties=font)
-    ax2.set_ylabel("累计收益 (碎片)", fontproperties=font)
+    ax2.set_ylabel("累计收益 (Pt)", fontproperties=font)
     ax2.grid(True, alpha=0.3)
     ax2.legend(prop=font)
 

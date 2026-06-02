@@ -132,7 +132,7 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
             + MessageSegment.text(
                 Messages.START
                 + "\n"
-                + f"当前难度：{config.label}，预计奖励：{reward} 个碎片。"
+                + f"当前难度：{config.label}，预计奖励：{reward} 个Pt。"
                 + "\n"
                 + Messages.PROMPT
             )

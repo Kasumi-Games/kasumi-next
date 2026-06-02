@@ -25,10 +25,12 @@ from ..monetary import (  # noqa: E402
     get_user,
     get_top_users,
     get_user_rank,
+    is_using_offseason_points,
     xp_to_next_level,
     add_star_stickers,
     total_xp_for_level,
     set as set_balance,
+    get_star_stickers,
 )
 
 
@@ -49,10 +51,15 @@ async def info(matcher: Matcher, event: MessageEvent):
     progress_xp = user.xp - current_level_base
     level_xp_range = next_level_total - current_level_base
 
+    point_label = "休赛期临时 Pt" if is_using_offseason_points() else "赛季 Pt"
+    warning = "\n休赛期临时 Pt 不会计入下一赛季。" if is_using_offseason_points() else ""
+
     await matcher.send(
         f"Lv.{user.level} | XP: {progress_xp}/{level_xp_range} (还需 {xp_needed})\n"
-        f"星之碎片: {user.balance}\n"
-        f"星星贴纸: {user.star_stickers}" + passive_generator.element,
+        f"{point_label}: {get(user_id)} Pt\n"
+        f"星星贴纸: {get_star_stickers(user_id)}"
+        + warning
+        + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -90,7 +97,9 @@ async def handle_daily(matcher: Matcher, event: MessageEvent):
     # Update consecutive check-in
     user.consecutive_checkins += 1
 
-    msg = f"签到成功，获得 {amount} 个星之碎片\n"
+    msg = f"签到成功，获得 {amount} Pt\n"
+    if is_using_offseason_points():
+        msg += "当前是休赛期，本次获得的是临时 Pt，不会计入下一赛季。\n"
     msg += f"当前连续签到：{user.consecutive_checkins} 天\n"
 
     # Every 7th day bonus stickers
@@ -178,7 +187,7 @@ async def handle_transfer(
     transfer(user_id, to_user_id, amount, "transfer_by_command")
 
     await matcher.finish(
-        f"转账成功，已转账 {amount} 个星之碎片给{to_user_nick}"
+        f"转账成功，已转账 {amount} Pt 给{to_user_nick}"
         + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )

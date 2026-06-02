@@ -31,7 +31,7 @@
     {
       "id": "mines_cashout_2x",
       "name": "见好就收",
-      "description": "在探险中带着≥2倍碎片撤退",
+      "description": "在探险中带着≥2倍Pt撤退",
       "reward": 80,
       "type": "mines_cashout",
       "conditions": [
