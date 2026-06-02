@@ -6,6 +6,12 @@ from .models import User, TransactionCategory
 from .transaction_service import get_transaction_manager
 
 
+def _inventory():
+    from ..inventory import service
+
+    return service
+
+
 def get_all_users() -> List[User]:
     """Get all users"""
     session = get_session()
@@ -35,53 +41,60 @@ def get_user(user_id: str) -> User:
 # Balance operations
 def get_balance(user_id: str) -> int:
     """Get user's current balance"""
-    return get_user(user_id).balance
+    get_user(user_id)
+    return _inventory().get_quantity(user_id, "season_point")
+
+
+def is_using_offseason_points() -> bool:
+    from ..inventory.models import OFFSEASON_SCOPE_TYPE
+    from ..inventory.season_service import get_point_scope
+
+    scope_type, _, _ = get_point_scope()
+    return scope_type == OFFSEASON_SCOPE_TYPE
 
 
 def add_balance(user_id: str, amount: int, description: str):
     """Add balance to user account"""
-    session = get_session()
     transaction_manager = get_transaction_manager()
 
-    user = get_user(user_id)
-    user.balance += amount
-    session.commit()
+    get_user(user_id)
+    if amount < 0:
+        return cost_balance(user_id, abs(amount), description)
+    if amount > 0:
+        _inventory().grant_item(user_id, "season_point", amount, description)
 
     transaction_manager.add(user_id, TransactionCategory.INCOME, amount, description)
 
 
 def cost_balance(user_id: str, amount: int, description: str):
     """Deduct balance from user account"""
-    session = get_session()
     transaction_manager = get_transaction_manager()
 
-    user = get_user(user_id)
-    user.balance -= amount
-    session.commit()
+    get_user(user_id)
+    if amount < 0:
+        return add_balance(user_id, abs(amount), description)
+    if amount > 0:
+        _inventory().cost_item(user_id, "season_point", amount, description)
 
     transaction_manager.add(user_id, TransactionCategory.EXPENSE, amount, description)
 
 
 def set_balance(user_id: str, amount: int, description: str):
     """Set user's balance to a specific amount"""
-    session = get_session()
     transaction_manager = get_transaction_manager()
 
-    user = get_user(user_id)
-    user.balance = amount
-    session.commit()
+    get_user(user_id)
+    _inventory().set_quantity(user_id, "season_point", amount, description)
 
     transaction_manager.add(user_id, TransactionCategory.SET, amount, description)
 
 
 def transfer_balance(from_user_id: str, to_user_id: str, amount: int, description: str):
     """Transfer balance between users"""
-    session = get_session()
     transaction_manager = get_transaction_manager()
 
     cost_balance(from_user_id, amount, f"transfer_to_{to_user_id}")
     add_balance(to_user_id, amount, f"transfer_from_{from_user_id}")
-    session.commit()
 
     transaction_manager.add(
         to_user_id, TransactionCategory.TRANSFER, amount, description

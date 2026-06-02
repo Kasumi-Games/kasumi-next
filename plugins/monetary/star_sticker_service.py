@@ -1,27 +1,29 @@
 import time
 
-from nonebot.log import logger
-
-from .models import StickerTransaction, User
-from .database import get_session, get_transaction_session
+from .models import StickerTransaction
+from .database import get_transaction_session
 
 
 LEVEL_UP_STICKERS = 120
 CHECKIN_STICKERS = 120
 
 
+def _inventory():
+    from ..inventory import service
+
+    return service
+
+
 def add_star_stickers(user_id: str, amount: int, reason: str) -> int:
     """Add star stickers to a user, log the transaction, return new balance."""
-    session = get_session()
-    user = session.query(User).filter(User.user_id == user_id).first()
+    from .user_service import get_user
 
-    if not user:
-        logger.warning(f"User {user_id} not found for sticker add")
-        return 0
+    if amount <= 0:
+        return get_star_stickers(user_id)
 
-    user.star_stickers += amount
-    balance_after = user.star_stickers
-    session.commit()
+    get_user(user_id)
+    result = _inventory().grant_item(user_id, "star_sticker", amount, reason)
+    balance_after = result.quantity_after
 
     _log_sticker_tx(user_id, amount, reason, balance_after)
 
@@ -30,22 +32,17 @@ def add_star_stickers(user_id: str, amount: int, reason: str) -> int:
 
 def get_star_stickers(user_id: str) -> int:
     """Query star sticker balance."""
-    session = get_session()
-    user = session.query(User).filter(User.user_id == user_id).first()
-    return user.star_stickers if user else 0
+    return _inventory().get_quantity(user_id, "star_sticker")
 
 
 def cost_star_stickers(user_id: str, amount: int, reason: str) -> bool:
     """Spend star stickers (for gacha). Returns True if sufficient balance."""
-    session = get_session()
-    user = session.query(User).filter(User.user_id == user_id).first()
-
-    if not user or user.star_stickers < amount:
+    if amount <= 0:
+        return True
+    if get_star_stickers(user_id) < amount:
         return False
 
-    user.star_stickers -= amount
-    balance_after = user.star_stickers
-    session.commit()
+    balance_after = _inventory().cost_item(user_id, "star_sticker", amount, reason)
 
     _log_sticker_tx(user_id, -amount, reason, balance_after)
 
@@ -54,7 +51,10 @@ def cost_star_stickers(user_id: str, amount: int, reason: str) -> bool:
 
 def admin_add_stickers(user_id: str, amount: int, reason: str) -> None:
     """Admin direct sticker add/subtract."""
-    add_star_stickers(user_id, amount, f"admin_{reason}")
+    if amount >= 0:
+        add_star_stickers(user_id, amount, f"admin_{reason}")
+    else:
+        cost_star_stickers(user_id, abs(amount), f"admin_{reason}")
 
 
 def _log_sticker_tx(user_id: str, amount: int, reason: str, balance_after: int):

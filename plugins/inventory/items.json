@@ -1,0 +1,112 @@
+{
+  "items": [
+    {
+      "item_id": "season_point",
+      "category": "currency",
+      "name": "赛季积分",
+      "description": "当前赛季内获得的积分，赛季结束后用于排名结算。",
+      "stackable": true,
+      "visible": true,
+      "sort_order": 10,
+      "currency": {
+        "currency_kind": "seasonal",
+        "unit_name": "Pt",
+        "rankable": true,
+        "reset_policy": "season"
+      }
+    },
+    {
+      "item_id": "star_sticker",
+      "category": "currency",
+      "name": "星星贴纸",
+      "description": "永久保留的货币，可用于未来抽卡等功能。",
+      "stackable": true,
+      "visible": true,
+      "sort_order": 20,
+      "currency": {
+        "currency_kind": "permanent",
+        "unit_name": "张",
+        "rankable": false,
+        "reset_policy": "none"
+      }
+    },
+    {
+      "item_id": "frame_default",
+      "category": "cosmetic",
+      "name": "默认头像框",
+      "description": "基础头像框。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 100,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": "N"
+      }
+    },
+    {
+      "item_id": "title_first_season",
+      "category": "cosmetic",
+      "name": "初始之星",
+      "description": "仓库系统上线纪念称号。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 110,
+      "cosmetic": {
+        "cosmetic_type": "title",
+        "rarity": "R"
+      }
+    },
+    {
+      "item_id": "title_s1_champion",
+      "category": "cosmetic",
+      "name": "扬帆之星",
+      "description": "第一赛季冠军限定称号。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 120,
+      "cosmetic": {
+        "cosmetic_type": "title",
+        "rarity": "UR"
+      }
+    },
+    {
+      "item_id": "frame_s1_champion",
+      "category": "cosmetic",
+      "name": "扬帆冠军头像框",
+      "description": "第一赛季冠军限定头像框。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 130,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": "UR"
+      }
+    },
+    {
+      "item_id": "frame_s1_top3",
+      "category": "cosmetic",
+      "name": "扬帆前三头像框",
+      "description": "第一赛季前三限定头像框。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 140,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": "SR"
+      }
+    },
+    {
+      "item_id": "frame_s1_top10",
+      "category": "cosmetic",
+      "name": "扬帆前十头像框",
+      "description": "第一赛季前十限定头像框。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 150,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": "R"
+      }
+    }
+  ]
+}

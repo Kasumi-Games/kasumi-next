@@ -1,0 +1,58 @@
+{
+  "timezone": "UTC+8",
+  "offseason_starting_points": 100,
+  "seasons": [
+    {
+      "season_key": "2026-s01",
+      "number": 1,
+      "name": "Kasumi，扬帆起航",
+      "starts_at": "2026-06-01T00:00:00+08:00",
+      "ends_at": "2026-06-29T00:00:00+08:00",
+      "starting_points": 0,
+      "snapshot_interval_minutes": 60,
+      "snapshot_ranks": [10, 50],
+      "reward_tiers": [
+        {
+          "tier_key": "rank_1",
+          "from_rank": 1,
+          "to_rank": 1,
+          "title": "赛季冠军奖励",
+          "items": [
+            {"item_id": "star_sticker", "quantity": 500},
+            {"item_id": "title_s1_champion", "quantity": 1},
+            {"item_id": "frame_s1_champion", "quantity": 1}
+          ]
+        },
+        {
+          "tier_key": "rank_2_3",
+          "from_rank": 2,
+          "to_rank": 3,
+          "title": "赛季前三奖励",
+          "items": [
+            {"item_id": "star_sticker", "quantity": 300},
+            {"item_id": "frame_s1_top3", "quantity": 1}
+          ]
+        },
+        {
+          "tier_key": "rank_4_10",
+          "from_rank": 4,
+          "to_rank": 10,
+          "title": "赛季前十奖励",
+          "items": [
+            {"item_id": "star_sticker", "quantity": 200},
+            {"item_id": "frame_s1_top10", "quantity": 1}
+          ]
+        },
+        {
+          "tier_key": "rank_11_50",
+          "from_rank": 11,
+          "to_rank": 50,
+          "title": "赛季前五十奖励",
+          "items": [
+            {"item_id": "star_sticker", "quantity": 100}
+          ]
+        }
+      ]
+    }
+  ]
+}

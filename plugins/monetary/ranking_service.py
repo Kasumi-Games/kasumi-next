@@ -2,6 +2,8 @@ from typing import List
 from .database import get_session
 from .user_service import get_user
 from .models import User, UserRank, UserStats
+from .user_service import get_balance
+from .star_sticker_service import get_star_stickers
 
 
 def get_top_users(limit: int = 10) -> List[User]:
@@ -77,10 +79,10 @@ def get_user_stats(user_id: str) -> UserStats:
 
     return UserStats(
         user_id=user.user_id,
-        balance=user.balance,
+        balance=get_balance(user_id),
         level=user.level,
         xp=user.xp,
-        star_stickers=user.star_stickers,
+        star_stickers=get_star_stickers(user_id),
         rank=rank_info.rank,
         xp_gap=rank_info.xp_gap,
         last_daily_time=user.last_daily_time,
