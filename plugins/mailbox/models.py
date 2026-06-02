@@ -5,7 +5,7 @@
 import time
 import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Text, Boolean, ForeignKey
@@ -32,6 +32,24 @@ class Mail(Base):
     recipients: Mapped[list["MailRecipient"]] = relationship(
         back_populates="mail", cascade="all, delete-orphan"
     )
+    attachments: Mapped[list["MailAttachment"]] = relationship(
+        back_populates="mail", cascade="all, delete-orphan"
+    )
+
+
+class MailAttachment(Base):
+    __tablename__ = "mail_attachments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    mail_id: Mapped[int] = mapped_column(
+        ForeignKey("mails.id", ondelete="CASCADE"), nullable=False
+    )
+    item_id: Mapped[str] = mapped_column(String, nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    scope_type: Mapped[str] = mapped_column(String, default="", nullable=False)
+    scope_id: Mapped[str] = mapped_column(String, default="", nullable=False)
+
+    mail: Mapped["Mail"] = relationship(back_populates="attachments")
 
 
 class MailRecipient(Base):
@@ -62,7 +80,7 @@ class ScheduledMail(Base):
     )  # 接收者："all" 或 "user1,user2,user3"
     title: Mapped[str] = mapped_column(String, nullable=False)  # 邮件标题
     content: Mapped[str] = mapped_column(Text, nullable=False)  # 邮件内容
-    star_kakeras: Mapped[int] = mapped_column(Integer, default=0)  # 星之碎片奖励
+    star_kakeras: Mapped[int] = mapped_column(Integer, default=0)  # Pt奖励
     star_stickers: Mapped[int] = mapped_column(Integer, default=0)  # 星星贴纸奖励
     expire_days: Mapped[int] = mapped_column(Integer, default=7)  # 过期天数
     scheduled_time: Mapped[int] = mapped_column(
@@ -75,8 +93,34 @@ class ScheduledMail(Base):
         Integer, nullable=True
     )  # 实际发送时间
 
+    attachments: Mapped[list["ScheduledMailAttachment"]] = relationship(
+        back_populates="scheduled_mail", cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
         return f"<ScheduledMail(id={self.id}, name={self.name}, scheduled_time={self.scheduled_time})>"
+
+
+class ScheduledMailAttachment(Base):
+    __tablename__ = "scheduled_mail_attachments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    scheduled_mail_id: Mapped[int] = mapped_column(
+        ForeignKey("scheduled_mails.id", ondelete="CASCADE"), nullable=False
+    )
+    item_id: Mapped[str] = mapped_column(String, nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    scope_type: Mapped[str] = mapped_column(String, default="", nullable=False)
+    scope_id: Mapped[str] = mapped_column(String, default="", nullable=False)
+
+    scheduled_mail: Mapped["ScheduledMail"] = relationship(back_populates="attachments")
+
+
+class ServiceMailAttachment(BaseModel):
+    item_id: str
+    quantity: int
+    scope_type: str = ""
+    scope_id: str = ""
 
 
 class ServiceMail(BaseModel):
@@ -87,6 +131,7 @@ class ServiceMail(BaseModel):
     content: str
     star_kakeras: int
     star_stickers: int = 0
+    attachments: list[ServiceMailAttachment] = Field(default_factory=list)
     sender_id: str
     created_at: datetime.datetime
     expire_time: datetime.datetime

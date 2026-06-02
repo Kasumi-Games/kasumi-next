@@ -9,7 +9,8 @@ from typing import List, Optional
 
 from .service import MailService
 from .database import get_session
-from .models import ScheduledMail
+from .models import ScheduledMail, ScheduledMailAttachment
+from ..inventory.models import ItemAmount
 
 
 class ScheduledMailService:
@@ -26,6 +27,7 @@ class ScheduledMailService:
         scheduled_time: int,  # Unix时间戳
         star_kakeras: int = 0,
         star_stickers: int = 0,
+        attachments: Optional[list[ItemAmount]] = None,
         expire_days: int = 7,
         created_by: str = "system",
         name: str = None,  # 如果不提供则自动生成
@@ -38,7 +40,7 @@ class ScheduledMailService:
             title: 邮件标题
             content: 邮件内容
             scheduled_time: 预定发送时间(Unix时间戳)
-            star_kakeras: 星之碎片奖励
+            star_kakeras: Pt奖励
             expire_days: 邮件过期天数
             created_by: 创建者用户ID
             name: 定时邮件名称/标识，如果不提供则自动生成
@@ -80,6 +82,21 @@ class ScheduledMailService:
         )
 
         session.add(scheduled_mail)
+        session.flush()
+
+        for attachment in _normalize_attachments(
+            star_kakeras, star_stickers, attachments
+        ):
+            session.add(
+                ScheduledMailAttachment(
+                    scheduled_mail_id=scheduled_mail.id,
+                    item_id=attachment.item_id,
+                    quantity=attachment.quantity,
+                    scope_type=attachment.scope_type or "",
+                    scope_id=attachment.scope_id or "",
+                )
+            )
+
         session.commit()
 
         logger.info(
@@ -202,6 +219,26 @@ class ScheduledMailService:
         logger.info(f"已删除定时邮件: {name}")
         return True
 
+    def add_attachment(self, name: str, attachment: ItemAmount) -> bool:
+        session = get_session()
+        scheduled_mail = (
+            session.query(ScheduledMail).filter(ScheduledMail.name == name).first()
+        )
+        if not scheduled_mail or scheduled_mail.is_sent:
+            return False
+
+        session.add(
+            ScheduledMailAttachment(
+                scheduled_mail_id=scheduled_mail.id,
+                item_id=attachment.item_id,
+                quantity=attachment.quantity,
+                scope_type=attachment.scope_type or "",
+                scope_id=attachment.scope_id or "",
+            )
+        )
+        session.commit()
+        return True
+
     def process_due_mails(self) -> int:
         """
         处理到期的定时邮件
@@ -237,6 +274,7 @@ class ScheduledMailService:
                         content=scheduled_mail.content,
                         star_kakeras=scheduled_mail.star_kakeras,
                         star_stickers=scheduled_mail.star_stickers,
+                        attachments=_scheduled_attachments(scheduled_mail),
                         expire_days=scheduled_mail.expire_days,
                         sender_id=scheduled_mail.created_by,
                     )
@@ -253,6 +291,7 @@ class ScheduledMailService:
                                 content=scheduled_mail.content,
                                 star_kakeras=scheduled_mail.star_kakeras,
                                 star_stickers=scheduled_mail.star_stickers,
+                                attachments=_scheduled_attachments(scheduled_mail),
                                 expire_days=scheduled_mail.expire_days,
                                 sender_id=scheduled_mail.created_by,
                             )
@@ -289,3 +328,34 @@ class ScheduledMailService:
             .filter(ScheduledMail.is_sent == False)  # noqa: E712
             .count()
         )
+
+
+def _normalize_attachments(
+    star_kakeras: int = 0,
+    star_stickers: int = 0,
+    attachments: Optional[list[ItemAmount]] = None,
+) -> list[ItemAmount]:
+    normalized = list(attachments or [])
+    if star_kakeras > 0:
+        normalized.append(ItemAmount("season_point", star_kakeras))
+    if star_stickers > 0:
+        normalized.append(ItemAmount("star_sticker", star_stickers))
+    return normalized
+
+
+def _scheduled_attachments(scheduled_mail: ScheduledMail) -> list[ItemAmount]:
+    if scheduled_mail.attachments:
+        return [
+            ItemAmount(
+                item_id=attachment.item_id,
+                quantity=attachment.quantity,
+                scope_type=attachment.scope_type or None,
+                scope_id=attachment.scope_id or None,
+            )
+            for attachment in scheduled_mail.attachments
+        ]
+    return _normalize_attachments(
+        scheduled_mail.star_kakeras,
+        scheduled_mail.star_stickers,
+        attachments=None,
+    )

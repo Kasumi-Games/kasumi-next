@@ -11,7 +11,14 @@ from nonebot.log import logger
 from typing import List, Optional
 
 from .database import get_session
-from .models import Mail, MailRecipient, ServiceMail
+from .models import (
+    Mail,
+    MailAttachment,
+    MailRecipient,
+    ServiceMail,
+    ServiceMailAttachment,
+)
+from ..inventory.models import ItemAmount
 
 
 class MailService:
@@ -24,6 +31,7 @@ class MailService:
         content: str,
         star_kakeras: int = 0,
         star_stickers: int = 0,
+        attachments: Optional[list[ItemAmount]] = None,
         expire_days: int = 7,
         sender_id: str = "system",
     ) -> int:
@@ -34,7 +42,7 @@ class MailService:
             recipient_id: 接收者用户ID
             title: 邮件标题
             content: 邮件内容
-            star_kakeras: 星之碎片奖励
+            star_kakeras: Pt奖励
             star_stickers: 星星贴纸奖励
             expire_days: 过期天数
             sender_id: 发送者用户ID
@@ -57,6 +65,19 @@ class MailService:
             )
             session.add(mail)
             session.flush()  # 获取 mail.id
+
+            for attachment in _normalize_attachments(
+                star_kakeras, star_stickers, attachments
+            ):
+                session.add(
+                    MailAttachment(
+                        mail_id=mail.id,
+                        item_id=attachment.item_id,
+                        quantity=attachment.quantity,
+                        scope_type=attachment.scope_type or "",
+                        scope_id=attachment.scope_id or "",
+                    )
+                )
 
             # 创建接收者记录
             recipient = MailRecipient(
@@ -83,6 +104,7 @@ class MailService:
         content: str,
         star_kakeras: int = 0,
         star_stickers: int = 0,
+        attachments: Optional[list[ItemAmount]] = None,
         expire_days: int = 7,
         sender_id: str = "system",
     ) -> int:
@@ -93,7 +115,7 @@ class MailService:
         Args:
             title: 邮件标题
             content: 邮件内容
-            star_kakeras: 星之碎片奖励
+            star_kakeras: Pt奖励
             star_stickers: 星星贴纸奖励
             expire_days: 过期天数
             sender_id: 发送者用户ID
@@ -115,6 +137,21 @@ class MailService:
                 is_broadcast=True,  # 标记为广播邮件
             )
             session.add(mail)
+            session.flush()
+
+            for attachment in _normalize_attachments(
+                star_kakeras, star_stickers, attachments
+            ):
+                session.add(
+                    MailAttachment(
+                        mail_id=mail.id,
+                        item_id=attachment.item_id,
+                        quantity=attachment.quantity,
+                        scope_type=attachment.scope_type or "",
+                        scope_id=attachment.scope_id or "",
+                    )
+                )
+
             session.commit()
 
             mail_id = mail.id
@@ -199,22 +236,7 @@ class MailService:
             for recipient in recipients:
                 mail = recipient.mail  # 使用关系访问邮件内容
                 expire_time = mail.created_at + (mail.expire_days * 24 * 60 * 60)
-                mail_dict = ServiceMail(
-                    id=mail.id,
-                    title=mail.title,
-                    content=mail.content,
-                    star_kakeras=mail.star_kakeras,
-                    star_stickers=mail.star_stickers,
-                    sender_id=mail.sender_id,
-                    created_at=datetime.datetime.fromtimestamp(mail.created_at),
-                    expire_time=datetime.datetime.fromtimestamp(expire_time),
-                    is_broadcast=mail.is_broadcast,
-                    is_read=recipient.is_read,
-                    read_at=datetime.datetime.fromtimestamp(recipient.read_at)
-                    if recipient.read_at
-                    else None,
-                )
-                mail_list.append(mail_dict)
+                mail_list.append(_to_service_mail(mail, recipient, expire_time))
 
             mail_list.sort(key=lambda x: x.created_at, reverse=True)
 
@@ -271,21 +293,7 @@ class MailService:
 
             # 返回邮件详情
             expire_time = mail.created_at + (mail.expire_days * 24 * 60 * 60)
-            return ServiceMail(
-                id=mail.id,
-                title=mail.title,
-                content=mail.content,
-                star_kakeras=mail.star_kakeras,
-                star_stickers=mail.star_stickers,
-                sender_id=mail.sender_id,
-                created_at=datetime.datetime.fromtimestamp(mail.created_at),
-                expire_time=datetime.datetime.fromtimestamp(expire_time),
-                is_broadcast=mail.is_broadcast,
-                is_read=recipient.is_read,
-                read_at=datetime.datetime.fromtimestamp(recipient.read_at)
-                if recipient.read_at
-                else None,
-            )
+            return _to_service_mail(mail, recipient, expire_time)
 
         except Exception as e:
             session.rollback()
@@ -333,3 +341,58 @@ class MailService:
             raise
         finally:
             session.close()
+
+
+def _normalize_attachments(
+    star_kakeras: int = 0,
+    star_stickers: int = 0,
+    attachments: Optional[list[ItemAmount]] = None,
+) -> list[ItemAmount]:
+    normalized = list(attachments or [])
+    if star_kakeras > 0:
+        normalized.append(ItemAmount("season_point", star_kakeras))
+    if star_stickers > 0:
+        normalized.append(ItemAmount("star_sticker", star_stickers))
+    return normalized
+
+
+def _to_service_mail(
+    mail: Mail, recipient: MailRecipient, expire_time: int
+) -> ServiceMail:
+    attachments = [
+        ServiceMailAttachment(
+            item_id=attachment.item_id,
+            quantity=attachment.quantity,
+            scope_type=attachment.scope_type,
+            scope_id=attachment.scope_id,
+        )
+        for attachment in mail.attachments
+    ]
+    if not attachments:
+        attachments = [
+            ServiceMailAttachment(
+                item_id=attachment.item_id, quantity=attachment.quantity
+            )
+            for attachment in _normalize_attachments(
+                mail.star_kakeras,
+                mail.star_stickers,
+                attachments=None,
+            )
+        ]
+
+    return ServiceMail(
+        id=mail.id,
+        title=mail.title,
+        content=mail.content,
+        star_kakeras=mail.star_kakeras,
+        star_stickers=mail.star_stickers,
+        attachments=attachments,
+        sender_id=mail.sender_id,
+        created_at=datetime.datetime.fromtimestamp(mail.created_at),
+        expire_time=datetime.datetime.fromtimestamp(expire_time),
+        is_broadcast=mail.is_broadcast,
+        is_read=recipient.is_read,
+        read_at=datetime.datetime.fromtimestamp(recipient.read_at)
+        if recipient.read_at
+        else None,
+    )
