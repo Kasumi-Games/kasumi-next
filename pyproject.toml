@@ -25,6 +25,7 @@ dependencies = [
     "matplotlib>=3.9.4",
     "nonebot-plugin-manosaba-memes>=0.1.2",
     "rapidfuzz>=3.13.0",
+    "uniseg>=0.10.1",
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -39,3 +40,10 @@ dev = [
     "pandas>=2.3.2",
     "seaborn>=0.13.2",
 ]
+
+[tool.ruff]
+lint.select = ["I"]
+
+[tool.ruff.lint.isort]
+length-sort = true
+force-single-line = true
