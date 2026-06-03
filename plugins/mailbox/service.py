@@ -6,18 +6,18 @@
 
 import time
 import datetime
+from typing import List
+from typing import Optional
+
 from sqlalchemy import and_
 from nonebot.log import logger
-from typing import List, Optional
 
+from .models import Mail
+from .models import ServiceMail
+from .models import MailRecipient
+from .models import MailAttachment
+from .models import ServiceMailAttachment
 from .database import get_session
-from .models import (
-    Mail,
-    MailAttachment,
-    MailRecipient,
-    ServiceMail,
-    ServiceMailAttachment,
-)
 from ..inventory.models import ItemAmount
 
 

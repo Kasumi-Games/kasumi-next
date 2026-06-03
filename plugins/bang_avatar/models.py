@@ -1,6 +1,7 @@
-from dataclasses import dataclass
-from enum import IntEnum, StrEnum
 import random
+from enum import IntEnum
+from enum import StrEnum
+from dataclasses import dataclass
 
 
 class Band(IntEnum):

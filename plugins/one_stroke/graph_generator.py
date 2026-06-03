@@ -1,10 +1,11 @@
-from __future__ import annotations
-
 import random
+from typing import List
+from typing import Iterable
 from dataclasses import dataclass
-from typing import Iterable, List
 
-from .models import Edge, Graph, Node
+from .models import Edge
+from .models import Node
+from .models import Graph
 
 
 @dataclass(frozen=True)

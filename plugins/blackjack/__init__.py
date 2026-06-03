@@ -1,13 +1,19 @@
-import cv2
 import json
-from pathlib import Path
 from typing import Optional
+from pathlib import Path
+
+import cv2
+from nonebot import require
+from nonebot import get_driver
+from nonebot import on_command
 from nonebot.log import logger
 from nonebot.params import CommandArg
-from utils.error_handler import handle_error
 from nonebot.exception import MatcherException
-from nonebot import on_command, require, get_driver
-from nonebot.adapters.satori import MessageEvent, Message, MessageSegment
+from nonebot.adapters.satori import Message
+from nonebot.adapters.satori import MessageEvent
+from nonebot.adapters.satori import MessageSegment
+
+from utils.error_handler import handle_error
 
 require("cck")  # for card images
 require("nonebot_plugin_waiter")
@@ -15,25 +21,23 @@ require("nonebot_plugin_localstore")
 
 from nonebot_plugin_waiter import waiter  # noqa: E402
 
+from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
+from utils.passive_generator import generators as gens  # noqa: E402
+
 from .. import monetary  # noqa: E402
 from ..cck import card_manager  # noqa: E402
-from utils.passive_generator import generators as gens  # noqa: E402
-from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
-
-from .database import init_database  # noqa: E402
-from .render import BlackjackRenderer  # noqa: E402
 from .models import Hand  # noqa: E402
-from .stats_service import get_blackjack_stats, create_win_loss_chart  # noqa: E402
+from .render import BlackjackRenderer  # noqa: E402
 from .session import GameManager  # noqa: E402
+from .database import init_database  # noqa: E402
+from .handlers import get_bet_amount  # noqa: E402
+from .handlers import handle_split_game  # noqa: E402
+from .handlers import handle_normal_game  # noqa: E402
+from .handlers import handle_split_decision  # noqa: E402
+from .handlers import handle_initial_blackjack  # noqa: E402
 from .messages import Messages  # noqa: E402
-from .handlers import (  # noqa: E402
-    get_bet_amount,
-    handle_initial_blackjack,
-    handle_split_decision,
-    handle_split_game,
-    handle_normal_game,
-)
-
+from .stats_service import get_blackjack_stats  # noqa: E402
+from .stats_service import create_win_loss_chart  # noqa: E402
 
 HELP_MESSAGE = MessageSegment.image(
     raw=Path("plugins/blackjack/recourses/instruction.png").read_bytes(),

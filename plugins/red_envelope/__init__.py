@@ -1,29 +1,33 @@
 from typing import Optional
 
+from nonebot import require
+from nonebot import get_driver
+from nonebot import on_command
 from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot.exception import MatcherException
-from nonebot import get_driver, on_command, require
-from nonebot.adapters.satori import Message, MessageEvent
-from utils.error_handler import handle_error, log_error, generate_error_code
+from nonebot.adapters.satori import Message
+from nonebot.adapters.satori import MessageEvent
+
+from utils.error_handler import log_error
+from utils.error_handler import handle_error
+from utils.error_handler import generate_error_code
 
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
 
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
-from .. import monetary  # noqa: E402
 from utils import PassiveGenerator  # noqa: E402
 
+from .. import monetary  # noqa: E402
+from .service import EnvelopeCompletionInfo  # noqa: E402  # noqa: F401
+from .service import claim_envelope  # noqa: E402
+from .service import create_envelope  # noqa: E402
+from .service import get_active_envelopes  # noqa: E402
+from .service import expire_overdue_envelopes  # noqa: E402
 from .database import init_database  # noqa: E402
 from .messages import Messages  # noqa: E402
-from .service import (  # noqa: E402
-    claim_envelope,
-    create_envelope,
-    get_active_envelopes,
-    EnvelopeCompletionInfo,  # noqa: F401
-    expire_overdue_envelopes,
-)
 from ..nickname import nickname  # noqa: E402
 
 

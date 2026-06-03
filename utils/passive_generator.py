@@ -1,6 +1,9 @@
 from typing import Dict
-from datetime import datetime, timedelta
-from nonebot.adapters.satori import MessageEvent, MessageSegment
+from datetime import datetime
+from datetime import timedelta
+
+from nonebot.adapters.satori import MessageEvent
+from nonebot.adapters.satori import MessageSegment
 
 
 class SeqCounter:

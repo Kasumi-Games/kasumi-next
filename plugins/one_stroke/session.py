@@ -1,13 +1,18 @@
-from __future__ import annotations
-
 import time
 import random
+from typing import Set
+from typing import Dict
+from typing import Optional
 from pathlib import Path
-from typing import Dict, Optional, Set
-from dataclasses import dataclass, field
+from dataclasses import field
+from dataclasses import dataclass
 
-from .models import Edge, Graph, MoveResult, Node
 from plugins.render_service.primitives import RESOURCES_DIR
+
+from .models import Edge
+from .models import Node
+from .models import Graph
+from .models import MoveResult
 
 BG_PATH = RESOURCES_DIR / "BG"
 BGS = list(BG_PATH.glob("bg[0-9][0-9][0-9][0-9][0-9].png"))

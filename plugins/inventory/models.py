@@ -1,20 +1,17 @@
 """Inventory and season data models."""
 
-from dataclasses import dataclass
 from typing import Optional
+from dataclasses import dataclass
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-)
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Text
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import Boolean
+from sqlalchemy import Integer
+from sqlalchemy import ForeignKey
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship
-
+from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 

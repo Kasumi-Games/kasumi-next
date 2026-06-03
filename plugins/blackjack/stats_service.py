@@ -2,15 +2,17 @@
 Blackjack game statistics service for analyzing player game data.
 """
 
+from typing import List
+from typing import Optional
+from typing import cast
 from pathlib import Path
-from matplotlib.axes import Axes
 from dataclasses import dataclass
+
 import matplotlib.font_manager as fm
-from typing import List, Optional, cast
+from matplotlib.axes import Axes
 
 from .models import BlackjackGame
 from .game_service import BlackjackGameService
-
 
 font_path = Path(__file__).parent / "recourses" / "old.ttf"
 font = fm.FontProperties(fname=font_path)
@@ -149,9 +151,10 @@ def create_win_loss_chart(stats: BlackjackStats) -> Optional[bytes]:
         import matplotlib
 
         matplotlib.use("Agg")  # 使用非交互式后端
-        import matplotlib.pyplot as plt
         from io import BytesIO
+
         import numpy as np
+        import matplotlib.pyplot as plt
     except ImportError:
         # matplotlib未安装，返回None
         return None

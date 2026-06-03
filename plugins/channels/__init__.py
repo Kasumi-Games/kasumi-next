@@ -1,10 +1,10 @@
-from nonebot.adapters.satori.event import (
-    GuildRemovedEvent,
-    MessageCreatedEvent,
-    GuildMemberAddedEvent,
-    GuildMemberRemovedEvent,
-)
-from nonebot import on_message, on_notice, require
+from nonebot import require
+from nonebot import on_notice
+from nonebot import on_message
+from nonebot.adapters.satori.event import GuildRemovedEvent
+from nonebot.adapters.satori.event import MessageCreatedEvent
+from nonebot.adapters.satori.event import GuildMemberAddedEvent
+from nonebot.adapters.satori.event import GuildMemberRemovedEvent
 
 require("nonebot_plugin_localstore")
 
@@ -13,7 +13,6 @@ import nonebot_plugin_localstore as store  # noqa: E402
 from utils import is_qq_bot  # noqa: E402
 
 from .data_source import ChannelMemberManager  # noqa: E402
-
 
 member_file = store.get_data_file("channels", "channels.db")
 database_url = f"sqlite:///{member_file.absolute()}"

@@ -1,17 +1,21 @@
-import re
 import io
+import re
 import csv
 import random
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Tuple
+
 import aiohttp
+from PIL import Image
+from PIL import ImageDraw
 from rapidfuzz import process
-from PIL import Image, ImageDraw
-from bestdori.charts import Chart
-from nonebot.adapters import Message
 from nonebot.params import CommandArg
-from typing import List, Dict, Any, Tuple
+from bestdori.charts import Chart
 from bestdori.render import _utils as utils
 from bestdori.render import config as render_config
-
+from nonebot.adapters import Message
 
 diff_num = {
     "easy": "0",

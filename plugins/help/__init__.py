@@ -1,6 +1,7 @@
 from nonebot import on_command
 from nonebot.params import CommandArg
-from nonebot.adapters import Bot, Message
+from nonebot.adapters import Bot
+from nonebot.adapters import Message
 from nonebot.adapters.satori import MessageEvent
 
 from utils import PassiveGenerator

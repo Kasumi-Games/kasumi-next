@@ -1,11 +1,13 @@
-from __future__ import annotations
-
-from dataclasses import dataclass
+from typing import Set
+from typing import Dict
+from typing import Optional
 from collections import defaultdict
-from typing import Dict, Optional, Set
+from dataclasses import dataclass
 
 from .. import monetary
-from .models import Hand, Shoe, GameResult
+from .models import Hand
+from .models import Shoe
+from .models import GameResult
 from .game_service import BlackjackGameService
 
 
@@ -95,9 +97,7 @@ class GameManager:
         self._player_bets[user_id] = bet_amount
         return True
 
-    def end_game(
-        self, user_id: str, result: GameResult, winnings: int = 0
-    ) -> int:
+    def end_game(self, user_id: str, result: GameResult, winnings: int = 0) -> int:
         """
         结束游戏并返回实际奖金
         """

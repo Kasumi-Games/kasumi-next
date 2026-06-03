@@ -1,8 +1,10 @@
 import time
 import datetime
 from typing import List
+
+from .models import User
+from .models import TransactionCategory
 from .database import get_session
-from .models import User, TransactionCategory
 from .transaction_service import get_transaction_manager
 
 

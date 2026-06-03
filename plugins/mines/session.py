@@ -1,13 +1,16 @@
-from __future__ import annotations
-
 import time
 from math import comb
-from typing import Dict, Optional, Set
-from dataclasses import dataclass, field as dataclass_field
+from typing import Set
+from typing import Dict
+from typing import Optional
+from dataclasses import field as dataclass_field
+from dataclasses import dataclass
 
 from .. import monetary
+from .models import Field
+from .models import MinesGame
+from .models import GameResult
 from .database import get_session
-from .models import Field, GameResult, MinesGame
 
 
 @dataclass

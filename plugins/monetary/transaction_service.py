@@ -1,8 +1,10 @@
 import time
+
 from sqlalchemy.orm import Session
 
+from .models import Transaction
+from .models import TransactionCategory
 from .database import get_transaction_session
-from .models import Transaction, TransactionCategory
 
 
 class TransactionManager:

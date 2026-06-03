@@ -1,7 +1,9 @@
-# coding = utf-8
 from io import BytesIO
+
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFilter
 from aiohttp import ClientSession
-from PIL import Image, ImageDraw, ImageFilter
 from nonebot.adapters.satori import MessageSegment
 
 

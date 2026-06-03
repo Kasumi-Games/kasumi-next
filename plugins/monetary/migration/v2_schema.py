@@ -1,6 +1,7 @@
 """Schema migration for level system v2: add new columns and tables."""
 
 import sqlite3
+
 from nonebot import require
 from nonebot.log import logger
 

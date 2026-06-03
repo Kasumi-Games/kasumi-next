@@ -1,10 +1,12 @@
-from __future__ import annotations
-
 import math
-from typing import Dict, List, Set
+from typing import Set
+from typing import Dict
+from typing import List
 from collections import defaultdict
 
-from .models import Edge, Graph, Node
+from .models import Edge
+from .models import Node
+from .models import Graph
 
 DECAY_DELAY_BY_SCALE = {
     3: 3,

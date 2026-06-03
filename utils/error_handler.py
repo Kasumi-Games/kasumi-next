@@ -5,7 +5,6 @@ from pathlib import Path
 
 from nonebot.log import logger
 
-
 ERROR_CODE_PREFIX = "KSM"
 _ERROR_CODE_CHARS = string.ascii_uppercase + string.digits
 _ERROR_CODE_LENGTH = 6

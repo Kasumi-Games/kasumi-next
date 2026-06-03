@@ -1,7 +1,9 @@
 import math
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFilter
 
 from ..primitives import alpha_composite_paste
 

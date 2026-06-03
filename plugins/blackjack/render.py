@@ -1,15 +1,23 @@
-import cv2
 import random
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Dict
+from typing import Tuple
+from typing import Callable
+from typing import Optional
 from pathlib import Path
-from nonebot.log import logger
+
+import cv2
 import nonebot_plugin_localstore as store
-from PIL import Image, ImageDraw, ImageFont
-from typing import Tuple, Optional, Callable, TYPE_CHECKING, Dict, Any
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+from nonebot.log import logger
 
 from plugins.render_service import (
-    generate_simple_background,
     draw_rounded_rectangle as shared_draw_rounded_rectangle,
 )
+from plugins.render_service import generate_simple_background
 
 if TYPE_CHECKING:
     from .models import Hand

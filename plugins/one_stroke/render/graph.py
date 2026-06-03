@@ -1,16 +1,14 @@
-from __future__ import annotations
-
 from typing import Literal
 from functools import lru_cache
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
-from plugins.render_service import (
-    create_bg,
-    draw_pill,
-    load_font,
-    draw_rounded_rectangle,
-)
+from plugins.render_service import create_bg
+from plugins.render_service import draw_pill
+from plugins.render_service import load_font
+from plugins.render_service import draw_rounded_rectangle
 
 from ..session import GameSession
 from ..difficulty import apply_time_decay

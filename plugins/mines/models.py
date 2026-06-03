@@ -1,10 +1,14 @@
 import random
-from enum import Enum, StrEnum
+from enum import Enum
+from enum import StrEnum
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-from .render.utils import get_random_kasumi, get_random_arisa
+from .render.utils import get_random_arisa
+from .render.utils import get_random_kasumi
 
 
 class BlockType(Enum):

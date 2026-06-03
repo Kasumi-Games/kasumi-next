@@ -1,7 +1,7 @@
 """One-shot migrations into inventory."""
 
-import sqlite3
 import time
+import sqlite3
 
 from nonebot import require
 from nonebot.log import logger
@@ -10,18 +10,15 @@ require("nonebot_plugin_localstore")
 
 import nonebot_plugin_localstore as store  # noqa: E402
 
+from .models import SEASON_SCOPE_TYPE  # noqa: E402
+from .models import PERMANENT_SCOPE_ID  # noqa: E402
+from .models import PERMANENT_SCOPE_TYPE  # noqa: E402
+from .models import SEASON_POINT_ITEM_ID  # noqa: E402
+from .models import STAR_STICKER_ITEM_ID  # noqa: E402
+from .models import UserItem  # noqa: E402
+from .models import MigrationState  # noqa: E402
+from .models import ItemTransaction  # noqa: E402
 from .database import get_session  # noqa: E402
-from .models import (  # noqa: E402
-    ItemTransaction,
-    MigrationState,
-    SEASON_POINT_ITEM_ID,
-    SEASON_SCOPE_TYPE,
-    STAR_STICKER_ITEM_ID,
-    PERMANENT_SCOPE_ID,
-    PERMANENT_SCOPE_TYPE,
-    UserItem,
-)
-
 
 LEGACY_MIGRATION_KEY = "legacy_monetary_balances_v1"
 
@@ -83,8 +80,8 @@ def migrate_legacy_monetary_balances() -> None:
     if marker is not None:
         return
 
-    from ..monetary.database import init_database as init_monetary_database
     from .season_service import get_current_season
+    from ..monetary.database import init_database as init_monetary_database
 
     init_monetary_database()
 

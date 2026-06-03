@@ -179,3 +179,5 @@ ntsilk.exe
 
 # log files
 logs/
+
+.ruff_cache/

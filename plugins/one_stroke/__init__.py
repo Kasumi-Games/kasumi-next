@@ -1,34 +1,40 @@
-from __future__ import annotations
-
 import io
 import time
 
 from PIL import Image
+from nonebot import require
+from nonebot import on_command
 from nonebot.params import CommandArg
-from nonebot import on_command, require
-from utils.error_handler import handle_error
 from nonebot.exception import MatcherException
-from nonebot.adapters.satori import Message, MessageEvent, MessageSegment
+from nonebot.adapters.satori import Message
+from nonebot.adapters.satori import MessageEvent
+from nonebot.adapters.satori import MessageSegment
+
+from utils.error_handler import handle_error
 
 require("nonebot_plugin_waiter")
 require("daily_task")
 from nonebot_plugin_waiter import waiter  # noqa: E402
 
-from ..daily_task import check_progress  # noqa: E402
-from utils.passive_generator import generators as gens  # noqa: E402
+from utils import get_today_birthday  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
+from utils.passive_generator import generators as gens  # noqa: E402
 
 from .. import monetary  # noqa: E402
-from .messages import Messages  # noqa: E402
+from .models import MoveResult  # noqa: E402
+from .models import OneStrokeGame  # noqa: E402
+from .render import render  # noqa: E402
+from .render import render_leaderboard  # noqa: E402
 from .session import GameManager  # noqa: E402
-from utils import get_today_birthday  # noqa: E402
+from .database import get_session as get_db_session  # noqa: E402
+from .database import get_leaderboard  # noqa: E402
+from .messages import Messages  # noqa: E402
 from ..nickname import get as get_nickname  # noqa: E402
-from .models import MoveResult, OneStrokeGame  # noqa: E402
-from .render import render, render_leaderboard  # noqa: E402
-from .difficulty import apply_time_decay, calculate_reward  # noqa: E402
-from .graph_generator import generate_graph, parse_difficulty  # noqa: E402
-from .database import get_leaderboard, get_session as get_db_session  # noqa: E402
-
+from .difficulty import apply_time_decay  # noqa: E402
+from .difficulty import calculate_reward  # noqa: E402
+from ..daily_task import check_progress  # noqa: E402
+from .graph_generator import generate_graph  # noqa: E402
+from .graph_generator import parse_difficulty  # noqa: E402
 
 game_manager = GameManager()
 

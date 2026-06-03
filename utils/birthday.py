@@ -1,8 +1,7 @@
 import json
+import datetime
 from typing import List
 from pathlib import Path
-import datetime
-
 
 with open(Path(__file__).parent / "character_birthdays.json", "r", encoding="utf-8") as f:
     birthday_map = json.load(f)

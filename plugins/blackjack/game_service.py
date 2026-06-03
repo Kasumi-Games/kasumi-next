@@ -3,10 +3,12 @@ Blackjack game database service for storing and retrieving game records.
 """
 
 import time
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
+from .models import GameResult
+from .models import BlackjackGame
 from .database import get_session
-from .models import BlackjackGame, GameResult
 
 
 class BlackjackGameService:

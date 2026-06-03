@@ -1,15 +1,17 @@
 """Daily task plugin - assign, track and complete daily challenges."""
 
+from nonebot import get_driver
+from nonebot import on_command
+from nonebot import on_message
 from nonebot.log import logger
 from nonebot.matcher import Matcher
 from nonebot.adapters.satori import MessageEvent
-from nonebot import on_command, on_message, get_driver
 
 from utils import PassiveGenerator
-from .models import DailyTaskConfig
-from .database import init_database
-from .service import DailyTaskService
 
+from .models import DailyTaskConfig
+from .service import DailyTaskService
+from .database import init_database
 
 daily_task_service = DailyTaskService()
 

@@ -3,9 +3,10 @@
 import json
 from pathlib import Path
 
+from .models import Item
+from .models import CosmeticItem
+from .models import CurrencyItem
 from .database import get_session
-from .models import CosmeticItem, CurrencyItem, Item
-
 
 CATALOG_PATH = Path(__file__).with_name("items.json")
 

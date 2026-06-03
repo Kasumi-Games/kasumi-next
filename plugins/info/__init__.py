@@ -2,7 +2,8 @@ from nonebot import on_command
 from nonebot.matcher import Matcher
 from nonebot.adapters.satori import MessageEvent
 
-from utils import has_no_argument, PassiveGenerator
+from utils import PassiveGenerator
+from utils import has_no_argument
 
 
 @on_command(

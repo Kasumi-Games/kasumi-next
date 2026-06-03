@@ -4,9 +4,11 @@ Database models and data structures for the monetary plugin.
 
 from enum import StrEnum
 from dataclasses import dataclass
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
 
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import Integer
+from sqlalchemy.ext.declarative import declarative_base
 
 # Database table base classes
 Base = declarative_base()

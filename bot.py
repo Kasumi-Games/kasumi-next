@@ -1,13 +1,16 @@
-import nonebot
 from typing import Optional
+
+import nonebot
 from nonebot.log import logger
 from nonebot.matcher import Matcher
 from nonebot.message import run_postprocessor
+from nonebot.exception import IgnoredException
+from nonebot.exception import MatcherException
 from nonebot.adapters.satori import Adapter as Adapter
-from nonebot.exception import MatcherException, IgnoredException
 
-from utils.error_handler import setup_logging, generate_error_code, log_error
-
+from utils.error_handler import log_error
+from utils.error_handler import setup_logging
+from utils.error_handler import generate_error_code
 
 nonebot.init()
 

@@ -3,13 +3,16 @@
 """
 
 import time
+from typing import List
+from typing import Optional
+
 from sqlalchemy import and_
 from nonebot.log import logger
-from typing import List, Optional
 
+from .models import ScheduledMail
+from .models import ScheduledMailAttachment
 from .service import MailService
 from .database import get_session
-from .models import ScheduledMail, ScheduledMailAttachment
 from ..inventory.models import ItemAmount
 
 

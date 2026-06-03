@@ -1,13 +1,11 @@
-from __future__ import annotations
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
-from PIL import Image, ImageDraw, ImageFont
-
-from plugins.render_service import (
-    load_font,
-    draw_pill,
-    draw_rounded_rectangle,
-    generate_simple_background,
-)
+from plugins.render_service import draw_pill
+from plugins.render_service import load_font
+from plugins.render_service import draw_rounded_rectangle
+from plugins.render_service import generate_simple_background
 
 LeaderboardRows = list[tuple[str, float]]
 

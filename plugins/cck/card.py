@@ -1,10 +1,11 @@
 import os
 import random
-import aiohttp
 from typing import Tuple
 from pathlib import Path
-from nonebot import logger
+
+import aiohttp
 from aiohttp import ClientTimeout
+from nonebot import logger
 
 from .downloader import AsyncDownloader
 

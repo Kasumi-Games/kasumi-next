@@ -1,13 +1,15 @@
 from nonebot import require
-from sqlalchemy import and_, create_engine, func
+from sqlalchemy import and_
+from sqlalchemy import func
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 require("nonebot_plugin_localstore")
 
 import nonebot_plugin_localstore as store  # noqa: E402
 
-from .models import Base, OneStrokeGame  # noqa: E402
-
+from .models import Base  # noqa: E402
+from .models import OneStrokeGame  # noqa: E402
 
 database_path = store.get_data_file("one_stroke", "games.db")
 

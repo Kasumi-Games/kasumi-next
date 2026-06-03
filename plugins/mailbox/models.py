@@ -5,11 +5,18 @@
 import time
 import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Text, Boolean, ForeignKey
 
+from pydantic import Field
+from pydantic import BaseModel
+from sqlalchemy import Text
+from sqlalchemy import String
+from sqlalchemy import Boolean
+from sqlalchemy import Integer
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import mapped_column
+from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 

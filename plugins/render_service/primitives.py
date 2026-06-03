@@ -1,9 +1,11 @@
-from __future__ import annotations
-
+from typing import Tuple
+from typing import Union
+from typing import Optional
 from pathlib import Path
-from typing import Optional, Tuple, Union
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
 RESOURCES_DIR = Path(__file__).resolve().parent / "resources"
 FONTS_DIR = RESOURCES_DIR / "Fonts"

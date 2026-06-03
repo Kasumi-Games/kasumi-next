@@ -2,7 +2,9 @@ import math
 import random
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
 from ..primitives import alpha_composite_paste
 

@@ -3,7 +3,6 @@ import time
 from .models import StickerTransaction
 from .database import get_transaction_session
 
-
 LEVEL_UP_STICKERS = 120
 CHECKIN_STICKERS = 120
 

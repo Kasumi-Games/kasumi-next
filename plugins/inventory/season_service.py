@@ -1,30 +1,26 @@
 """Season metadata, lifecycle, snapshots, and settlement."""
 
-from __future__ import annotations
-
-import hashlib
 import json
 import time
-from datetime import datetime
+import hashlib
+from typing import Any
+from typing import Optional
 from pathlib import Path
-from typing import Any, Optional
+from datetime import datetime
 
 from nonebot.log import logger
 
+from .models import SEASON_SCOPE_TYPE
+from .models import OFFSEASON_SCOPE_TYPE
+from .models import SEASON_POINT_ITEM_ID
+from .models import Item
+from .models import Season
+from .models import UserItem
+from .models import ItemAmount
+from .models import SeasonReward
+from .models import SeasonRanking
+from .models import SeasonRankSnapshot
 from .database import get_session
-from .models import (
-    Item,
-    ItemAmount,
-    OFFSEASON_SCOPE_TYPE,
-    SEASON_POINT_ITEM_ID,
-    SEASON_SCOPE_TYPE,
-    Season,
-    SeasonRankSnapshot,
-    SeasonRanking,
-    SeasonReward,
-    UserItem,
-)
-
 
 SEASONS_PATH = Path(__file__).with_name("seasons.json")
 DEFAULT_TIMEZONE = "UTC+8"
@@ -161,7 +157,9 @@ def get_offseason_scope_id(now: int | None = None) -> str:
 
 def get_offseason_starting_points() -> int:
     config = load_seasons_config()
-    return int(config.get("offseason_starting_points", DEFAULT_OFFSEASON_STARTING_POINTS))
+    return int(
+        config.get("offseason_starting_points", DEFAULT_OFFSEASON_STARTING_POINTS)
+    )
 
 
 def get_season_metadata(season: Season) -> dict[str, Any]:
@@ -379,7 +377,9 @@ def _season_point_query(season_id: int):
     )
 
 
-def _reward_tier_for_rank(tiers: list[dict[str, Any]], rank: int) -> dict[str, Any] | None:
+def _reward_tier_for_rank(
+    tiers: list[dict[str, Any]], rank: int
+) -> dict[str, Any] | None:
     for tier in tiers:
         if int(tier["from_rank"]) <= rank <= int(tier["to_rank"]):
             return tier
@@ -396,7 +396,9 @@ def _validate_reward_items(config: dict[str, Any]) -> None:
                 if item["item_id"] not in known_item_ids:
                     missing.append(item["item_id"])
     if missing:
-        raise ValueError(f"Unknown season reward item ids: {', '.join(sorted(set(missing)))}")
+        raise ValueError(
+            f"Unknown season reward item ids: {', '.join(sorted(set(missing)))}"
+        )
 
 
 def _parse_time(value: str) -> int:

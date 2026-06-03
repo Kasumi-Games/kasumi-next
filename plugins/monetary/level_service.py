@@ -5,8 +5,8 @@ from typing import Optional
 
 from nonebot.log import logger
 
-from .database import get_session
 from .models import User
+from .database import get_session
 from .star_sticker_service import add_star_stickers
 
 LEVEL_UP_STICKERS = 120

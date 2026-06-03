@@ -8,7 +8,6 @@ import nonebot_plugin_localstore as store  # noqa: E402
 
 from .models import Base  # noqa: E402
 
-
 # Database path
 database_path = store.get_data_file("blackjack", "games.db")
 

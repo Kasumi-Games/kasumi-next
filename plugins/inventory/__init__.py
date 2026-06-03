@@ -1,11 +1,15 @@
 """Inventory plugin commands, season commands, and exports."""
 
-from nonebot.matcher import Matcher
+from nonebot import require
+from nonebot import get_driver
+from nonebot import on_command
 from nonebot.params import CommandArg
-from nonebot.permission import SUPERUSER
+from nonebot.matcher import Matcher
 from nonebot.exception import MatcherException
-from nonebot import get_driver, on_command, require
-from nonebot.adapters.satori import Message, MessageEvent, MessageSegment
+from nonebot.permission import SUPERUSER
+from nonebot.adapters.satori import Message
+from nonebot.adapters.satori import MessageEvent
+from nonebot.adapters.satori import MessageSegment
 
 from utils import PassiveGenerator
 
@@ -13,30 +17,27 @@ require("nonebot_plugin_apscheduler")
 
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
+from .models import SEASON_POINT_ITEM_ID  # noqa: E402
+from .models import ItemAmount  # noqa: E402
+from .service import get_equipped  # noqa: E402
+from .service import get_quantity  # noqa: E402
+from .service import display_scope  # noqa: E402
+from .service import equip_cosmetic  # noqa: E402
+from .service import list_inventory  # noqa: E402
+from .service import unequip_cosmetic  # noqa: E402
+from .service import parse_item_amount  # noqa: E402
+from .service import display_item_amount  # noqa: E402
 from .database import init_database  # noqa: E402
 from .season_render import render_snapshot_trend  # noqa: E402
-from .models import ItemAmount, SEASON_POINT_ITEM_ID  # noqa: E402
-from .season_service import (  # noqa: E402
-    settle_season,
-    get_latest_season,
-    get_season_by_key,
-    get_active_ranking,
-    get_current_season,
-    settle_due_seasons,
-    get_user_season_rank,
-    list_settled_rankings,
-    capture_rank_snapshots,
-)
-from .service import (  # noqa: E402
-    get_equipped,
-    get_quantity,
-    display_scope,
-    equip_cosmetic,
-    list_inventory,
-    unequip_cosmetic,
-    parse_item_amount,
-    display_item_amount,
-)
+from .season_service import settle_season  # noqa: E402
+from .season_service import get_latest_season  # noqa: E402
+from .season_service import get_season_by_key  # noqa: E402
+from .season_service import get_active_ranking  # noqa: E402
+from .season_service import get_current_season  # noqa: E402
+from .season_service import settle_due_seasons  # noqa: E402
+from .season_service import get_user_season_rank  # noqa: E402
+from .season_service import list_settled_rankings  # noqa: E402
+from .season_service import capture_rank_snapshots  # noqa: E402
 
 
 @get_driver().on_startup
@@ -308,8 +309,9 @@ async def handle_season_history(matcher: Matcher, event: MessageEvent):
         )
 
     lines = ["赛季历史："]
+    from .models import Season
+    from .models import SeasonRanking
     from .database import get_session
-    from .models import Season, SeasonRanking
 
     seasons = (
         get_session()

@@ -1,10 +1,20 @@
 import json
+from typing import Dict
+from typing import List
 from pathlib import Path
-from typing import Dict, List
+
+from nonebot import require
+from nonebot import get_driver
+from nonebot import on_command
+from nonebot import get_plugin_config
 from nonebot.params import CommandArg
-from nonebot import on_command, get_driver, get_plugin_config, require
-from nonebot.adapters.satori import MessageEvent, MessageSegment, Message
-from utils.error_handler import handle_error, log_error, generate_error_code
+from nonebot.adapters.satori import Message
+from nonebot.adapters.satori import MessageEvent
+from nonebot.adapters.satori import MessageSegment
+
+from utils.error_handler import log_error
+from utils.error_handler import handle_error
+from utils.error_handler import generate_error_code
 
 require("nonebot_plugin_waiter")
 
@@ -14,15 +24,11 @@ from utils import encode_with_ntsilk  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
 from .. import monetary  # noqa: E402
-
+from .utils import speaker_dict  # noqa: E402
+from .utils import match_character  # noqa: E402
+from .utils import call_speaker_api  # noqa: E402
+from .utils import call_synthesize_api  # noqa: E402
 from .config import Config  # noqa: E402
-from .utils import (  # noqa: E402
-    speaker_dict,
-    match_character,
-    call_speaker_api,
-    call_synthesize_api,
-)
-
 
 plugin_config = get_plugin_config(Config)
 

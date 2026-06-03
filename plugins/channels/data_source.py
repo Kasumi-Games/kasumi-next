@@ -1,8 +1,16 @@
-from typing import Optional, List
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, Column, String, Table, ForeignKey
-from sqlalchemy.orm import relationship, Mapped, sessionmaker, scoped_session
+from typing import List
+from typing import Optional
 
+from sqlalchemy import Table
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import ForeignKey
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 

@@ -1,7 +1,10 @@
 from typing import List
+
+from .models import User
+from .models import UserRank
+from .models import UserStats
 from .database import get_session
 from .user_service import get_user
-from .models import User, UserRank, UserStats
 from .user_service import get_balance
 from .star_sticker_service import get_star_stickers
 

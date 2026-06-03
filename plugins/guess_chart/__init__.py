@@ -1,16 +1,25 @@
 import random
+from typing import List
+from typing import Union
+from typing import Optional
 from pathlib import Path
+
+from nonebot import require
+from nonebot import get_driver
+from nonebot import on_command
+from nonebot import get_plugin_config
 from bestdori import songs
 from bestdori import settings
 from nonebot.log import logger
+from nonebot.params import Depends
+from nonebot.params import CommandArg
 from bestdori.charts import Chart
 from bestdori.render import render
-from nonebot import get_plugin_config
-from typing import Optional, List, Union
+from nonebot.adapters.satori import Message
+from nonebot.adapters.satori import MessageEvent
+from nonebot.adapters.satori import MessageSegment
+
 from utils.error_handler import handle_error
-from nonebot.params import Depends, CommandArg
-from nonebot import on_command, require, get_driver
-from nonebot.adapters.satori import MessageSegment, MessageEvent, Message
 
 require("daily_task")
 require("nonebot_plugin_waiter")
@@ -19,28 +28,27 @@ require("nonebot_plugin_apscheduler")
 from nonebot_plugin_waiter import waiter  # noqa: E402
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
-from .. import monetary  # noqa: E402
 from utils import get_today_birthday  # noqa: E402
-from ..daily_task import check_progress  # noqa: E402
-from utils.passive_generator import generators as gens  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
+from utils.passive_generator import generators as gens  # noqa: E402
 
+from .. import monetary  # noqa: E402
+from .store import BandStore  # noqa: E402
+from .store import SongStore  # noqa: E402
+from .store import GamersStore  # noqa: E402
+from .utils import diff_num  # noqa: E402
+from .utils import fuzzy_match  # noqa: E402
+from .utils import get_difficulty  # noqa: E402
+from .utils import get_jacket_image  # noqa: E402
+from .utils import read_csv_to_dict  # noqa: E402
+from .utils import render_to_slices  # noqa: E402
+from .utils import flatten_song_data  # noqa: E402
+from .utils import pil_image_to_bytes  # noqa: E402
+from .utils import sort_by_difficulty  # noqa: E402
+from .utils import get_value_from_list  # noqa: E402
+from .utils import build_enriched_dictionary  # noqa: E402
 from .config import Config  # noqa: E402
-from .store import SongStore, BandStore, GamersStore  # noqa: E402
-from .utils import (  # noqa: E402
-    diff_num,
-    fuzzy_match,
-    get_difficulty,
-    read_csv_to_dict,
-    get_jacket_image,
-    render_to_slices,
-    flatten_song_data,
-    sort_by_difficulty,
-    pil_image_to_bytes,
-    get_value_from_list,
-    build_enriched_dictionary,
-)
-
+from ..daily_task import check_progress  # noqa: E402
 
 plugin_config = get_plugin_config(Config)
 settings.proxy = plugin_config.bestdori_proxy

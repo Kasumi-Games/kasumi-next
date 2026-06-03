@@ -1,32 +1,38 @@
-from __future__ import annotations
-
 import io
-from typing import Optional, Tuple
+from typing import Tuple
+from typing import Optional
 
 from PIL import Image
+from nonebot import require
+from nonebot import get_driver
+from nonebot import on_command
 from nonebot.log import logger
 from nonebot.params import CommandArg
-from utils.error_handler import handle_error
 from nonebot.exception import MatcherException
-from nonebot import get_driver, on_command, require
-from nonebot.adapters.satori import Message, MessageEvent, MessageSegment
+from nonebot.adapters.satori import Message
+from nonebot.adapters.satori import MessageEvent
+from nonebot.adapters.satori import MessageSegment
+
+from utils.error_handler import handle_error
 
 require("daily_task")
 require("nonebot_plugin_waiter")
 
 from nonebot_plugin_waiter import waiter  # noqa: E402
 
-from ..daily_task import check_progress  # noqa: E402
-from utils.passive_generator import generators as gens  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
+from utils.passive_generator import generators as gens  # noqa: E402
 
 from .. import monetary  # noqa: E402
+from .models import BlockType  # noqa: E402
+from .models import GameResult  # noqa: E402
 from .render import render  # noqa: E402
-from .messages import Messages  # noqa: E402
 from .session import GameManager  # noqa: E402
 from .database import init_database  # noqa: E402
-from .models import BlockType, GameResult  # noqa: E402
-from .stats_service import get_mines_stats, create_win_loss_chart  # noqa: E402
+from .messages import Messages  # noqa: E402
+from ..daily_task import check_progress  # noqa: E402
+from .stats_service import get_mines_stats  # noqa: E402
+from .stats_service import create_win_loss_chart  # noqa: E402
 
 game_manager = GameManager()
 

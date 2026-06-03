@@ -1,17 +1,17 @@
+from typing import TYPE_CHECKING
+from typing import Tuple
 from pathlib import Path
-from typing import Tuple, TYPE_CHECKING
 
-from PIL import Image, ImageDraw
+from PIL import Image
+from PIL import ImageDraw
+
+from plugins.render_service import create_bg
+from plugins.render_service import draw_pill
+from plugins.render_service import load_font
+from plugins.render_service import draw_rounded_rectangle
+from plugins.render_service.primitives import RESOURCES_DIR
 
 from ..models import BlockType
-from plugins.render_service import (
-    create_bg,
-    draw_pill,
-    load_font,
-    draw_rounded_rectangle,
-)
-
-from plugins.render_service.primitives import RESOURCES_DIR
 
 if TYPE_CHECKING:
     from ..models import Field

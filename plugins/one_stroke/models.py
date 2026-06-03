@@ -1,10 +1,14 @@
-from __future__ import annotations
-
 from enum import StrEnum
+from typing import Set
+from typing import Dict
+from typing import Tuple
+from typing import FrozenSet
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, Set, Tuple
 
-from sqlalchemy import Column, Float, Integer, String
+from sqlalchemy import Float
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import Integer
 from sqlalchemy.ext.declarative import declarative_base
 
 Node = Tuple[int, int]

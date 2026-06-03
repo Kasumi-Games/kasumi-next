@@ -4,41 +4,44 @@
 
 import time
 from typing import Optional
+
+from nonebot import require
+from nonebot import get_driver
+from nonebot import on_command
 from nonebot.log import logger
 from nonebot.params import CommandArg
-from nonebot.permission import SUPERUSER
 from nonebot.exception import MatcherException
-from nonebot import get_driver, on_command, require
-from nonebot.adapters.satori import MessageEvent, Message
-from utils.error_handler import handle_error, log_error, generate_error_code
+from nonebot.permission import SUPERUSER
+from nonebot.adapters.satori import Message
+from nonebot.adapters.satori import MessageEvent
+
+from utils.error_handler import log_error
+from utils.error_handler import handle_error
+from utils.error_handler import generate_error_code
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_localstore")
 require("nonebot_plugin_apscheduler")
 
-from nonebot_plugin_apscheduler import scheduler  # noqa: E402
-from nonebot_plugin_alconna import (  # noqa: E402
-    Args,
-    Option,
-    Alconna,
-    Arparma,
-    Subcommand,
-    on_alconna,
-    CommandMeta,
-)
 from arclet.alconna.action import append  # noqa: E402
+from nonebot_plugin_alconna import Args  # noqa: E402
+from nonebot_plugin_alconna import Option  # noqa: E402
+from nonebot_plugin_alconna import Alconna  # noqa: E402
+from nonebot_plugin_alconna import Arparma  # noqa: E402
+from nonebot_plugin_alconna import Subcommand  # noqa: E402
+from nonebot_plugin_alconna import CommandMeta  # noqa: E402
+from nonebot_plugin_alconna import on_alconna  # noqa: E402
+from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import PassiveGenerator  # noqa: E402
 
 from .service import MailService  # noqa: E402
 from .database import init_database  # noqa: E402
-from .scheduled_service import ScheduledMailService  # noqa: E402
 from ..inventory.models import ItemAmount  # noqa: E402
-from ..inventory.service import (  # noqa: E402
-    display_item_amount,
-    grant_many,
-    parse_item_amount,
-)
+from .scheduled_service import ScheduledMailService  # noqa: E402
+from ..inventory.service import grant_many  # noqa: E402
+from ..inventory.service import parse_item_amount  # noqa: E402
+from ..inventory.service import display_item_amount  # noqa: E402
 
 
 def escape_text(text: str) -> str:

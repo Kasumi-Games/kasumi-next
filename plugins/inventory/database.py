@@ -10,7 +10,6 @@ import nonebot_plugin_localstore as store  # noqa: E402
 
 from .models import Base  # noqa: E402
 
-
 database_path = store.get_data_file("inventory", "inventory.db")
 
 session = None
@@ -24,7 +23,8 @@ def init_database():
     session = sessionmaker(bind=engine)()
 
     from .catalog import sync_catalog
-    from .migration import migrate_inventory_schema, migrate_legacy_monetary_balances
+    from .migration import migrate_inventory_schema
+    from .migration import migrate_legacy_monetary_balances
     from .season_service import sync_seasons_config
 
     Base.metadata.create_all(engine)

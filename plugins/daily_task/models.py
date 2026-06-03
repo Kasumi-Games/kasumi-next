@@ -1,8 +1,12 @@
 """Daily task ORM model."""
 
 from pydantic import BaseModel
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import Boolean
+from sqlalchemy import Integer
+from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Boolean, UniqueConstraint
 
 Base = declarative_base()
 

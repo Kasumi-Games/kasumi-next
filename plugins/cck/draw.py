@@ -1,6 +1,8 @@
 import random
 from io import BytesIO
-from PIL import Image, ImageEnhance
+
+from PIL import Image
+from PIL import ImageEnhance
 from nonebot.adapters.satori import MessageSegment
 
 

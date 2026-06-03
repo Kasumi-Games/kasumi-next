@@ -1,9 +1,13 @@
 import re
 import contextlib
-from typing import Dict, Any
+from typing import Any
+from typing import Dict
+
+from nonebot import require
+from nonebot import on_message
 from nonebot.log import logger
-from nonebot import on_message, require
-from nonebot.adapters.satori import MessageEvent, Bot
+from nonebot.adapters.satori import Bot
+from nonebot.adapters.satori import MessageEvent
 
 require("nonebot_plugin_apscheduler")
 
@@ -12,7 +16,6 @@ from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 from utils import is_qq_bot  # noqa: E402
 
 from .manager import PassiveManager  # noqa: E402
-
 
 passive_manager = PassiveManager()
 

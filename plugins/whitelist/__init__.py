@@ -5,7 +5,6 @@ from nonebot.adapters.satori import MessageEvent
 
 from .config import Config
 
-
 plugin_config = get_plugin_config(Config)
 
 

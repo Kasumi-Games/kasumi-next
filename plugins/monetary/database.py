@@ -6,14 +6,12 @@ require("nonebot_plugin_localstore")
 
 import nonebot_plugin_localstore as store  # noqa: E402
 
-from .models import Base, TransactionBase  # noqa: E402
-from .migration import (  # noqa: E402
-    migrate_data,
-    migrate_schema,
-    migrate_add_level_column,
-    migrate_fix_balance_column,
-)
-
+from .models import Base  # noqa: E402
+from .models import TransactionBase  # noqa: E402
+from .migration import migrate_data  # noqa: E402
+from .migration import migrate_schema  # noqa: E402
+from .migration import migrate_add_level_column  # noqa: E402
+from .migration import migrate_fix_balance_column  # noqa: E402
 
 # Database paths
 database_path = store.get_data_file("monetary", "data.db")

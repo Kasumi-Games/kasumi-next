@@ -1,5 +1,8 @@
+from typing import Dict
+from typing import List
+from typing import Optional
+
 import aiohttp
-from typing import Optional, Dict, List
 
 
 async def call_synthesize_api(

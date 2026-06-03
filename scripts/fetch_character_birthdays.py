@@ -1,6 +1,7 @@
 import json
-import httpx
 from datetime import datetime
+
+import httpx
 
 # 定义要请求的 URL 模板
 url_template = "https://bestdori.com/api/characters/{}.json"

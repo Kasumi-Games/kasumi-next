@@ -1,10 +1,12 @@
 import os
-import aiohttp
 import asyncio
-import aiofiles
+from typing import Dict
+from typing import List
 from pathlib import Path
+
+import aiohttp
+import aiofiles
 from nonebot import logger
-from typing import List, Dict
 
 
 class AsyncDownloader:

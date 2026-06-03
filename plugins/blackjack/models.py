@@ -1,7 +1,10 @@
 import random
-from typing import List
 from enum import StrEnum
-from sqlalchemy import Column, Integer, String
+from typing import List
+
+from sqlalchemy import Column
+from sqlalchemy import String
+from sqlalchemy import Integer
 from sqlalchemy.ext.declarative import declarative_base
 
 # Database base class
