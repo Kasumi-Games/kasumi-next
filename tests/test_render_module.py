@@ -165,7 +165,7 @@ class RenderLayoutTest(unittest.TestCase):
         source = Image.new("RGBA", (12, 12), (66, 133, 244, 255))
         page = Page(
             size=(180, 120),
-            background=kit.page_background(fill=(1, 2, 3, 255)),
+            background=kit.background(fill=(1, 2, 3, 255)),
             padding=Insets.all(10),
             child=VStack(
                 [
@@ -300,7 +300,7 @@ class RenderLayoutTest(unittest.TestCase):
     def test_minimal_text_clips_under_page_pixel_ratio(self) -> None:
         page = Page(
             size=(80, 40),
-            background=MinimalKit().page_background(fill=(255, 255, 255, 255)),
+            background=MinimalKit().background(fill=(255, 255, 255, 255)),
             padding=Insets.only(left=8, top=8, right=40, bottom=8),
             child=MinimalText(
                 "This line is intentionally too long",
@@ -399,6 +399,78 @@ class RenderLayoutTest(unittest.TestCase):
         self.assertEqual(title_pill.title_font, DISPLAY_FONT)
         self.assertEqual(title_pill.subtitle_font, CHINESE_FONT)
 
+    def test_bangdream_titled_panel_measures_authored_size(self) -> None:
+        panel = BanGDreamKit().titled_panel(
+            "国服相关活动",
+            title_width=180,
+            title_height=48,
+            main_width=320,
+            main_height=240,
+        )
+
+        size = panel.measure(RenderContext(pixel_ratio=2), Constraints())
+
+        self.assertEqual(size, Size(320, 288))
+
+    def test_bangdream_titled_panel_accepts_size_values(self) -> None:
+        panel = BanGDreamKit().titled_panel(
+            "Event",
+            title_width=180,
+            title_height=48,
+            main_width=Fill(),
+            main_height=Fill(),
+        )
+
+        size = panel.measure(
+            RenderContext(),
+            Constraints(max_width=360, max_height=300),
+        )
+
+        self.assertIsInstance(panel.width, Fill)
+        self.assertIsInstance(panel.height, Fill)
+        self.assertEqual(size, Size(360, 300))
+
+    def test_bangdream_titled_panel_can_select_bundled_font(self) -> None:
+        panel = BanGDreamKit().titled_panel(
+            "Event",
+            title_width=180,
+            title_height=48,
+            main_width=320,
+            main_height=240,
+            title_font="display",
+            title_radius=18,
+            main_radius=24,
+        )
+
+        self.assertEqual(panel.title_font, DISPLAY_FONT)
+        self.assertEqual(panel.title_radius, 18)
+        self.assertEqual(panel.main_radius, 24)
+
+    def test_bangdream_titled_panel_renders_tabbed_shape(self) -> None:
+        panel = BanGDreamKit().titled_panel(
+            "",
+            title_width=80,
+            title_height=40,
+            main_width=120,
+            main_height=80,
+            stroke_width=6,
+            title_fill=(234, 78, 116, 255),
+            main_fill=(255, 255, 255, 255),
+        )
+        page = Page(
+            size=(140, 140),
+            padding=Insets.only(left=10, top=10),
+            child=panel,
+        )
+
+        image = page.render(RenderContext(pixel_ratio=2))
+
+        self.assertGreater(image.getpixel((10, 50))[3], 0)
+        self.assertEqual(image.getpixel((11, 51)), (255, 255, 255, 255))
+        self.assertEqual(image.getpixel((16, 16)), (255, 255, 255, 255))
+        self.assertEqual(image.getpixel((40, 30)), (234, 78, 116, 255))
+        self.assertEqual(image.getpixel((129, 50)), (0, 0, 0, 0))
+
     def test_minimal_image_renders_under_page_pixel_ratio(self) -> None:
         source = Image.new("RGBA", (10, 20), (1, 2, 3, 255))
         page = Page(
@@ -427,7 +499,7 @@ class RenderLayoutTest(unittest.TestCase):
         cell = Image.new("RGBA", (24, 24), (234, 78, 116, 255))
         page = Page(
             size=(200, 220),
-            background=kit.page_background_simple(),
+            background=kit.background_simple(),
             padding=Insets.all(10),
             child=VStack(
                 [
@@ -456,7 +528,7 @@ class RenderLayoutTest(unittest.TestCase):
             for y in range(24):
                 source.putpixel((x, y), (66, 133, 244, 255))
 
-        background = kit.page_background(
+        background = kit.background(
             source=source,
             text="BD",
             blur_radius=4,

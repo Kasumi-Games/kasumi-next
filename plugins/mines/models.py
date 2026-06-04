@@ -7,8 +7,8 @@ from sqlalchemy import String
 from sqlalchemy import Integer
 from sqlalchemy.ext.declarative import declarative_base
 
-from .render.utils import get_random_arisa
-from .render.utils import get_random_kasumi
+from .utils import get_random_arisa
+from .utils import get_random_kasumi
 
 
 class BlockType(Enum):

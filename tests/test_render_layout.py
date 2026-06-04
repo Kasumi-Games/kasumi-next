@@ -84,9 +84,9 @@ class PageLayoutTest(unittest.TestCase):
             size=(100, 80),
             padding=Insets.only(left=5, top=7, right=11, bottom=13),
             child=child,
-        ).render(RenderContext(pixel_ratio=1))
+        ).render(RenderContext())
 
-        self.assertEqual(child.renders, [("child", Rect(5, 7, 84, 60))])
+        self.assertEqual(child.renders, [("child", Rect(10, 14, 168, 120))])
 
     def test_auto_page_measures_with_padding_adjusted_constraints(self) -> None:
         child = RecordingBox("child", Size(80, 40))
@@ -98,7 +98,7 @@ class PageLayoutTest(unittest.TestCase):
             max_width=120,
             min_height=90,
             max_height=100,
-        ).render(RenderContext(pixel_ratio=1))
+        ).render(RenderContext())
 
         self.assertEqual(image.size, (100, 90))
         self.assertEqual(
@@ -108,7 +108,7 @@ class PageLayoutTest(unittest.TestCase):
                 Constraints(min_width=90, max_width=110, min_height=76, max_height=86),
             ),
         )
-        self.assertEqual(child.renders, [("child", Rect(5, 7, 90, 76))])
+        self.assertEqual(child.renders, [("child", Rect(10, 14, 180, 152))])
 
 
 class FrameLayoutTest(unittest.TestCase):

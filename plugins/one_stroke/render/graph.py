@@ -1,97 +1,58 @@
+import random
 from typing import Literal
+from pathlib import Path
 from functools import lru_cache
+from dataclasses import dataclass
 
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
-from plugins.render_service import create_bg
-from plugins.render_service import draw_pill
-from plugins.render_service import load_font
-from plugins.render_service import draw_rounded_rectangle
+from plugins.render import Rect
+from plugins.render import Size
+from plugins.render import Fixed
+from plugins.render import Frame
+from plugins.render import Insets
+from plugins.render import VStack
+from plugins.render import BaseKit
+from plugins.render import AutoPage
+from plugins.render import Constraints
+from plugins.render import RenderContext
+from plugins.render.primitives import load_font
+from plugins.render.primitives import draw_rounded_rectangle
+from plugins.render.kits.bangdream import BG_DIR
+from plugins.render.kits.bangdream import CHINESE_FONT
+from plugins.render.kits.bangdream import BanGDreamKit
 
 from ..session import GameSession
 from ..difficulty import apply_time_decay
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    return load_font(size)
+    return load_font(size, CHINESE_FONT)
 
 
-def _generate_title(
-    text1: str, text2: str, pill_width: int, pill_height: int
-) -> Image.Image:
-    pill2_height = pill_height * 85 // 62
-    pill2_width = pill_width * 625 // 570
-    duplicate_height = pill_height * 9 // 62
-
-    width = pill2_width
-    height = pill_height + pill2_height - duplicate_height
-    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-
-    canvas = draw_pill(
-        canvas,
-        (
-            0,
-            pill_height - duplicate_height,
-            pill2_width,
-            pill_height - duplicate_height + pill2_height,
-        ),
-        (255, 255, 255, 255),
-    )
-    canvas = draw_pill(canvas, (0, 0, pill_width, pill_height), (234, 78, 116, 255))
-
-    text1_size = pill_height * 33 // 61
-    text2_size = pill2_height * 36 // 75
-    draw = ImageDraw.Draw(canvas)
-    font1 = _font(text1_size)
-    font2 = _font(text2_size)
-    text1_bbox = draw.textbbox((0, 0), text1, font=font1)
-    text2_bbox = draw.textbbox((0, 0), text2, font=font2)
-
-    draw.text(
-        (
-            pill_height // 2,
-            (pill_height - (text1_bbox[3] - text1_bbox[1])) // 2 - text1_bbox[1],
-        ),
-        text1,
-        font=font1,
-        fill=(255, 255, 255, 255),
-    )
-    draw.text(
-        (
-            pill2_height // 2,
-            pill_height
-            - duplicate_height
-            + (pill2_height - (text2_bbox[3] - text2_bbox[1])) // 2
-            - text2_bbox[1],
-        ),
-        text2,
-        font=font2,
-        fill=(80, 80, 80, 255),
-    )
-    return canvas
-
-
-def _cell_params(rows: int, cols: int) -> tuple[int, int, int, int]:
+def _cell_params(
+    rows: int, cols: int, rect: Rect, ctx: RenderContext
+) -> tuple[int, int, int, int]:
     visual_rows = rows * 2 - 1
     visual_cols = cols * 2 - 1
-    board_left, board_top = 56 + 50, 182 + 50
-    board_size = 786 - 100
+    board_size = min(rect.width, rect.height)
 
-    gap = (
+    logical_gap = (
         8
         if max(visual_rows, visual_cols) <= 5
         else (6 if max(visual_rows, visual_cols) <= 7 else 5)
     )
+    gap = ctx.scale_px(logical_gap)
     cell_w = (board_size - gap * (visual_cols - 1)) // visual_cols
     cell_h = (board_size - gap * (visual_rows - 1)) // visual_rows
     cell_size = min(cell_w, cell_h)
 
     grid_w = visual_cols * cell_size + (visual_cols - 1) * gap
     grid_h = visual_rows * cell_size + (visual_rows - 1) * gap
-    offset_x = board_left + (board_size - grid_w) // 2
-    offset_y = board_top + (board_size - grid_h) // 2
+    offset_x = rect.x + (rect.width - grid_w) // 2
+    offset_y = rect.y + (rect.height - grid_h) // 2
     return cell_size, gap, offset_x, offset_y
 
 
@@ -204,43 +165,44 @@ def _cell_type(
     return "wall"
 
 
-def render(session: GameSession) -> Image.Image:
-    live_reward = apply_time_decay(
-        base_reward=session.reward,
-        elapsed_seconds=session.elapsed_seconds(),
-        graph=session.graph,
-    )
-    canvas = create_bg(
-        session.bg_path,
-        width=896,
-        height=1024,
-        text="BanG Dream!",
-        blur_radius=40,
-        triangle_size=200,
-        brightness_difference=0.06,
-    )
-    title = _generate_title(
-        "一笔画",
-        f"{session.difficulty_name} | {session.drawn_count}/{session.total_edges} | 奖励 {live_reward}/{session.reward}",
-        560,
-        57,
-    )
-    title_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    title_layer.paste(title, (56, 36))
-    canvas = Image.alpha_composite(canvas, title_layer)
+@dataclass(frozen=True)
+class OneStrokeBoard:
+    session: GameSession
 
-    canvas = draw_rounded_rectangle(
-        canvas,
-        (56, 182, 56 + 786, 182 + 786),
-        corner_radius=48,
-        fill=(255, 255, 255, 208),
-    )
+    def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
+        return constraints.clamp(Size(686, 686))
 
-    visual_rows = session.graph.rows * 2 - 1
-    visual_cols = session.graph.cols * 2 - 1
-    cell_size, gap, offset_x, offset_y = _cell_params(
-        session.graph.rows, session.graph.cols
-    )
+    def render(self, ctx: RenderContext, canvas: Image.Image, rect: Rect) -> None:
+        session = self.session
+        visual_rows = session.graph.rows * 2 - 1
+        visual_cols = session.graph.cols * 2 - 1
+        cell_size, gap, offset_x, offset_y = _cell_params(
+            session.graph.rows, session.graph.cols, rect, ctx
+        )
+        _render_board_cells(
+            session,
+            canvas,
+            visual_rows,
+            visual_cols,
+            cell_size,
+            gap,
+            offset_x,
+            offset_y,
+            ctx,
+        )
+
+
+def _render_board_cells(
+    session: GameSession,
+    canvas: Image.Image,
+    visual_rows: int,
+    visual_cols: int,
+    cell_size: int,
+    gap: int,
+    offset_x: int,
+    offset_y: int,
+    ctx: RenderContext,
+) -> None:
     corner_radius = max(6, cell_size // 7)
 
     palette = {
@@ -293,15 +255,24 @@ def render(session: GameSession) -> Image.Image:
 
                 if ctype == "current":
                     glow = Image.new(
-                        "RGBA", (cell_size + 8, cell_size + 8), (0, 0, 0, 0)
+                        "RGBA",
+                        (cell_size + ctx.scale_px(8), cell_size + ctx.scale_px(8)),
+                        (0, 0, 0, 0),
                     )
                     glow_draw = ImageDraw.Draw(glow)
                     glow_draw.ellipse(
-                        (0, 0, cell_size + 7, cell_size + 7),
+                        (
+                            0,
+                            0,
+                            cell_size + ctx.scale_px(7),
+                            cell_size + ctx.scale_px(7),
+                        ),
                         outline=(66, 133, 244, 150),
-                        width=4,
+                        width=ctx.scale_px(4),
                     )
-                    special_layer.paste(glow, (x - 4, y - 4), glow)
+                    special_layer.paste(
+                        glow, (x - ctx.scale_px(4), y - ctx.scale_px(4)), glow
+                    )
 
             elif is_h_edge:
                 if ctype == "wall":
@@ -360,9 +331,98 @@ def render(session: GameSession) -> Image.Image:
                 )
                 wall_layer.paste(cell, (x, y), cell)
 
-    canvas = Image.alpha_composite(canvas, wall_layer)
-    canvas = Image.alpha_composite(canvas, traversable_layer)
-    canvas = Image.alpha_composite(canvas, drawn_layer)
-    canvas = Image.alpha_composite(canvas, special_layer)
+    for layer in (wall_layer, traversable_layer, drawn_layer, special_layer):
+        canvas.paste(Image.alpha_composite(canvas, layer), (0, 0))
 
-    return canvas
+
+def _background(kit: BaseKit) -> Image.Image:
+    if isinstance(kit, BanGDreamKit):
+        return kit.background(
+            source=random.choice(
+                list(Path(BG_DIR).glob("bg[0-9][0-9][0-9][0-9][0-9].png"))
+            )
+        )
+    return kit.background()
+
+
+def _title_bar(
+    kit: BaseKit,
+    title: str,
+    subtitle: str,
+    *,
+    width: int,
+    height: int,
+):
+    if isinstance(kit, BanGDreamKit):
+        return kit.title_pill(
+            title,
+            subtitle,
+            pill_width=width,
+            pill_height=height,
+        )
+    return kit.panel(
+        Frame(
+            kit.text(
+                f"{title} - {subtitle}",
+                font_size=24,
+                color=(255, 255, 255, 255),
+                align="center",
+                max_lines=1,
+            ),
+            align_x="center",
+            align_y="center",
+        ),
+        width=Fixed(width),
+        height=Fixed(height),
+        radius=height // 2,
+    )
+
+
+def _board_panel(kit: BaseKit, child):
+    if isinstance(kit, BanGDreamKit):
+        return kit.panel(
+            child,
+            radius=64,
+            padding=50,
+            width=Fixed(786),
+            height=Fixed(786),
+        )
+    return kit.panel(
+        Frame(
+            child,
+            width=Fixed(786),
+            height=Fixed(786),
+            padding=50,
+            align_x="stretch",
+            align_y="stretch",
+            aspect_ratio=1,
+        ),
+        width=Fixed(786),
+        height=Fixed(786),
+    )
+
+
+def render(session: GameSession, kit: BaseKit | None = None) -> Image.Image:
+    live_reward = apply_time_decay(
+        base_reward=session.reward,
+        elapsed_seconds=session.elapsed_seconds(),
+        graph=session.graph,
+    )
+    kit = kit or BanGDreamKit()
+    title = (
+        f"{session.difficulty_name} | {session.drawn_count}/{session.total_edges} | "
+        f"奖励 {live_reward}/{session.reward}"
+    )
+    page = AutoPage(
+        min_width=896,
+        background=_background(kit),
+        padding=56,
+        child=VStack(
+            [
+                _title_bar(kit, "一笔画", title, width=560, height=57),
+                _board_panel(kit, OneStrokeBoard(session)),
+            ],
+            gap=24,
+        ),
+    )
+    return page.render()

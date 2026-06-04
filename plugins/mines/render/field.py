@@ -1,227 +1,157 @@
-from typing import TYPE_CHECKING
-from typing import Tuple
 from pathlib import Path
 
 from PIL import Image
-from PIL import ImageDraw
 
-from plugins.render_service import create_bg
-from plugins.render_service import draw_pill
-from plugins.render_service import load_font
-from plugins.render_service import draw_rounded_rectangle
-from plugins.render_service.primitives import RESOURCES_DIR
+from plugins.render import Grid
+from plugins.render import Fixed
+from plugins.render import Frame
+from plugins.render import VStack
+from plugins.render import BaseKit
+from plugins.render import AutoPage
+from plugins.render import Component
+from plugins.render.kits.bangdream import BG_DIR
+from plugins.render.kits.bangdream import BanGDreamKit
 
+from ..models import Field
 from ..models import BlockType
 
-if TYPE_CHECKING:
-    from ..models import Field
 
-
-def generate_unrevealed_field(index: int) -> Image.Image:
-    width, height = 120, 120
-
-    # Create the gradient
-    gradient = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    gradient_draw = ImageDraw.Draw(gradient)
-
-    top_color = (223, 223, 223)
-    bottom_color = (213, 213, 213)
-
-    for y in range(height):
-        # Calculate color for this row
-        ratio = y / height
-        r = int(top_color[0] + (bottom_color[0] - top_color[0]) * ratio)
-        g = int(top_color[1] + (bottom_color[1] - top_color[1]) * ratio)
-        b = int(top_color[2] + (bottom_color[2] - top_color[2]) * ratio)
-
-        gradient_draw.line([(0, y), (width, y)], fill=(r, g, b, 255))
-
-    # Create the mask
-    mask_img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    # mask_draw = ImageDraw.Draw(mask)
-    mask_img = draw_rounded_rectangle(
-        mask_img, (0, 0, width, height), 16, fill=(255, 255, 255, 255)
-    )
-
-    # Use alpha channel of the drawn shape as mask
-    mask = mask_img.split()[3]
-
-    # Apply mask to gradient by replacing its alpha channel
-    output = gradient.copy()
-    output.putalpha(mask)
-
-    # Draw the index
-    index_draw = ImageDraw.Draw(output)
-    bbox = index_draw.textbbox((0, 0), str(index), font=load_font(80, "old.ttf"))
-    index_draw.text(
-        (
-            width // 2 - (bbox[2] + bbox[0]) // 2,
-            height // 2 - (bbox[3] + bbox[1]) // 2,
+def generate_unrevealed_field(index: int, kit: BaseKit) -> Component:
+    return kit.panel(
+        Frame(
+            kit.text(
+                str(index),
+                font_size=80,
+                color=(255, 255, 255, 255),
+                align="center",
+                max_lines=1,
+            ),
+            align_x="center",
+            align_y="center",
         ),
-        str(index),
-        font=load_font(80, "old.ttf"),
-        fill=(255, 255, 255, 255),
+        width=Fixed(120),
+        height=Fixed(120),
+        fill=(223, 223, 223, 255),
+        radius=16,
     )
-
-    return output
 
 
 def generate_revealed_field(
-    stamp_path: Path, background_color: Tuple[int, int, int]
-) -> Image.Image:
-    width, height = 120, 120
-
-    # Create a rounded rectangle with the background color
-    background = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    # background_draw = ImageDraw.Draw(background)
-    background = draw_rounded_rectangle(
-        background, (0, 0, width, height), 16, fill=background_color + (255,)
-    )
-
-    # Create the stamp
-    stamp = Image.open(stamp_path).convert("RGBA")
-
-    # Resize the stamp to make its longest side 110 pixels
-    stamp_width, stamp_height = stamp.size
-    if stamp_width >= stamp_height:
-        new_width = 110
-        new_height = int((110 / stamp_width) * stamp_height)
-    else:
-        new_height = 110
-        new_width = int((110 / stamp_height) * stamp_width)
-    stamp = stamp.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
-    # Paste the stamp onto the background using alpha composite
-    # Center the stamp
-    stamp_x = (width - new_width) // 2
-    stamp_y = (height - new_height) // 2
-
-    # Create a temporary image to composite
-    temp = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    temp.paste(stamp, (stamp_x, stamp_y))
-
-    # Alpha composite the stamp onto the background
-    result = Image.alpha_composite(background, temp)
-
-    return result
-
-
-def generate_title(
-    text1: str, text2: str, pill_width: int, pill_height: int
-) -> Image.Image:
-    pill2_height = pill_height * 85 // 62
-    pill2_width = pill_width * 625 // 570
-    duplicate_height = pill_height * 9 // 62
-
-    width = pill2_width
-    height = pill_height + pill2_height - duplicate_height
-
-    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    # draw = ImageDraw.Draw(canvas)
-
-    canvas = draw_pill(
-        canvas,
-        (
-            0,
-            pill_height - duplicate_height,
-            pill2_width,
-            pill_height - duplicate_height + pill2_height,
+    stamp_path: Path, background_color: tuple[int, int, int], kit: BaseKit
+) -> Component:
+    return kit.panel(
+        Frame(
+            kit.image(stamp_path, width=Fixed(110), height=Fixed(110)),
+            align_x="center",
+            align_y="center",
         ),
-        (255, 255, 255, 255),
-    )
-    canvas = draw_pill(
-        canvas,
-        (0, 0, pill_width, pill_height),
-        (234, 78, 116, 255),
+        width=Fixed(120),
+        height=Fixed(120),
+        fill=background_color + (255,),
+        radius=16,
     )
 
-    text1_size = pill_height * 33 // 61
-    text2_size = pill2_height * 40 // 75
 
-    draw = ImageDraw.Draw(
-        canvas
-    )  # Create draw object after pills are drawn because they return new images
+def _background(kit: BaseKit):
+    if isinstance(kit, BanGDreamKit):
+        return kit.background(source=BG_DIR / "bg00039.png")
+    return kit.background()
 
-    font1 = load_font(text1_size, "old.ttf")
-    font2 = load_font(text2_size, "old.ttf")
 
-    text1_bbox = draw.textbbox((0, 0), text1, font=font1)
-    text2_bbox = draw.textbbox((0, 0), text2, font=font2)
-
-    draw.text(
-        (
-            pill_height // 2,
-            (pill_height - (text1_bbox[3] - text1_bbox[1])) // 2 - text1_bbox[1],
+def _title_bar(
+    kit: BaseKit,
+    title: str,
+    subtitle: str,
+    *,
+    width: int,
+    height: int,
+):
+    if isinstance(kit, BanGDreamKit):
+        return kit.title_pill(
+            title,
+            subtitle,
+            pill_width=width,
+            pill_height=height,
+        )
+    return kit.panel(
+        Frame(
+            kit.text(
+                f"{title} - {subtitle}",
+                font_size=24,
+                color=(255, 255, 255, 255),
+                align="center",
+                max_lines=1,
+            ),
+            align_x="center",
+            align_y="center",
         ),
-        text1,
-        font=font1,
-        fill=(255, 255, 255, 255),
+        width=Fixed(width),
+        height=Fixed(height),
+        radius=height // 2,
     )
-    draw.text(
-        (
-            pill2_height // 2,
-            pill_height
-            - duplicate_height
-            + (pill2_height - (text2_bbox[3] - text2_bbox[1])) // 2
-            - text2_bbox[1],
+
+
+def _board_panel(kit: BaseKit, child):
+    return kit.panel(
+        Frame(
+            child,
+            width=Fixed(786),
+            height=Fixed(786),
+            padding=50,
+            align_x="stretch",
+            align_y="stretch",
+            aspect_ratio=1,
         ),
-        text2,
-        font=font2,
-        fill=(80, 80, 80, 255),
-    )
-
-    return canvas
-
-
-def render(field: "Field") -> Image.Image:
-    canvas = create_bg(
-        RESOURCES_DIR / "BG" / "bg00039.png",
-        width=896,
-        height=1024,
-    )
-    title = generate_title("探险", "Arisa的仓库", 500, 57)
-
-    title_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    title_layer.paste(title, (56, 36))
-    canvas = Image.alpha_composite(canvas, title_layer)
-
-    # draw = ImageDraw.Draw(canvas)
-    canvas = draw_rounded_rectangle(
-        canvas,
-        (56, 182, 56 + 786, 182 + 786),
-        corner_radius=48,
+        width=Fixed(786),
+        height=Fixed(786),
         fill=(255, 255, 255, 200),
+        radius=32,
     )
 
-    field_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+
+def render(field: "Field", kit: BaseKit | None = None) -> Image.Image:
+    kit = kit or BanGDreamKit()
+    cells = []
 
     for i in range(field.height):
         for j in range(field.width):
             block = field.field[i][j]
             if block == BlockType.EMPTY or block == BlockType.MINE:
-                image = generate_unrevealed_field(i * field.width + j + 1)
-                field_layer.paste(
-                    image,
-                    (56 + 50 + j * 120 + j * 21, 182 + 50 + i * 120 + i * 21),
-                )
+                cell = generate_unrevealed_field(i * field.width + j + 1, kit)
             elif block == BlockType.EMPTY_SHOWN:
-                image = generate_revealed_field(
+                cell = generate_revealed_field(
                     field.kasumi_stamps[i][j],
                     (255, 124, 85),
-                )
-                field_layer.paste(
-                    image,
-                    (56 + 50 + j * 120 + j * 21, 182 + 50 + i * 120 + i * 21),
+                    kit,
                 )
             elif block == BlockType.MINE_SHOWN:
-                image = generate_revealed_field(
+                cell = generate_revealed_field(
                     field.arisa_stamps[i][j],
                     (184, 130, 225),
+                    kit,
                 )
-                field_layer.paste(
-                    image,
-                    (56 + 50 + j * 120 + j * 21, 182 + 50 + i * 120 + i * 21),
-                )
+            cells.append(cell)
 
-    canvas = Image.alpha_composite(canvas, field_layer)
-    return canvas
+    page = AutoPage(
+        min_width=896,
+        background=_background(kit),
+        padding=56,
+        child=VStack(
+            [
+                _title_bar(kit, "探险", "Arisa的仓库", width=500, height=57),
+                _board_panel(
+                    kit,
+                    Grid(
+                        children=cells,
+                        columns=field.width,
+                        rows=field.height,
+                        column_track=Fixed(120),
+                        row_track=Fixed(120),
+                        gap=21,
+                    ),
+                ),
+            ],
+            gap=32,
+        ),
+    )
+    return page.render()

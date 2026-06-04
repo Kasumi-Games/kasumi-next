@@ -14,10 +14,15 @@ from PIL import ImageDraw
 from PIL import ImageFont
 from nonebot.log import logger
 
-from plugins.render_service import (
-    draw_rounded_rectangle as shared_draw_rounded_rectangle,
-)
-from plugins.render_service import generate_simple_background
+from plugins.render import Fixed
+from plugins.render import Frame
+from plugins.render import HStack
+from plugins.render import VStack
+from plugins.render import BaseKit
+from plugins.render import AutoPage
+from plugins.render import ColorLike
+from plugins.render import RenderContext
+from plugins.render.kits.bangdream import BanGDreamKit
 
 if TYPE_CHECKING:
     from .models import Hand
@@ -58,6 +63,7 @@ class BlackjackRenderer:
         character_data: Optional[Dict[str, Any]] = None,
         face_positions: Optional[Dict[str, Any]] = None,
         cascade: Optional[cv2.CascadeClassifier] = None,
+        kit: Optional[BaseKit] = None,
     ):
         """
         初始化 BlackjackRenderer，支持自定义资源路径
@@ -68,6 +74,7 @@ class BlackjackRenderer:
             character_data: 角色数据
             face_positions: 人脸位置数据
             cascade: 级联分类器
+            kit: 渲染主题组件集合
         """
         self.resource_dir = Path(resource_dir)
         self.card_data = card_data
@@ -82,6 +89,7 @@ class BlackjackRenderer:
         self.star: Optional[Image.Image] = None
         self.star_trained: Optional[Image.Image] = None
         self.image_face_cache: Dict[str, Image.Image] = {}
+        self.kit: BaseKit = kit or BanGDreamKit()
 
         # Load all resources
         self._load_resources()
@@ -419,229 +427,55 @@ class BlackjackRenderer:
 
         return final_canvas, generate_the_card
 
-    def draw_rounded_rectangle(
-        self,
-        draw: ImageDraw.ImageDraw,
-        bbox: Tuple[int, int, int, int],
-        corner_radius: int = 10,
-        fill: Optional[Tuple[int, int, int, int]] = None,
-        outline: Optional[Tuple[int, int, int, int]] = None,
-        width: int = 1,
-    ):
-        shared_draw_rounded_rectangle(
-            draw,
-            bbox,
-            corner_radius=corner_radius,
-            fill=fill,
-            outline=outline,
-            width=width,
-            scale=4,
-        )
-
     def generate_hand(self, hand: "Hand", second_card_back: bool) -> Image.Image:
         """生成手牌的图片"""
-        # 计算布局尺寸
-        card_count = len(hand.cards)
-        container_width, container_height = self._calculate_card_container_dimensions(
-            card_count
-        )
-
-        # 为名字标签添加额外空间
-        total_width = container_width + self.TableLayout.MARGIN * 2
-        total_height = (
-            self.TableLayout.MARGIN  # 顶部边距
-            + self.TableLayout.NAME_TAG_HEIGHT  # 标签高度
-            + self.TableLayout.MARGIN  # 标签下边距
-            + container_height  # 卡牌容器
-            + self.TableLayout.MARGIN  # 底部边距
-        )
-
-        background = generate_simple_background(total_width, total_height)
-        draw = ImageDraw.Draw(background)
-
-        # 当前Y位置追踪器
-        current_y = self.TableLayout.MARGIN
-
-        # 绘制Kasumi名字标签（包含分数）
         if second_card_back:
             score_text = f"共 {hand.cards[0].get_value()} + ? 点"
         else:
             score_text = f"共 {hand.value} 点"
-
-        self._draw_name_tag_with_score(
-            draw,
-            self.TableLayout.MARGIN,
-            current_y,
-            "Kasumi",
-            score_text,
-            self.TableLayout.DEALER_TAG_COLOR,
+        page = AutoPage(
+            padding=self.RenderLayout.PAGE_PADDING,
+            background=self.kit.background(),
+            child=VStack(
+                [
+                    self._hand_label(
+                        "Kasumi",
+                        score_text,
+                        self.RenderLayout.DEALER_TAG_COLOR,
+                    ),
+                    self._cards_panel(hand, second_card_back),
+                ],
+                gap=self.RenderLayout.SECTION_GAP,
+                align="start",
+            ),
         )
-        current_y += self.TableLayout.NAME_TAG_HEIGHT + self.TableLayout.MARGIN
+        return page.render(RenderContext())
 
-        # 绘制卡牌
-        cards_start_x = (
-            self.TableLayout.MARGIN
-            + self.TableLayout.CARD_CONTAINER_PADDING_HORIZONTAL
-            + self.TableLayout.CARD_SPACING
-        )
-        cards_start_y = current_y + self.TableLayout.CARD_CONTAINER_PADDING_VERTICAL
-        self._draw_hand_cards(
-            background, hand, cards_start_x, cards_start_y, second_card_back
-        )
+    class RenderLayout:
+        PAGE_PADDING = 32
+        SECTION_GAP = 24
+        CARD_GAP = 32
+        PANEL_PADDING = 32
+        PANEL_RADIUS = 32
 
-        return background
+        CARD_SOURCE_WIDTH = 640
+        CARD_SOURCE_HEIGHT = 896
+        CARD_WIDTH = 160 * 2
+        CARD_HEIGHT = 224 * 2
 
-    class TableLayout:
-        """游戏桌面布局配置"""
+        NAME_TAG_WIDTH = 450
+        NAME_TAG_HEIGHT = 48
+        NAME_TAG_FONT_SIZE = 36
 
-        # 基础尺寸
-        CARD_WIDTH = 640
-        CARD_HEIGHT = 896
-        CARD_PADDING = 32  # 卡牌内部padding
-
-        # 间距配置
-        MARGIN = 64  # 外边距
-        CARD_SPACING = 64  # 卡牌间距
-        SECTION_SPACING = 32  # 区块间距
-
-        # 名字标签配置
-        NAME_TAG_WIDTH = 320
-        NAME_TAG_HEIGHT = 90
-        NAME_TAG_FONT_SIZE = 80
-        NAME_TAG_TEXT_OFFSET = 16  # 文字在标签内的偏移
-
-        # 卡牌容器配置
-        CARD_CONTAINER_PADDING_HORIZONTAL = 32  # 容器水平内边距
-        CARD_CONTAINER_PADDING_VERTICAL = 64  # 容器垂直内边距
-        CORNER_RADIUS = 32
-        BORDER_WIDTH = 4
-
-        # 文字配置
         CARD_TEXT_FONT_SIZE = 64
-        CARD_TEXT_PADDING_HORIZONTAL = 20  # 卡牌点数水平偏移
-        CARD_TEXT_PADDING_VERTICAL = 30  # 卡牌点数垂直偏移
+        CARD_TEXT_PADDING_HORIZONTAL = 20
+        CARD_TEXT_PADDING_VERTICAL = 30
         CARD_TEXT_STROKE_WIDTH = 2
 
-        # 颜色配置
         DEALER_TAG_COLOR = (0xFF, 0x55, 0x22, 255)
-        PLAYER_TAG_COLOR = (0x33, 0x75, 0xD6, 255)
-        CONTAINER_FILL_COLOR = (255, 255, 255, 230)
-        CONTAINER_BORDER_COLOR = (200, 200, 200, 255)
+        PLAYER_TAG_COLOR = (0x34, 0x74, 0xD6, 255)
         WHITE_TEXT_COLOR = (255, 255, 255, 255)
         BLACK_TEXT_COLOR = (0, 0, 0, 255)
-
-    def _calculate_card_container_dimensions(self, card_count: int) -> tuple[int, int]:
-        """计算卡牌容器的尺寸"""
-        width = (
-            card_count * self.TableLayout.CARD_WIDTH
-            + (card_count + 1) * self.TableLayout.CARD_SPACING
-            + self.TableLayout.CARD_CONTAINER_PADDING_HORIZONTAL * 2  # 左右padding
-        )
-        height = (
-            self.TableLayout.CARD_HEIGHT
-            + self.TableLayout.CARD_CONTAINER_PADDING_VERTICAL * 2  # 上下padding
-        )
-        return width, height
-
-    def _calculate_table_size(
-        self, dealer_hand: "Hand", player_hand: "Hand"
-    ) -> tuple[int, int]:
-        """计算整个桌面的尺寸"""
-        max_cards = max(len(dealer_hand.cards), len(player_hand.cards))
-        base_width = (
-            max_cards * self.TableLayout.CARD_WIDTH
-            + (max_cards + 1) * self.TableLayout.CARD_SPACING
-            + self.TableLayout.CARD_CONTAINER_PADDING_HORIZONTAL * 2  # 容器左右padding
-            + self.TableLayout.MARGIN * 2  # 外边距
-        )
-
-        total_height = (
-            self.TableLayout.MARGIN  # 顶部边距
-            + self.TableLayout.NAME_TAG_HEIGHT  # 庄家标签
-            + self.TableLayout.MARGIN  # 标签下边距
-            + self.TableLayout.CARD_HEIGHT
-            + self.TableLayout.CARD_CONTAINER_PADDING_VERTICAL
-            * 2  # 庄家卡牌区域(上下padding)
-            + self.TableLayout.SECTION_SPACING  # 区块间距
-            + self.TableLayout.NAME_TAG_HEIGHT  # 玩家标签
-            + self.TableLayout.MARGIN  # 标签下边距
-            + self.TableLayout.CARD_HEIGHT
-            + self.TableLayout.CARD_CONTAINER_PADDING_VERTICAL
-            * 2  # 玩家卡牌区域(上下padding)
-            + self.TableLayout.MARGIN  # 底部边距
-        )
-
-        return base_width, total_height
-
-    def _draw_name_tag_with_score(
-        self,
-        draw: ImageDraw.ImageDraw,
-        x: int,
-        y: int,
-        name: str,
-        score_text: str,
-        color: tuple,
-    ):
-        """绘制包含名字和分数的标签"""
-        # 计算需要的标签宽度
-        font = self.get_font(self.TableLayout.NAME_TAG_FONT_SIZE)
-        name_bbox = draw.textbbox((0, 0), name, font=font)
-        score_bbox = draw.textbbox((0, 0), f" - {score_text}", font=font)
-
-        name_width = name_bbox[2] - name_bbox[0]
-        score_width = score_bbox[2] - score_bbox[0]
-        total_text_width = name_width + score_width
-
-        # 动态调整标签宽度
-        tag_width = max(self.TableLayout.NAME_TAG_WIDTH, total_text_width + 64)
-
-        self.draw_rounded_rectangle(
-            draw,
-            bbox=(
-                x,
-                y,
-                x + tag_width,
-                y + self.TableLayout.NAME_TAG_HEIGHT,
-            ),
-            corner_radius=self.TableLayout.CORNER_RADIUS,
-            fill=color,
-        )
-
-        # 计算文字居中位置
-        text_height = name_bbox[3] - name_bbox[1]
-        text_x = x + (tag_width - total_text_width) // 2
-        text_y = y + (self.TableLayout.NAME_TAG_HEIGHT - text_height) // 2 - 20
-
-        # 绘制名字（白色）
-        draw.text(
-            (text_x, text_y),
-            name,
-            fill=self.TableLayout.WHITE_TEXT_COLOR,
-            font=font,
-        )
-
-        # 绘制分数（稍微透明的白色）
-        draw.text(
-            (text_x + name_width, text_y),
-            f" - {score_text}",
-            fill=(255, 255, 255, 200),
-            font=font,
-        )
-
-        return tag_width
-
-    def _draw_card_container(
-        self, draw: ImageDraw.ImageDraw, x: int, y: int, width: int, height: int
-    ):
-        """绘制卡牌容器背景"""
-        self.draw_rounded_rectangle(
-            draw,
-            bbox=(x, y, x + width, y + height),
-            corner_radius=self.TableLayout.CORNER_RADIUS,
-            fill=self.TableLayout.CONTAINER_FILL_COLOR,
-            outline=self.TableLayout.CONTAINER_BORDER_COLOR,
-            width=self.TableLayout.BORDER_WIDTH,
-        )
 
     def _render_card_with_text(self, card, show_back: bool = False) -> Image.Image:
         """渲染单张卡牌并添加文字"""
@@ -660,58 +494,88 @@ class BlackjackRenderer:
             card_draw = ImageDraw.Draw(card_image)
             text = str(card.get_value())
             text_bbox = card_draw.textbbox(
-                (0, 0), text, font=self.get_font(self.TableLayout.CARD_TEXT_FONT_SIZE)
+                (0, 0), text, font=self.get_font(self.RenderLayout.CARD_TEXT_FONT_SIZE)
             )
             text_width = text_bbox[2] - text_bbox[0]
             text_height = text_bbox[3] - text_bbox[1]
 
             card_draw.text(
                 (
-                    self.TableLayout.CARD_WIDTH
+                    self.RenderLayout.CARD_SOURCE_WIDTH
                     - text_width
-                    - self.TableLayout.CARD_TEXT_PADDING_HORIZONTAL,
-                    self.TableLayout.CARD_HEIGHT
+                    - self.RenderLayout.CARD_TEXT_PADDING_HORIZONTAL,
+                    self.RenderLayout.CARD_SOURCE_HEIGHT
                     - text_height
-                    - self.TableLayout.CARD_TEXT_PADDING_VERTICAL,
+                    - self.RenderLayout.CARD_TEXT_PADDING_VERTICAL,
                 ),
                 text,
-                fill=self.TableLayout.WHITE_TEXT_COLOR,
-                font=self.get_font(self.TableLayout.CARD_TEXT_FONT_SIZE),
-                stroke_width=self.TableLayout.CARD_TEXT_STROKE_WIDTH,
-                stroke_fill=self.TableLayout.BLACK_TEXT_COLOR,
+                fill=self.RenderLayout.WHITE_TEXT_COLOR,
+                font=self.get_font(self.RenderLayout.CARD_TEXT_FONT_SIZE),
+                stroke_width=self.RenderLayout.CARD_TEXT_STROKE_WIDTH,
+                stroke_fill=self.RenderLayout.BLACK_TEXT_COLOR,
             )
 
         return card_image
 
-    def _draw_hand_score(
+    def _hand_label(self, name: str, score_text: str, fill: ColorLike):
+        if isinstance(self.kit, BanGDreamKit):
+            return self.kit.pill(
+                f"{name} - {score_text}",
+                fill=fill,
+                width=Fixed(self.RenderLayout.NAME_TAG_WIDTH),
+                height=Fixed(self.RenderLayout.NAME_TAG_HEIGHT),
+                font_size=self.RenderLayout.NAME_TAG_FONT_SIZE,
+            )
+        return self.kit.panel(
+            Frame(
+                self.kit.text(
+                    f"{name} - {score_text}",
+                    font_size=self.RenderLayout.NAME_TAG_FONT_SIZE,
+                    color=self.RenderLayout.WHITE_TEXT_COLOR,
+                    align="center",
+                    max_lines=1,
+                ),
+                align_x="center",
+                align_y="center",
+            ),
+            width=Fixed(self.RenderLayout.NAME_TAG_WIDTH),
+            height=Fixed(self.RenderLayout.NAME_TAG_HEIGHT),
+            fill=fill,
+            radius=self.RenderLayout.NAME_TAG_HEIGHT // 2,
+        )
+
+    def _cards_panel(self, hand: "Hand", show_second_back: bool = False):
+        cards = []
+        for index, card in enumerate(hand.cards):
+            show_back = show_second_back and index == 1
+            cards.append(
+                self.kit.image(
+                    self._render_card_with_text(card, show_back),
+                    width=Fixed(self.RenderLayout.CARD_WIDTH),
+                    height=Fixed(self.RenderLayout.CARD_HEIGHT),
+                )
+            )
+        return self.kit.panel(
+            HStack(cards, gap=self.RenderLayout.CARD_GAP, align="center"),
+            padding=self.RenderLayout.PANEL_PADDING,
+            radius=self.RenderLayout.PANEL_RADIUS,
+        )
+
+    def _hand_section(
         self,
-        background: Image.Image,
+        name: str,
         hand: "Hand",
-        container_x: int,
-        score_y: int,
-        container_width: int,
-        show_hidden: bool = False,
+        score_text: str,
+        color: ColorLike,
+        show_second_back: bool = False,
     ):
-        """绘制手牌分数"""
-        draw = ImageDraw.Draw(background)
-
-        if show_hidden:
-            score_text = f"共 {hand.cards[0].get_value()} + ? 点"
-        else:
-            score_text = f"共 {hand.value} 点"
-
-        font = self.get_font(self.TableLayout.CARD_TEXT_FONT_SIZE)
-        text_bbox = draw.textbbox((0, 0), score_text, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-
-        # 将分数文字居中显示在容器内
-        text_x = container_x + (container_width - text_width) // 2
-
-        draw.text(
-            (text_x, score_y),
-            score_text,
-            fill=self.TableLayout.BLACK_TEXT_COLOR,
-            font=font,
+        return VStack(
+            [
+                self._hand_label(name, score_text, color),
+                self._cards_panel(hand, show_second_back),
+            ],
+            gap=self.RenderLayout.SECTION_GAP,
+            align="start",
         )
 
     def _draw_hand_cards(
@@ -722,13 +586,13 @@ class BlackjackRenderer:
         start_y: int,
         show_second_back: bool = False,
     ):
-        """绘制一手牌"""
+        """Compatibility helper for older tests and ad hoc scripts."""
         for i, card in enumerate(hand.cards):
             show_back = show_second_back and i == 1
             card_image = self._render_card_with_text(card, show_back)
 
             card_x = start_x + i * (
-                self.TableLayout.CARD_WIDTH + self.TableLayout.CARD_SPACING
+                self.RenderLayout.CARD_SOURCE_WIDTH + self.RenderLayout.CARD_GAP
             )
             background.paste(card_image, (card_x, start_y), card_image.split()[3])
 
@@ -736,98 +600,35 @@ class BlackjackRenderer:
         self, dealer_hand: "Hand", player_hand: "Hand", dealer_card_back: bool
     ) -> Image.Image:
         """生成包含庄家和玩家手牌的游戏桌面"""
-        # 计算布局尺寸
-        table_width, table_height = self._calculate_table_size(dealer_hand, player_hand)
-        background = generate_simple_background(table_width, table_height)
-        draw = ImageDraw.Draw(background)
-
-        # 当前Y位置追踪器
-        current_y = self.TableLayout.MARGIN
-
-        # 绘制庄家标签（包含分数）
         if dealer_card_back:
             dealer_score = f"共 {dealer_hand.cards[0].get_value()} + ? 点"
         else:
             dealer_score = f"共 {dealer_hand.value} 点"
-
-        _dealer_tag_width = self._draw_name_tag_with_score(
-            draw,
-            self.TableLayout.MARGIN,
-            current_y,
-            "Kasumi",
-            dealer_score,
-            self.TableLayout.DEALER_TAG_COLOR,
-        )
-        current_y += self.TableLayout.NAME_TAG_HEIGHT + self.TableLayout.MARGIN
-
-        # 绘制庄家卡牌容器
-        dealer_container_width, dealer_container_height = (
-            self._calculate_card_container_dimensions(len(dealer_hand.cards))
-        )
-        self._draw_card_container(
-            draw,
-            self.TableLayout.MARGIN,
-            current_y,
-            dealer_container_width,
-            dealer_container_height,
-        )
-
-        # 绘制庄家卡牌
-        cards_start_x = (
-            self.TableLayout.MARGIN
-            + self.TableLayout.CARD_CONTAINER_PADDING_HORIZONTAL
-            + self.TableLayout.CARD_SPACING
-        )
-        cards_start_y = current_y + self.TableLayout.CARD_CONTAINER_PADDING_VERTICAL
-        self._draw_hand_cards(
-            background, dealer_hand, cards_start_x, cards_start_y, dealer_card_back
-        )
-
-        current_y += dealer_container_height + self.TableLayout.SECTION_SPACING
-
-        # 绘制玩家标签（包含分数）
         player_score = f"共 {player_hand.value} 点"
-        _player_tag_width = self._draw_name_tag_with_score(
-            draw,
-            self.TableLayout.MARGIN,
-            current_y,
-            "You",
-            player_score,
-            self.TableLayout.PLAYER_TAG_COLOR,
+        page = AutoPage(
+            min_width=832,
+            padding=self.RenderLayout.PAGE_PADDING,
+            background=self.kit.background(),
+            child=VStack(
+                [
+                    self._hand_section(
+                        "Kasumi",
+                        dealer_hand,
+                        dealer_score,
+                        self.RenderLayout.DEALER_TAG_COLOR,
+                        dealer_card_back,
+                    ),
+                    self._hand_section(
+                        "You",
+                        player_hand,
+                        player_score,
+                        self.RenderLayout.PLAYER_TAG_COLOR,
+                        False,
+                    ),
+                ],
+                gap=self.RenderLayout.SECTION_GAP,
+                align="stretch",
+            ),
         )
-        current_y += self.TableLayout.NAME_TAG_HEIGHT + self.TableLayout.MARGIN
-
-        # 绘制玩家卡牌容器
-        player_container_width, player_container_height = (
-            self._calculate_card_container_dimensions(len(player_hand.cards))
-        )
-        self._draw_card_container(
-            draw,
-            self.TableLayout.MARGIN,
-            current_y,
-            player_container_width,
-            player_container_height,
-        )
-
-        # 绘制玩家卡牌
-        cards_start_x = (
-            self.TableLayout.MARGIN
-            + self.TableLayout.CARD_CONTAINER_PADDING_HORIZONTAL
-            + self.TableLayout.CARD_SPACING
-        )
-        cards_start_y = current_y + self.TableLayout.CARD_CONTAINER_PADDING_VERTICAL
-        self._draw_hand_cards(
-            background, player_hand, cards_start_x, cards_start_y, False
-        )
-
-        # 确保没有透明背景
-        result = Image.new("RGBA", (table_width, table_height), (255, 255, 255, 255))
-        result.paste(background, (0, 0), background.split()[3])
-
-        # 缩小图片
-        result = result.resize(
-            (table_width // 2, table_height // 2), Image.Resampling.LANCZOS
-        )
-        result = result.convert("RGB")
-
-        return result
+        result = page.render(RenderContext())
+        return result.convert("RGB")

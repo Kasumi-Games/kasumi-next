@@ -10,6 +10,8 @@ from plugins.render.types import ImageFit
 from plugins.render.types import Overflow
 from plugins.render.types import TextAlign
 from plugins.render.types import ImageSource
+from plugins.render.layout import Frame
+from plugins.render.sizing import Fill
 from plugins.render.sizing import SizeValue
 from plugins.render.spacing import InsetsLike
 
@@ -19,6 +21,7 @@ from .components import BanGDreamImage
 from .components import BanGDreamPanel
 from .components import BanGDreamSeparator
 from .components import BanGDreamTitlePill
+from .components import BanGDreamTitledPanel
 from .backgrounds import BanGDreamImageBackground
 from .backgrounds import BanGDreamPatternBackground
 
@@ -79,6 +82,38 @@ class BanGDreamKit(BaseKit):
 
         return BanGDreamPatternBackground(
             fill=fill, pattern=BG_DIR / "bg_object_big.png"
+        )
+
+    def board_frame(
+        self,
+        child: Component,
+        *,
+        width: SizeValue | int | None = None,
+        height: SizeValue | int | None = None,
+        padding: InsetsLike = 0,
+        max_size: int | None = None,
+        fill: ColorLike | None = None,
+        radius: int | None = None,
+    ) -> Component:
+        """Create a square-ish translucent board container."""
+
+        outer = Frame(
+            child,
+            width=width or Fill(),
+            height=height or Fill(),
+            padding=padding,
+            align_x="stretch",
+            align_y="stretch",
+            aspect_ratio=1,
+            max_width=max_size,
+            max_height=max_size,
+        )
+        return self.panel(
+            outer,
+            width=width,
+            height=height,
+            fill=fill,
+            radius=radius,
         )
 
     def text(
@@ -186,6 +221,41 @@ class BanGDreamKit(BaseKit):
             subtitle_fill=subtitle_fill or (255, 255, 255, 255),
             title_text_color=title_text_color or (255, 255, 255, 255),
             subtitle_text_color=subtitle_text_color or (80, 80, 80, 255),
+        )
+
+    def titled_panel(
+        self,
+        title: str,
+        child: Component | None = None,
+        *,
+        title_width: SizeValue | int,
+        title_height: SizeValue | int,
+        main_width: SizeValue | int,
+        main_height: SizeValue | int,
+        title_font_size: int = 40,
+        title_font: BanGDreamFont = "chinese",
+        stroke_width: int = 6,
+        title_radius: int | None = None,
+        main_radius: int | None = None,
+        title_fill: ColorLike | None = None,
+        main_fill: ColorLike | None = None,
+    ) -> Component:
+        """Create a tabbed panel with a BanG Dream!-style title."""
+
+        return BanGDreamTitledPanel(
+            title,
+            child,
+            _resolve_font(title_font),
+            title_width=title_width,
+            title_height=title_height,
+            main_width=main_width,
+            main_height=main_height,
+            title_font_size=title_font_size,
+            stroke_width=stroke_width,
+            title_radius=title_radius,
+            main_radius=main_radius,
+            title_fill=title_fill or self.primary,
+            main_fill=main_fill or (255, 255, 255, 255),
         )
 
     def pill(

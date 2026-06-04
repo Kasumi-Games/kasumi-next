@@ -1,21 +1,15 @@
 import time
-import random
 from typing import Set
 from typing import Dict
 from typing import Optional
-from pathlib import Path
 from dataclasses import field
 from dataclasses import dataclass
-
-from plugins.render_service.primitives import RESOURCES_DIR
 
 from .models import Edge
 from .models import Node
 from .models import Graph
 from .models import MoveResult
 
-BG_PATH = RESOURCES_DIR / "BG"
-BGS = list(BG_PATH.glob("bg[0-9][0-9][0-9][0-9][0-9].png"))
 DIRECTION_DELTAS = {
     "W": (-1, 0),
     "A": (0, -1),
@@ -31,7 +25,6 @@ class GameSession:
     difficulty_name: str
     reward: int
     graph: Graph
-    bg_path: Path = field(init=False)
     current_pos: Node = field(init=False)
     drawn_edges: Set[Edge] = field(default_factory=set)
     visited_nodes: Set[Node] = field(default_factory=set)
@@ -40,7 +33,6 @@ class GameSession:
 
     def __post_init__(self) -> None:
         self.started_at = time.monotonic()
-        self.bg_path = random.choice(BGS)
         self.current_pos = self.graph.start_node
         self.visited_nodes = {self.graph.start_node}
 

@@ -12,6 +12,7 @@ from plugins.render.core import Constraints
 from plugins.render.core import LayoutError
 from plugins.render.core import RenderContext
 from plugins.render.color import ColorLike
+from plugins.render.color import rgba
 from plugins.render.color import normalize_color
 from plugins.render.types import ImageFit
 from plugins.render.types import Overflow
@@ -236,6 +237,99 @@ class BanGDreamPanel:
 
 
 @dataclass(frozen=True)
+class BanGDreamTitledPanel:
+    """Panel with a top tab title and a square upper-left main corner."""
+
+    title: str
+    child: Component | None
+    title_font: str | Path
+    title_width: SizeValue | int
+    title_height: SizeValue | int
+    main_width: SizeValue | int
+    main_height: SizeValue | int
+    title_font_size: int = 40
+    stroke_width: int = 6
+    title_radius: int | None = None
+    main_radius: int | None = None
+    title_fill: ColorLike = rgba(234, 78, 116, 255)
+    main_fill: ColorLike = rgba(255, 255, 255, 255)
+
+    @property
+    def width(self) -> SizeValue:
+        return _combine_titled_panel_width(self.title_width, self.main_width)
+
+    @property
+    def height(self) -> SizeValue:
+        return _combine_titled_panel_height(self.title_height, self.main_height)
+
+    def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
+        return constraints.clamp(_resolve_titled_panel_layout(self, constraints).size)
+
+    def render(self, ctx: RenderContext, canvas: Image.Image, rect: Rect) -> None:
+        constraints = ctx.unscale_constraints(
+            Constraints(max_width=rect.width, max_height=rect.height)
+        )
+        layout = _resolve_titled_panel_layout(self, constraints)
+        scaled = ctx.scale_size(layout.size)
+        layer = Image.new("RGBA", (scaled.width, scaled.height), (0, 0, 0, 0))
+
+        title_w = ctx.scale_px(layout.title_width)
+        title_h = ctx.scale_px(layout.title_height)
+        main_w = ctx.scale_px(layout.main_width)
+        main_h = ctx.scale_px(layout.main_height)
+        stroke = max(0, ctx.scale_px(self.stroke_width))
+        title_radius = (
+            max(0, title_h // 2)
+            if self.title_radius is None
+            else max(0, ctx.scale_px(self.title_radius))
+        )
+        main_radius = (
+            max(0, title_h // 2)
+            if self.main_radius is None
+            else max(0, ctx.scale_px(self.main_radius))
+        )
+
+        _draw_upper_left_square_rounded_rect(
+            layer,
+            (0, title_h, main_w, title_h + main_h),
+            main_radius,
+            self.main_fill,
+        )
+        _draw_top_rounded_rect(
+            layer,
+            (0, 0, title_w, title_h),
+            title_radius,
+            self.main_fill,
+        )
+        if title_w > stroke * 2 and title_h > stroke:
+            _draw_top_rounded_rect(
+                layer,
+                (stroke, stroke, title_w - stroke, title_h),
+                max(0, title_radius - stroke),
+                self.title_fill,
+            )
+
+        draw = ImageDraw.Draw(layer)
+        font = load_font(ctx.scale_px(self.title_font_size), self.title_font)
+        _draw_aligned_text(
+            draw,
+            self.title,
+            font,
+            (stroke, stroke, max(stroke, title_w - stroke), title_h),
+            (255, 255, 255, 255),
+            align="center",
+        )
+
+        if self.child is not None:
+            self.child.render(
+                ctx,
+                layer,
+                Rect(0, title_h, main_w, main_h),
+            )
+        alpha_composite_paste(canvas, layer, (rect.x, rect.y))
+
+
+@dataclass(frozen=True)
 class BanGDreamSeparator:
     """Rounded divider line for horizontal or vertical separation."""
 
@@ -385,6 +479,189 @@ class BanGDreamPill:
             align=self.align,
         )
         alpha_composite_paste(canvas, layer, (rect.x, rect.y))
+
+
+@dataclass(frozen=True)
+class _TitledPanelLayout:
+    title_width: int
+    title_height: int
+    main_width: int
+    main_height: int
+
+    @property
+    def size(self) -> Size:
+        return Size(
+            max(self.title_width, self.main_width),
+            self.title_height + self.main_height,
+        )
+
+
+def _combine_titled_panel_width(
+    title_width: SizeValue | int,
+    main_width: SizeValue | int,
+) -> SizeValue:
+    title = as_size_value(title_width)
+    main = as_size_value(main_width)
+    if isinstance(title, Fill) or isinstance(main, Fill):
+        return Fill()
+    if isinstance(title, Fixed) and isinstance(main, Fixed):
+        return Fixed(max(title.value, main.value))
+    return Fit()
+
+
+def _combine_titled_panel_height(
+    title_height: SizeValue | int,
+    main_height: SizeValue | int,
+) -> SizeValue:
+    title = as_size_value(title_height)
+    main = as_size_value(main_height)
+    if isinstance(title, Fill) or isinstance(main, Fill):
+        return Fill()
+    if isinstance(title, Fixed) and isinstance(main, Fixed):
+        return Fixed(title.value + main.value)
+    return Fit()
+
+
+def _resolve_titled_panel_layout(
+    panel: BanGDreamTitledPanel,
+    constraints: Constraints,
+) -> _TitledPanelLayout:
+    title_width = _resolve_titled_panel_width(
+        as_size_value(panel.title_width),
+        constraints.max_width,
+        "BanGDreamTitledPanel.title_width",
+    )
+    main_width = _resolve_titled_panel_width(
+        as_size_value(panel.main_width),
+        constraints.max_width,
+        "BanGDreamTitledPanel.main_width",
+    )
+    title_height, main_height = _resolve_titled_panel_heights(
+        as_size_value(panel.title_height),
+        as_size_value(panel.main_height),
+        constraints.max_height,
+    )
+    return _TitledPanelLayout(
+        title_width=title_width,
+        title_height=title_height,
+        main_width=main_width,
+        main_height=main_height,
+    )
+
+
+def _resolve_titled_panel_width(
+    value: SizeValue,
+    bound: int | None,
+    owner: str,
+) -> int:
+    if isinstance(value, Fit):
+        return 0
+    if isinstance(value, Fixed):
+        return value.value
+    if isinstance(value, Fill):
+        if bound is None:
+            raise LayoutError(f"{owner} uses Fill(), but parent axis is unbounded")
+        return bound
+    if isinstance(value, Fraction):
+        if bound is None:
+            raise LayoutError(f"{owner} uses Fraction(), but parent axis is unbounded")
+        return round(bound * value.value)
+    return 0
+
+
+def _resolve_titled_panel_heights(
+    title_height: SizeValue,
+    main_height: SizeValue,
+    bound: int | None,
+) -> tuple[int, int]:
+    title_fixed = _resolve_titled_panel_non_fill_height(
+        title_height,
+        bound,
+        "BanGDreamTitledPanel.title_height",
+    )
+    main_fixed = _resolve_titled_panel_non_fill_height(
+        main_height,
+        bound,
+        "BanGDreamTitledPanel.main_height",
+    )
+    fill_count = int(isinstance(title_height, Fill)) + int(
+        isinstance(main_height, Fill)
+    )
+    if fill_count == 0:
+        return title_fixed, main_fixed
+    if bound is None:
+        raise LayoutError(
+            "BanGDreamTitledPanel.height uses Fill(), but parent axis is unbounded"
+        )
+    fill_height = max(0, (bound - title_fixed - main_fixed) // fill_count)
+    return (
+        fill_height if isinstance(title_height, Fill) else title_fixed,
+        fill_height if isinstance(main_height, Fill) else main_fixed,
+    )
+
+
+def _resolve_titled_panel_non_fill_height(
+    value: SizeValue,
+    bound: int | None,
+    owner: str,
+) -> int:
+    if isinstance(value, Fit):
+        return 0
+    if isinstance(value, Fixed):
+        return value.value
+    if isinstance(value, Fill):
+        return 0
+    if isinstance(value, Fraction):
+        if bound is None:
+            raise LayoutError(f"{owner} uses Fraction(), but parent axis is unbounded")
+        return round(bound * value.value)
+    return 0
+
+
+def _draw_top_rounded_rect(
+    target: Image.Image,
+    bbox: tuple[int, int, int, int],
+    radius: int,
+    fill: ColorLike,
+) -> None:
+    left, top, right, bottom = bbox
+    width = max(0, right - left)
+    height = max(0, bottom - top)
+    if width == 0 or height == 0:
+        return
+    radius = min(max(0, radius), width // 2, height)
+    color = normalize_color(fill)
+    draw = ImageDraw.Draw(target)
+    if radius == 0:
+        draw.rectangle((left, top, right, bottom), fill=color)
+        return
+    draw.rectangle((left, top + radius, right, bottom), fill=color)
+    draw.rectangle((left + radius, top, right - radius, bottom), fill=color)
+    draw.pieslice(
+        (left, top, left + radius * 2, top + radius * 2),
+        180,
+        270,
+        fill=color,
+    )
+    draw.pieslice(
+        (right - radius * 2, top, right, top + radius * 2), 270, 360, fill=color
+    )
+
+
+def _draw_upper_left_square_rounded_rect(
+    target: Image.Image,
+    bbox: tuple[int, int, int, int],
+    radius: int,
+    fill: ColorLike,
+) -> None:
+    left, top, right, bottom = bbox
+    draw_rounded_rectangle(target, bbox, radius, fill)
+    radius = max(0, min(radius, (right - left) // 2, (bottom - top) // 2))
+    if radius > 0:
+        ImageDraw.Draw(target).rectangle(
+            (left, top, left + radius, top + radius),
+            fill=normalize_color(fill),
+        )
 
 
 def _draw_left_aligned_text(
