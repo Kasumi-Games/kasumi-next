@@ -5,19 +5,17 @@ Mines game statistics service for analyzing player game data.
 from typing import List
 from typing import Optional
 from typing import cast
-from pathlib import Path
 from dataclasses import dataclass
 
 import matplotlib.font_manager as fm
 from matplotlib.axes import Axes
 
+from plugins.render.kits.bangdream import CHINESE_FONT
+
 from .models import MinesGame
 from .database import get_session
 
-font_path = (
-    Path(__file__).parent.parent / "render_service" / "resources" / "Fonts" / "old.ttf"
-)
-font = fm.FontProperties(fname=font_path)
+font = fm.FontProperties(fname=CHINESE_FONT)
 
 
 @dataclass

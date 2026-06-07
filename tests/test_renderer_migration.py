@@ -35,12 +35,8 @@ def _ensure_package(name: str, path: Path):
 
 class RendererMigrationTest(unittest.TestCase):
     def test_migrated_renderers_do_not_import_render_service(self) -> None:
-        allowed = {
-            ROOT / "plugins" / "mines" / "stats_service.py",
-            ROOT / "plugins" / "render_service" / "primitives.py",
-        }
         for path in (ROOT / "plugins").rglob("*.py"):
-            if path in allowed or "render_service" in path.parts:
+            if "render_service" in path.parts:
                 continue
             content = path.read_text(encoding="utf-8")
             self.assertNotIn("plugins.render_service", content, str(path))
