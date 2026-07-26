@@ -1,6 +1,8 @@
 from abc import ABC
 from abc import abstractmethod
 from typing import Literal
+from typing import Sequence
+from dataclasses import dataclass
 
 from .core import Component
 from .core import Background
@@ -13,12 +15,78 @@ from .sizing import SizeValue
 from .spacing import InsetsLike
 
 
+@dataclass(frozen=True)
+class PlayerIdentity:
+    """Who a rendered surface belongs to.
+
+    Assembled in the message handler (``utils.identity.identity_for``) and
+    passed into renderers, so the render layer never touches a database.
+
+    Attributes:
+        nickname: Display name; never empty.
+        level: Permanent level, or ``None`` to omit.
+        avatar: Optional avatar image. When ``None`` the surface draws a
+            fallback (typically an initial-letter badge) instead of leaving a
+            hole; avatar fetching currently costs one HTTP call per lookup, so
+            most surfaces pass ``None`` until a cache exists.
+    """
+
+    nickname: str
+    level: int | None = None
+    avatar: ImageSource | None = None
+
+
+@dataclass(frozen=True)
+class PullRevealItem:
+    """One result inside a gacha reveal.
+
+    Attributes:
+        name: Item display name.
+        rarity: Star rarity (1-6).
+        is_new: Whether the player did not own this item before the pull.
+        featured: Whether this is a featured banner item.
+        image: Optional art thumbnail.
+        note: Short annotation, e.g. a duplicate-compensation grant.
+    """
+
+    name: str
+    rarity: int
+    is_new: bool = False
+    featured: bool = False
+    image: ImageSource | None = None
+    note: str = ""
+
+
 class BaseKit(ABC):
     """Abstract contract for neutral render-kit atoms.
 
     Concrete kits may expose richer theme-specific helpers, but shared callers
     should only depend on these general factories.
+
+    Alongside the atom factories, a kit publishes a small palette so callers can
+    tint content they draw themselves without assuming a light theme. The
+    defaults below describe a light kit; dark kits override them. Callers that
+    need a themed surface should omit ``fill`` and let the kit decide rather
+    than hard-coding a color.
+
+    Attributes:
+        text_color: Default body text color.
+        muted_text_color: De-emphasized text color for secondary content.
+        panel_fill: Default panel surface color.
+
+    **Tier A surfaces.** ``game_identity``, ``player_card`` and ``pull_reveal``
+    are the three high-visibility surfaces that get a bespoke, hand-authored
+    treatment per kit rather than a shared composition. Their base
+    implementations raise; callers never invoke them directly and instead go
+    through the dispatchers in ``utils.cards`` (``game_identity(kit, ...)``
+    etc.), which fall back to a generic atom composition when a kit has not
+    authored its own. A kit that overrides one of these owns the full visual:
+    the dispatcher passes data through untouched.
     """
+
+    text_color: ColorLike = (80, 80, 80, 255)
+    muted_text_color: ColorLike = (130, 130, 145, 255)
+    panel_fill: ColorLike = (255, 255, 255, 208)
 
     @abstractmethod
     def background(self, *, fill: ColorLike | None = None) -> Background:
@@ -140,3 +208,77 @@ class BaseKit(ABC):
         """
 
         ...
+
+    def game_identity(
+        self,
+        identity: PlayerIdentity,
+        *,
+        width: SizeValue | int,
+        detail: str | None = None,
+    ) -> Component:
+        """Create the identity strip placed on a game board.
+
+        This is the highest-exposure Tier A surface: a game posts one board
+        image per move into the channel, and this strip is what ties the visual
+        to a player. Keep it compact (target height 64-88 logical px) — it sits
+        above the board, not instead of it. No theme signature here; mid-game
+        boards deliberately carry none.
+
+        Args:
+            identity: Player identity data.
+            width: Strip width; games pass their board width.
+            detail: Optional game-specific right-hand text, e.g. ``押注 120 Pt``.
+
+        Returns:
+            Strip component.
+        """
+
+        raise NotImplementedError("game_identity must be implemented by the kit")
+
+    def player_card(
+        self,
+        *,
+        avatar_image: ImageSource | None,
+        frame_image: ImageSource | None,
+        title1_image: ImageSource | None,
+        title2_image: ImageSource | None,
+        nickname: str,
+        level: int,
+        current_pt: int,
+        description: str,
+        width: SizeValue | int,
+        height: SizeValue | int,
+    ) -> Component:
+        """Create a kit-specific player identity card.
+
+        Tier A: concrete kits override this with their own composition instead
+        of sharing a generic render-module implementation. ``avatar_image`` may
+        be ``None`` (draw an initial-letter fallback); frame and title images
+        are ``None`` until those cosmetic assets exist.
+        """
+
+        raise NotImplementedError("player_card must be implemented by the kit")
+
+    def pull_reveal(
+        self,
+        pulls: Sequence[PullRevealItem],
+        *,
+        width: SizeValue | int,
+    ) -> Component:
+        """Create the gacha reveal grid for one to ten pulls.
+
+        The reveal is the emotional peak of the gacha loop, which is what makes
+        it Tier A. Rarity must be encoded by shape and weight, never hue alone
+        (the manga kit is monochrome): a ``★6`` chip, a heavier border, a
+        filled marker. The banner header and pity footer are page concerns
+        assembled by the caller — this component is only the grid of results.
+
+        Args:
+            pulls: Pull results in draw order (1-10 items).
+            width: Grid width.
+
+        Returns:
+            Reveal component.
+        """
+
+        raise NotImplementedError("pull_reveal must be implemented by the kit")

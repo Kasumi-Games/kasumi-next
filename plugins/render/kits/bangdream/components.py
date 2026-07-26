@@ -1,3 +1,4 @@
+import random
 from typing import Literal
 from pathlib import Path
 from dataclasses import dataclass
@@ -38,6 +39,7 @@ from plugins.render.text_layout import merge_line_limits as _merge_line_limits
 from plugins.render.text_layout import display_text_width as _display_text_width
 from plugins.render.text_layout import max_lines_for_height as _max_lines_for_height
 
+from .backgrounds import BG_DIR
 from .backgrounds import load_image
 from .backgrounds import resize_cover
 from .backgrounds import rounded_clip
@@ -64,6 +66,16 @@ class BanGDreamText:
         font = load_font(font_size, self.font)
         line_height = self.line_height or round(font_size * 1.35)
         width = max((_text_width(line, font) for line in lines), default=0)
+        if ctx.pixel_ratio > 1:
+            # Same guard as ``KitText.measure``: TrueType metrics are not
+            # linear in size, and render() draws at ``pixel_ratio`` scale on
+            # a rect-sized layer, so a logical-size measurement can clip the
+            # last glyph. Measure at draw size too and keep the safer width.
+            draw_font = load_font(font_size * ctx.pixel_ratio, self.font)
+            draw_width = max(
+                (_text_width(line, draw_font) for line in lines), default=0
+            )
+            width = max(width, -(-draw_width // ctx.pixel_ratio))
         if self.wrap and constraints.max_width is not None:
             width = min(width, constraints.max_width)
         return constraints.clamp(Size(width, line_height * max(1, len(lines))))
@@ -477,6 +489,289 @@ class BanGDreamPill:
             (0, 0, rect.width, rect.height),
             self.text_color or (255, 255, 255, 255),
             align=self.align,
+        )
+        alpha_composite_paste(canvas, layer, (rect.x, rect.y))
+
+
+@dataclass(frozen=True)
+class BanGDreamRingedAvatar:
+    """Circular avatar in a BanG Dream! primary ring, with an initial fallback.
+
+    When ``source`` is ``None`` the inner disc is filled with a soft brand tint
+    and carries the player's initial instead of leaving a hole. The ring is the
+    theme signal, so it is drawn in both states. Rendering is supersampled so
+    the circle edge stays clean after the page-level downscale.
+
+    Attributes:
+        source: Optional avatar image.
+        initial: Fallback glyph drawn when no avatar exists; first char is used.
+        size: Logical diameter of the whole component including the ring.
+        ring_color: Ring stroke color.
+        ring_width: Logical ring stroke width.
+        ring_gap: Logical gap between the ring and the inner disc.
+        fallback_fill: Inner disc fill used for the initial fallback.
+        initial_color: Initial glyph color.
+        initial_font: Font used for the initial glyph.
+    """
+
+    source: ImageSource | None
+    initial: str
+    size: int
+    ring_color: ColorLike = rgba(234, 78, 116, 255)
+    ring_width: int = 3
+    ring_gap: int = 2
+    fallback_fill: ColorLike = rgba(250, 228, 234, 255)
+    initial_color: ColorLike = rgba(80, 80, 80, 255)
+    initial_font: str | Path | None = None
+
+    def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
+        return constraints.clamp(Size(self.size, self.size))
+
+    def render(self, ctx: RenderContext, canvas: Image.Image, rect: Rect) -> None:
+        side = min(rect.width, rect.height)
+        if side <= 0:
+            return
+        supersample = 3
+        big = side * supersample
+        layer = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(layer)
+
+        ring_width = max(1, ctx.scale_px(self.ring_width)) * supersample
+        ring_gap = max(0, ctx.scale_px(self.ring_gap)) * supersample
+        inner = max(1, big - 2 * (ring_width + ring_gap))
+        inner_xy = (big - inner) // 2
+
+        if self.source is not None:
+            art = resize_cover(load_image(ctx, self.source), inner, inner)
+            mask = Image.new("L", (inner, inner), 0)
+            ImageDraw.Draw(mask).ellipse((0, 0, inner - 1, inner - 1), fill=255)
+            layer.paste(art, (inner_xy, inner_xy), mask)
+        else:
+            draw.ellipse(
+                (inner_xy, inner_xy, inner_xy + inner - 1, inner_xy + inner - 1),
+                fill=normalize_color(self.fallback_fill),
+            )
+            glyph = (self.initial or "?")[:1]
+            font = load_font(max(8, round(inner * 0.46)), self.initial_font)
+            bbox = draw.textbbox((0, 0), glyph, font=font)
+            draw.text(
+                (
+                    inner_xy + (inner - (bbox[2] - bbox[0])) // 2 - bbox[0],
+                    inner_xy + (inner - (bbox[3] - bbox[1])) // 2 - bbox[1],
+                ),
+                glyph,
+                font=font,
+                fill=normalize_color(self.initial_color),
+            )
+
+        half_stroke = ring_width // 2
+        draw.ellipse(
+            (half_stroke, half_stroke, big - half_stroke - 1, big - half_stroke - 1),
+            outline=normalize_color(self.ring_color),
+            width=ring_width,
+        )
+        resized = layer.resize((side, side), Image.Resampling.LANCZOS)
+        alpha_composite_paste(
+            canvas,
+            resized,
+            (
+                rect.x + max(0, (rect.width - side) // 2),
+                rect.y + max(0, (rect.height - side) // 2),
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class BanGDreamTileFrame:
+    """Rounded outline drawn over a tile, used as the top-rarity border.
+
+    Stretches to whatever rectangle it is given; pair it with a fixed-size
+    ``Frame`` inside an ``Overlay`` so it traces the tile underneath.
+
+    Attributes:
+        radius: Logical corner radius matching the tile panel.
+        color: Stroke color.
+        thickness: Logical stroke width.
+    """
+
+    radius: int = 24
+    color: ColorLike = rgba(234, 78, 116, 255)
+    thickness: int = 4
+
+    def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
+        return constraints.clamp(
+            Size(constraints.max_width or 0, constraints.max_height or 0)
+        )
+
+    def render(self, ctx: RenderContext, canvas: Image.Image, rect: Rect) -> None:
+        if rect.width <= 0 or rect.height <= 0:
+            return
+        supersample = 2
+        thickness = max(1, ctx.scale_px(self.thickness)) * supersample
+        radius = max(0, ctx.scale_px(self.radius)) * supersample
+        temp = Image.new(
+            "RGBA", (rect.width * supersample, rect.height * supersample), (0, 0, 0, 0)
+        )
+        inset = thickness // 2
+        ImageDraw.Draw(temp).rounded_rectangle(
+            (
+                inset,
+                inset,
+                rect.width * supersample - 1 - inset,
+                rect.height * supersample - 1 - inset,
+            ),
+            radius=radius,
+            outline=normalize_color(self.color),
+            width=thickness,
+        )
+        layer = temp.resize((rect.width, rect.height), Image.Resampling.LANCZOS)
+        alpha_composite_paste(canvas, layer, (rect.x, rect.y))
+
+
+@dataclass(frozen=True)
+class BanGDreamStarScatter:
+    """Deterministic sprinkle of the kit's star sprites around a tile edge.
+
+    Positions avoid the central content box so scattered stars celebrate the
+    tile without sitting under its text. The scatter is seeded, so the same
+    pull always renders the same image.
+
+    Attributes:
+        seed: Random seed; pass the pull index so tiles differ.
+        count: Number of stars.
+        size_range: Logical star size range in pixels.
+        opacity: Star alpha multiplier.
+        tint: Optional solid color replacing the sprite's own colors; the
+            sprite then only contributes its alpha shape.
+    """
+
+    seed: int = 0
+    count: int = 6
+    size_range: tuple[int, int] = (12, 26)
+    opacity: float = 0.85
+    tint: ColorLike | None = None
+
+    def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
+        return constraints.clamp(
+            Size(constraints.max_width or 0, constraints.max_height or 0)
+        )
+
+    def render(self, ctx: RenderContext, canvas: Image.Image, rect: Rect) -> None:
+        if rect.width <= 0 or rect.height <= 0:
+            return
+        sources = [
+            path
+            for path in (BG_DIR / "star1.png", BG_DIR / "star2.png")
+            if path.exists()
+        ]
+        if not sources:
+            return
+        rng = random.Random(self.seed)
+        layer = Image.new("RGBA", (rect.width, rect.height), (0, 0, 0, 0))
+        keep_out = (
+            rect.width * 0.24,
+            rect.height * 0.26,
+            rect.width * 0.76,
+            rect.height * 0.82,
+        )
+        for _ in range(self.count):
+            star = load_image(ctx, sources[rng.randrange(len(sources))])
+            size = max(
+                2, ctx.scale_px(round(rng.uniform(self.size_range[0], self.size_range[1])))
+            )
+            sprite = star.resize((size, size), Image.Resampling.BILINEAR)
+            if self.tint is not None:
+                red, green, blue, _alpha = normalize_color(self.tint)
+                tinted = Image.new("RGBA", sprite.size, (red, green, blue, 0))
+                tinted.putalpha(sprite.getchannel("A"))
+                sprite = tinted
+            sprite = sprite.rotate(
+                rng.uniform(0, 72), expand=True, resample=Image.Resampling.BICUBIC
+            )
+            x = y = 0.0
+            for _attempt in range(16):
+                x = rng.uniform(0, rect.width)
+                y = rng.uniform(0, rect.height)
+                inside_keep_out = (
+                    keep_out[0] < x < keep_out[2] and keep_out[1] < y < keep_out[3]
+                )
+                if not inside_keep_out:
+                    break
+            alpha_composite_paste(
+                layer,
+                sprite,
+                (round(x - sprite.width / 2), round(y - sprite.height / 2)),
+            )
+        if self.opacity < 1:
+            layer = with_opacity(layer, self.opacity)
+        alpha_composite_paste(canvas, layer, (rect.x, rect.y))
+
+
+@dataclass(frozen=True)
+class BanGDreamBannerChip:
+    """Miniature two-layer pill in the title-pill silhouette, with a ring.
+
+    A white under-band peeks out to the lower right of a filled band, echoing
+    ``BanGDreamTitlePill`` at chip scale; the optional ring traces the band in
+    the kit primary. The band fill is intended to be a dark emphasis color —
+    never the primary — so the label stays readable.
+
+    Attributes:
+        text: Chip label.
+        font: Label font path.
+        width: Logical total width including the under-band offset.
+        height: Logical total height including the under-band offset.
+        font_size: Label font size.
+        band_fill: Fill of the top band that carries the text.
+        band_text_color: Label color on the band.
+        under_fill: Fill of the offset under-band.
+        ring_color: Optional ring stroke color around the band.
+        ring_width: Logical ring stroke width.
+    """
+
+    text: str
+    font: str | Path
+    width: int
+    height: int
+    font_size: int = 22
+    band_fill: ColorLike = rgba(80, 80, 80, 255)
+    band_text_color: ColorLike = rgba(255, 255, 255, 255)
+    under_fill: ColorLike = rgba(255, 255, 255, 255)
+    ring_color: ColorLike | None = rgba(234, 78, 116, 255)
+    ring_width: int = 3
+
+    def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
+        return constraints.clamp(Size(self.width, self.height))
+
+    def render(self, ctx: RenderContext, canvas: Image.Image, rect: Rect) -> None:
+        if rect.width <= 0 or rect.height <= 0:
+            return
+        offset_x = max(2, rect.width // 9)
+        offset_y = max(2, rect.height // 5)
+        band_w = rect.width - offset_x
+        band_h = rect.height - offset_y
+        layer = Image.new("RGBA", (rect.width, rect.height), (0, 0, 0, 0))
+        draw_pill(
+            layer, (offset_x, offset_y, rect.width, rect.height), self.under_fill
+        )
+        draw_pill(layer, (0, 0, band_w, band_h), self.band_fill)
+        if self.ring_color is not None and self.ring_width > 0:
+            stroke = max(1, ctx.scale_px(self.ring_width))
+            inset = stroke // 2
+            ImageDraw.Draw(layer).rounded_rectangle(
+                (inset, inset, band_w - 1 - inset, band_h - 1 - inset),
+                radius=max(0, (band_h - stroke) // 2),
+                outline=normalize_color(self.ring_color),
+                width=stroke,
+            )
+        font = load_font(max(1, ctx.scale_px(self.font_size)), self.font)
+        _draw_aligned_text(
+            ImageDraw.Draw(layer),
+            self.text,
+            font,
+            (0, 0, band_w, band_h),
+            self.band_text_color,
+            align="center",
         )
         alpha_composite_paste(canvas, layer, (rect.x, rect.y))
 

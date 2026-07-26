@@ -11,7 +11,8 @@ from plugins.render.types import ImageSource
 from plugins.render.sizing import SizeValue
 from plugins.render.spacing import InsetsLike
 
-from .components import MinimalText
+from ..atoms import KitText
+from ..fonts import CHINESE_FONT
 from .components import MinimalImage
 from .components import MinimalPanel
 from .components import MinimalSeparator
@@ -19,6 +20,10 @@ from .components import MinimalBackground
 
 
 class MinimalKit(BaseKit):
+    text_color = (80, 80, 80, 255)
+    muted_text_color = (130, 130, 145, 255)
+    panel_fill = (245, 245, 245, 255)
+
     def background(self, *, fill: ColorLike | None = None) -> Background:
         return MinimalBackground(fill or (255, 255, 255, 255))
 
@@ -34,8 +39,14 @@ class MinimalKit(BaseKit):
         overflow: Overflow = "ellipsis",
         line_height: int | None = None,
     ) -> Component:
-        return MinimalText(
+        # KitText with the shared CJK font rather than MinimalText: PIL's
+        # default font has no CJK coverage, so Chinese rendered as tofu boxes.
+        # This keeps minimal's last-resort property — the font path is only
+        # touched at render time, and load_font falls back to the default font
+        # instead of raising when the file is missing.
+        return KitText(
             text,
+            CHINESE_FONT,
             font_size=font_size,
             color=color or (80, 80, 80, 255),
             align=align,

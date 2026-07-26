@@ -56,15 +56,17 @@ def _load_plugin_module(name: str, relative_path: str):
 
 
 def _kit(name: str):
-    if name == "minimal":
-        from plugins.render.kits.minimal import MinimalKit
+    from plugins.render.kits import KITS
 
-        return MinimalKit()
-    if name == "bangdream":
-        from plugins.render.kits.bangdream import BanGDreamKit
+    if name not in KITS:
+        raise ValueError(f"unknown kit: {name}")
+    return KITS[name]()
 
-        return BanGDreamKit()
-    raise ValueError(f"unknown kit: {name}")
+
+def _kit_names() -> list[str]:
+    from plugins.render.kits import KITS
+
+    return list(KITS)
 
 
 def _preview_card(label: str, fill: tuple[int, int, int, int]) -> Image.Image:
@@ -239,6 +241,8 @@ def _expand_targets(target: str) -> list[str]:
 
 
 def _expand_kits(kit: str) -> list[str]:
+    if kit == "all":
+        return _kit_names()
     if kit == "both":
         return ["bangdream", "minimal"]
     return [kit]
@@ -287,8 +291,8 @@ def main() -> None:
     parser.add_argument(
         "--kit",
         default="bangdream",
-        choices=["bangdream", "minimal", "both"],
-        help="Render with the current default kit, the minimal kit, or both.",
+        choices=[*_kit_names(), "both", "all"],
+        help="Render with one kit, 'both' for bangdream+minimal, or 'all' kits.",
     )
     parser.add_argument(
         "--output-dir",

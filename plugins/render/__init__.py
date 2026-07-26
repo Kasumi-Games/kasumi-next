@@ -1,4 +1,6 @@
 from .kit import BaseKit
+from .kit import PlayerIdentity
+from .kit import PullRevealItem
 from .core import Rect
 from .core import Size
 from .core import Component
@@ -45,6 +47,8 @@ __all__ = [
     "LayoutError",
     "Overlay",
     "Page",
+    "PlayerIdentity",
+    "PullRevealItem",
     "Rect",
     "RenderContext",
     "Size",
