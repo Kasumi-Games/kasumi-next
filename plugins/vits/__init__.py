@@ -163,7 +163,7 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
     has_amount = monetary.get(event.get_user_id())
     if has_amount < required_amount:
         await vits.finish(
-            f"你现在共有 {has_amount} 个星之碎片，但语音生成需要 {required_amount} 个星之碎片，去玩游戏赚取碎片吧"
+            f"你现在共有 {has_amount} Pt，但语音生成需要 {required_amount} Pt，去玩游戏赚取 Pt 吧"
             + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
@@ -194,7 +194,7 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
     )
 
     await vits.finish(
-        f"本次语音合成消耗了 {required_amount} 个星之碎片，你还有 {monetary.get(event.get_user_id())} 个星之碎片"
+        f"本次语音合成消耗了 {required_amount} Pt，你还有 {monetary.get(event.get_user_id())} Pt"
         + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )

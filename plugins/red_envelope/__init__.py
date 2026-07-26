@@ -19,9 +19,18 @@ require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import PassiveGenerator  # noqa: E402
+from utils.images import image_segment  # noqa: E402
+from utils.theming import kit_for_user  # noqa: E402
+from utils.identity import identity_for  # noqa: E402
 
 from .. import monetary  # noqa: E402
-from .service import EnvelopeCompletionInfo  # noqa: E402  # noqa: F401
+from .render import ClaimRow  # noqa: E402
+from .render import EnvelopeCreateData  # noqa: E402
+from .render import EnvelopeCompletionData  # noqa: E402
+from .render import create_page  # noqa: E402
+from .render import completion_page  # noqa: E402
+from .service import EXPIRE_SECONDS  # noqa: E402
+from .service import EnvelopeCompletionInfo  # noqa: E402
 from .service import claim_envelope  # noqa: E402
 from .service import create_envelope  # noqa: E402
 from .service import get_active_envelopes  # noqa: E402
@@ -138,16 +147,6 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
     try:
         monetary.cost(user_id, amount, "red_envelope_create")
         envelope = create_envelope(user_id, channel_id, title, amount, count)
-        await create_cmd.finish(
-            Messages.CREATE_SUCCESS.format(
-                envelope_id=envelope.channel_index,
-                title=title,
-                amount=amount,
-                count=count,
-            )
-            + passive_generator.element,
-            referrer=passive_generator.event.referrer,
-        )
     except MatcherException:
         raise
     except Exception as e:
@@ -159,6 +158,55 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
             + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
+
+    # 红包已建好、Pt 已扣：之后的任何失败都不能再走上面的退款分支。
+    # 广播创建卡片（成本纪律：整个红包只在创建与抢完时各渲染一次）。
+    await _send_create_card(
+        envelope.channel_index, title, amount, count, user_id, passive_generator
+    )
+
+
+async def _send_create_card(
+    channel_index: int,
+    title: str,
+    amount: int,
+    count: int,
+    user_id: str,
+    passive_generator: PassiveGenerator,
+):
+    """渲染并发送红包创建卡片；渲染失败时退化为原文本公告。
+
+    主题与身份解析必须留在事件循环线程（库存/昵称的 Session 是进程级共享且
+    非线程安全），``render_async`` 只把光栅化交给工作线程。卡片用创建者的
+    主题渲染——这是全群都会看的广播面，发红包就是在展示自己的主题。
+    """
+    kit = kit_for_user(user_id)
+    data = EnvelopeCreateData(
+        channel_index=channel_index,
+        title=title,
+        total_amount=amount,
+        total_count=count,
+        creator=identity_for(user_id),
+        validity_text=f"{EXPIRE_SECONDS // 3600} 小时",
+    )
+    try:
+        image = await create_page(data, kit).render_async()
+    except Exception as e:
+        log_error(generate_error_code(), e, context="red_envelope_create_card")
+        await create_cmd.finish(
+            Messages.CREATE_SUCCESS.format(
+                envelope_id=channel_index,
+                title=title,
+                amount=amount,
+                count=count,
+            )
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+    await create_cmd.finish(
+        image_segment(image) + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )
 
 
 @claim_cmd.handle()
@@ -215,27 +263,16 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
                 referrer=passive_generator.event.referrer,
             )
         if status == "success":
+            # 单次抢红包保持文本（成本纪律：一句一个数字的回执配不上一次渲染）
             await claim_cmd.send(
                 Messages.CLAIM_SUCCESS.format(amount=amount)
                 + passive_generator.element,
                 referrer=passive_generator.event.referrer,
             )
 
-            # Add completion message if this was the last claim
+            # 最后一份被抢走：这一条播报升级为带完整账本的结算卡片
             if completion_info:
-                creator_name = nickname.get(completion_info.creator_id) or "某人"
-                lucky_king_name = nickname.get(completion_info.lucky_king_id) or "某人"
-                duration_str = _format_duration(completion_info.duration_seconds)
-                await claim_cmd.finish(
-                    Messages.CLAIM_COMPLETE.format(
-                        creator=creator_name,
-                        duration=duration_str,
-                        lucky_king=lucky_king_name,
-                        lucky_amount=completion_info.lucky_king_amount,
-                    )
-                    + passive_generator.element,
-                    referrer=passive_generator.event.referrer,
-                )
+                await _send_completion_card(completion_info, passive_generator)
     except MatcherException:
         raise
     except Exception as e:
@@ -246,6 +283,64 @@ async def handle_claim(event: MessageEvent, arg: Message = CommandArg()):
             + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
+
+
+async def _send_completion_card(
+    info: EnvelopeCompletionInfo, passive_generator: PassiveGenerator
+):
+    """渲染并发送红包结算卡片；渲染失败时退化为原文本播报。
+
+    卡片用创建者的主题渲染并署名（与创建卡同一条规则：红包是创建者的广播
+    面）。手气王只在这里出现——``EnvelopeCompletionInfo`` 只在最后一份被领取
+    时构建，中途标手气王会与终局矛盾（一致性评审 #15）。
+    """
+    creator_name = _display_name(info.creator_id)
+    lucky_king_name = _display_name(info.lucky_king_id)
+    data = EnvelopeCompletionData(
+        channel_index=info.channel_index,
+        title=info.title,
+        total_amount=info.total_amount,
+        total_count=info.total_count,
+        creator_name=creator_name,
+        duration_text=_format_duration(info.duration_seconds).strip(),
+        lucky_king_name=lucky_king_name,
+        lucky_king_amount=info.lucky_king_amount,
+        claims=tuple(
+            ClaimRow(
+                name=_display_name(claim.user_id),
+                amount=claim.amount,
+                is_lucky_king=claim.user_id == info.lucky_king_id,
+            )
+            for claim in info.claims
+        ),
+    )
+    kit = kit_for_user(info.creator_id)
+    try:
+        image = await completion_page(data, kit).render_async()
+    except Exception as e:
+        log_error(generate_error_code(), e, context="red_envelope_completion_card")
+        await claim_cmd.finish(
+            Messages.CLAIM_COMPLETE.format(
+                creator=creator_name,
+                duration=_format_duration(info.duration_seconds),
+                lucky_king=lucky_king_name,
+                lucky_amount=info.lucky_king_amount,
+            )
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+    await claim_cmd.finish(
+        image_segment(image) + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )
+
+
+def _display_name(user_id: str) -> str:
+    """昵称，缺省时退化为可区分的 玩家XXXX——结算榜每一行都要能对上人。"""
+    name = nickname.get(user_id)
+    if name:
+        return str(name)
+    return f"玩家{user_id[-4:]}" if len(user_id) >= 4 else f"玩家{user_id}"
 
 
 @list_cmd.handle()

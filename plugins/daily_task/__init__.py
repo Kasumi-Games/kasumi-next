@@ -8,6 +8,7 @@ from nonebot.matcher import Matcher
 from nonebot.adapters.satori import MessageEvent
 
 from utils import PassiveGenerator
+from utils.clock import to_bot_time
 
 from .models import DailyTaskConfig
 from .service import DailyTaskService
@@ -45,9 +46,7 @@ async def handle_daily_task(matcher: Matcher, event: MessageEvent):
     if task.is_completed:
         completed_time = ""
         if task.completed_at:
-            from datetime import datetime
-
-            completed_time = datetime.fromtimestamp(task.completed_at).strftime(
+            completed_time = to_bot_time(task.completed_at).strftime(
                 "%H 时 %M 分"
             )
         await matcher.finish(

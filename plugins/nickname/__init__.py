@@ -80,7 +80,7 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
             referrer=passive_generator.event.referrer,
         )
         await set_nickname.send(
-            "首次设置昵称免费，下次修改需要 30 个星之碎片哦"
+            "首次设置昵称免费，下次修改需要 30 Pt 哦"
             + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
@@ -89,7 +89,7 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
         balance = monetary.get(user_id=event.get_user_id())
         if balance < 30:
             await set_nickname.finish(
-                "余额不足！修改昵称需要 30 个星之碎片" + passive_generator.element,
+                "余额不足！修改昵称需要 30 Pt" + passive_generator.element,
                 referrer=passive_generator.event.referrer,
             )
         monetary.cost(

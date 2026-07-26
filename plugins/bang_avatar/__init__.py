@@ -72,13 +72,13 @@ async def handle_bang_avatar(event: MessageEvent):
                     wife.avatar_url if platform == "qqguild" else None,
                 )
                 + f"娶到 {get_user_nickname(wife.id) or 'Ta'} 了哦~"
-                + f"你手里还有 {monetary.get(user_id)} 个碎片"
+                + f"你手里还有 {monetary.get(user_id)} Pt"
                 + passive_generator.element,
                 referrer=passive_generator.event.referrer,
             )
         else:
             await bang_avatar.finish(
-                f"余额不足，你手里只有 {monetary.get(user_id)} 个碎片哦，先赚些星之碎片吧~"
+                f"余额不足，你手里只有 {monetary.get(user_id)} Pt 哦，先赚些 Pt 吧~"
                 + passive_generator.element,
                 referrer=passive_generator.event.referrer,
             )

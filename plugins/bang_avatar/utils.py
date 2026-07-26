@@ -6,6 +6,8 @@ from PIL import ImageFilter
 from aiohttp import ClientSession
 from nonebot.adapters.satori import MessageSegment
 
+from utils.images import image_segment
+
 
 def paste_img(imgbase: Image, imgadd: Image, position: tuple[int, int]) -> Image:
     """将图片粘贴到指定位置并返回结果。
@@ -113,9 +115,7 @@ def image_to_message(image: Image.Image) -> MessageSegment:
     Returns:
         图片消息段对象
     """
-    buffer = BytesIO()
-    image.save(buffer, format="PNG")
-    return MessageSegment.image(raw=buffer, mime="image/png")
+    return image_segment(image)
 
 
 def svg_to_png(svg_path: str, output_path: str, width: int, height: int) -> None:

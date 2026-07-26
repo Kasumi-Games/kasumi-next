@@ -13,13 +13,30 @@ from .database import get_session
 
 
 @dataclass
+class EnvelopeClaim:
+    """One claim on a finished envelope, in claim order."""
+
+    user_id: str
+    amount: int
+
+
+@dataclass
 class EnvelopeCompletionInfo:
-    """Info returned when an envelope is fully claimed."""
+    """Info returned when an envelope is fully claimed.
+
+    Built only on the final claim — which is why 手气王 exists nowhere before
+    the completion card (consistency review #15).
+    """
 
     creator_id: str
     duration_seconds: int
     lucky_king_id: str
     lucky_king_amount: int
+    channel_index: int
+    title: str
+    total_amount: int
+    total_count: int
+    claims: tuple[EnvelopeClaim, ...]
 
 
 EXPIRE_SECONDS = 24 * 60 * 60
@@ -225,12 +242,15 @@ def claim_envelope(
         monetary.add(user_id, amount, f"red_envelope_claim_{envelope.id}")
         logger.info(f"红包领取成功: id={envelope.id} user={user_id} amount={amount}")
 
-        # If this was the last claim, find the lucky king
+        # If this was the last claim, build the settlement: the completion
+        # card needs the full ledger in claim order. claimed_at only has
+        # second precision, so the autoincrement id breaks same-second ties.
         completion_info = None
         if is_last_claim:
             all_claims = (
                 session.query(ClaimRecord)
                 .filter(ClaimRecord.envelope_id == envelope.id)
+                .order_by(ClaimRecord.claimed_at, ClaimRecord.id)
                 .all()
             )
             lucky_king = max(all_claims, key=lambda c: c.amount)
@@ -240,6 +260,14 @@ def claim_envelope(
                 duration_seconds=duration,
                 lucky_king_id=lucky_king.user_id,
                 lucky_king_amount=lucky_king.amount,
+                channel_index=envelope.channel_index,
+                title=envelope.title,
+                total_amount=envelope.total_amount,
+                total_count=envelope.total_count,
+                claims=tuple(
+                    EnvelopeClaim(user_id=claim.user_id, amount=claim.amount)
+                    for claim in all_claims
+                ),
             )
 
         return ("success", amount, completion_info)

@@ -5,6 +5,7 @@ from datetime import datetime
 from nonebot import require
 from nonebot import get_driver
 from nonebot import on_command
+from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot.matcher import Matcher
 from nonebot.permission import SUPERUSER
@@ -14,10 +15,21 @@ from nonebot.adapters.satori import MessageEvent
 require("mailbox")
 require("daily_task")
 
-from utils import PassiveGenerator  # noqa: E402
+from utils import PassiveGenerator
 from utils import has_no_argument  # noqa: E402
+from utils.clock import bot_date
+from utils.clock import bot_today  # noqa: E402
+from utils.images import image_segment  # noqa: E402
+from utils.theming import kit_for_user  # noqa: E402
+from utils.identity import identity_for  # noqa: E402
 
 from .utils import is_number  # noqa: E402
+from .render import RankRow  # noqa: E402
+from .render import RankData  # noqa: E402
+from .render import CheckinData  # noqa: E402
+from .render import CheckinTask  # noqa: E402
+from .render import rank_page  # noqa: E402
+from .render import checkin_page  # noqa: E402
 from ..mailbox import mail_service  # noqa: E402
 from ..monetary import add  # noqa: E402
 from ..monetary import get  # noqa: E402
@@ -34,6 +46,15 @@ from ..monetary import total_xp_for_level  # noqa: E402
 from ..monetary import is_using_offseason_points  # noqa: E402
 from ..nickname import nickname  # noqa: E402
 from ..daily_task import get_today_task  # noqa: E402
+from ..daily_task import daily_task_service  # noqa: E402
+from ..monetary.database import get_session as get_monetary_session  # noqa: E402
+from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
+
+#: Streak window: every ``STREAK_WINDOW``-th consecutive day pays the bonus.
+STREAK_WINDOW = 7
+
+#: Sticker bonus paid at the end of each streak window.
+STREAK_BONUS_STICKERS = 120
 
 
 @on_command(
@@ -74,11 +95,13 @@ async def handle_daily(matcher: Matcher, event: MessageEvent):
     passive_generator = PassiveGenerator(event)
 
     user = get_user(user_id)
-    today = datetime.now().date()
+    # Product-timezone day boundary: the streak day must flip at Beijing
+    # midnight regardless of the server's timezone (utils/clock.py).
+    today = bot_today()
 
     # Broken streak detection and duplicate check (must use old last_daily_time)
     if user.last_daily_time:
-        last_date = datetime.fromtimestamp(user.last_daily_time).date()
+        last_date = bot_date(user.last_daily_time)
         if last_date == today:
             await matcher.finish(
                 "今天已经签到过了" + passive_generator.element,
@@ -94,41 +117,99 @@ async def handle_daily(matcher: Matcher, event: MessageEvent):
     # Shard reward (normal distribution 1-10)
     amount = max(1, min(10, round(random.gauss(5.5, 2))))
     add(user_id, amount, "daily")
-    level_msg = await add_xp(user_id, amount)
+
+    old_level = user.level
+    await add_xp(user_id, amount)
+    new_level = user.level
 
     # Update consecutive check-in
     user.consecutive_checkins += 1
-
-    msg = f"签到成功，获得 {amount} Pt\n"
-    if is_using_offseason_points():
-        msg += "当前是休赛期，本次获得的是临时 Pt，不会计入下一赛季。\n"
-    msg += f"当前连续签到：{user.consecutive_checkins} 天\n"
+    streak = user.consecutive_checkins
 
     # Every 7th day bonus stickers
-    if user.consecutive_checkins % 7 == 0:
-        add_star_stickers(user_id, 120, f"checkin_day_{user.consecutive_checkins}")
-        msg += (
-            f"🎉 连续签到 {user.consecutive_checkins} 天！额外获得 120 个星星贴纸！\n"
-        )
+    streak_bonus = 0
+    if streak % STREAK_WINDOW == 0:
+        streak_bonus = STREAK_BONUS_STICKERS
+        add_star_stickers(user_id, streak_bonus, f"checkin_day_{streak}")
+
+    # The streak/last_daily mutations used to persist only because a later
+    # commit on the shared monetary session happened to fire; commit them
+    # explicitly so reordering the calls above can never silently drop them.
+    get_monetary_session().commit()
 
     task = get_today_task(user_id)
-    msg += f"今日任务：【{task.name}】{task.description}\n"
-    msg += f"奖励：{task.reward} 个星星贴纸\n"
-
-    if mails := [
-        mail for mail in mail_service.get_user_mails(user_id) if not mail.is_read
-    ]:
-        msg += f"你有 {len(mails)} 封邮件，记得查看哦～\n"
-
-    await matcher.send(
-        msg + passive_generator.element, referrer=passive_generator.event.referrer
+    task_row = daily_task_service.get_today_task(user_id)
+    unread_mails = len(
+        [mail for mail in mail_service.get_user_mails(user_id) if not mail.is_read]
     )
-    if level_msg:
-        await matcher.send(
-            level_msg + passive_generator.element,
+
+    data = CheckinData(
+        nickname=identity_for(user_id).nickname,
+        reward_pt=amount,
+        balance=get(user_id),
+        offseason=is_using_offseason_points(),
+        streak=streak,
+        window_done=(streak - 1) % STREAK_WINDOW + 1,
+        window_total=STREAK_WINDOW,
+        next_bonus_day=((streak - 1) // STREAK_WINDOW + 1) * STREAK_WINDOW,
+        bonus_stickers=STREAK_BONUS_STICKERS,
+        streak_bonus=streak_bonus,
+        old_level=old_level,
+        new_level=new_level,
+        level_stickers=(
+            (new_level - old_level) * LEVEL_UP_STICKERS
+            if new_level > old_level
+            else 0
+        ),
+        task=CheckinTask(
+            name=task.name,
+            description=task.description,
+            reward=task.reward,
+            done=bool(task_row.is_completed) if task_row is not None else False,
+        ),
+        unread_mails=unread_mails,
+    )
+
+    # Theme resolution and data assembly stay on the event loop thread; only
+    # the raster is offloaded. The check-in is already committed, so a render
+    # failure must degrade to text rather than swallow the result.
+    kit = kit_for_user(user_id)
+    try:
+        image = await checkin_page(data, kit).render_async()
+    except Exception:
+        logger.opt(exception=True).warning("checkin card render failed")
+        await matcher.finish(
+            _checkin_text(data) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
-    await matcher.finish(referrer=event.referrer)
+    await matcher.finish(
+        image_segment(image) + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )
+
+
+def _checkin_text(data: CheckinData) -> str:
+    """Text fallback with the same information as the card. No emoji."""
+
+    lines = [f"签到成功，获得 {data.reward_pt} Pt"]
+    if data.offseason:
+        lines.append("当前是休赛期，本次获得的是临时 Pt，不会计入下一赛季。")
+    lines.append(f"当前连续签到：{data.streak} 天")
+    if data.streak_bonus:
+        lines.append(
+            f"连续签到 {data.streak} 天！额外获得 {data.streak_bonus} 个星星贴纸！"
+        )
+    if data.new_level > data.old_level:
+        lines.append(
+            f"升级了！Lv.{data.old_level} → Lv.{data.new_level}，"
+            f"获得 {data.level_stickers} 个星星贴纸！"
+        )
+    if data.task is not None:
+        lines.append(f"今日任务：【{data.task.name}】{data.task.description}")
+        lines.append(f"奖励：{data.task.reward} 个星星贴纸")
+    if data.unread_mails:
+        lines.append(f"你有 {data.unread_mails} 封邮件，记得查看哦～")
+    return "\n".join(lines)
 
 
 @on_command("transfer", aliases={"转账"}, priority=10, block=True).handle()
@@ -207,25 +288,74 @@ async def handle_levelrank(matcher: Matcher, event: MessageEvent):
     rank_info = get_user_rank(user_id)
     passive_generator = PassiveGenerator(event)
 
-    rank_message = f"\n你当前的排名是第 {rank_info.rank} 名"
-
-    if rank_info.rank != 1:
-        if rank_info.xp_gap > 0:
-            rank_message += f"，离上一名还差 {rank_info.xp_gap} XP"
-        else:
-            rank_message += "，与上一名相同"
-
-    await matcher.send(
-        "\n".join(
-            [
-                f"{i + 1}. {nickname.get(user.user_id) or 'Unknown'}: Lv.{user.level} (XP: {user.xp}) "
-                for i, user in enumerate(top_users)
-            ]
+    rows = tuple(
+        RankRow(
+            rank=index + 1,
+            name=_display_name(user.user_id),
+            level=user.level,
+            xp=user.xp,
         )
-        + rank_message
-        + passive_generator.element,
+        for index, user in enumerate(top_users)
+    )
+    viewer_name = _display_name(user_id)
+    viewer_row = None
+    if all(user.user_id != user_id for user in top_users):
+        viewer = get_user(user_id)
+        viewer_row = RankRow(
+            rank=rank_info.rank,
+            name=viewer_name,
+            level=viewer.level,
+            xp=viewer.xp,
+        )
+
+    data = RankData(
+        rows=rows,
+        viewer=viewer_row,
+        viewer_name=viewer_name,
+        viewer_rank=rank_info.rank,
+        xp_gap=rank_info.xp_gap,
+    )
+
+    kit = kit_for_user(user_id)
+    try:
+        image = await rank_page(data, kit).render_async()
+    except Exception:
+        logger.opt(exception=True).warning("rank card render failed")
+        await matcher.finish(
+            _rank_text(data) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+    await matcher.finish(
+        image_segment(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
+
+
+def _display_name(user_id: str) -> str:
+    """Display name for a ladder row.
+
+    Falls back to the id tail rather than the old shared ``Unknown`` string so
+    rows stay distinguishable and the viewer highlight cannot collide.
+    """
+
+    name = nickname.get(user_id)
+    if name:
+        return str(name)
+    return f"玩家{user_id[-4:]}" if len(user_id) >= 4 else f"玩家{user_id}"
+
+
+def _rank_text(data: RankData) -> str:
+    """Text fallback with the same information as the card."""
+
+    lines = [f"{row.rank}. {row.name}: Lv.{row.level} (XP: {row.xp})" for row in data.rows]
+    message = f"你当前的排名是第 {data.viewer_rank} 名"
+    if data.viewer_rank != 1:
+        if data.xp_gap > 0:
+            message += f"，离上一名还差 {data.xp_gap} XP"
+        else:
+            message += "，与上一名相同"
+    lines.append(message)
+    return "\n".join(lines)
 
 
 @on_command(

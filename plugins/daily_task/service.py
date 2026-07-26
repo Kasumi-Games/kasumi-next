@@ -9,6 +9,8 @@ from datetime import datetime
 
 from nonebot.log import logger
 
+from utils.clock import bot_now
+
 from .. import monetary
 from .models import DailyTask
 from .database import get_session
@@ -39,7 +41,7 @@ class DailyTaskService:
 
     def ensure_daily_task(self, user_id: str) -> Optional[DailyTask]:
         """Ensure the user has a daily task for today. If not, assign one."""
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = bot_now().strftime("%Y-%m-%d")
         task = (
             self.session.query(DailyTask).filter_by(user_id=user_id, date=today).first()
         )
@@ -60,7 +62,7 @@ class DailyTaskService:
 
     def get_today_task(self, user_id: str) -> Optional[DailyTask]:
         """Get the user's task for today."""
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = bot_now().strftime("%Y-%m-%d")
         return (
             self.session.query(DailyTask).filter_by(user_id=user_id, date=today).first()
         )

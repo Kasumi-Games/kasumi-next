@@ -1,9 +1,10 @@
-from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
 from nonebot import get_plugin_config
 from nonebot.adapters.satori import MessageSegment
+
+from utils.images import image_segment
 
 from .utils import paste_img
 from .utils import resize_img
@@ -75,7 +76,5 @@ def _render(base:Image,
         base = paste_img(base,star_pic,(10,y))
 
     #返回MessageSegment对象
-    buffer = BytesIO()
-    base.save(buffer, format="PNG")
-    return MessageSegment.image(raw=buffer, mime="image/png")
+    return image_segment(base)
     
