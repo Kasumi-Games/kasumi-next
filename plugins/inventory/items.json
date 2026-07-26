@@ -31,6 +31,21 @@
       }
     },
     {
+      "item_id": "bonsai",
+      "category": "currency",
+      "name": "盆栽",
+      "description": "重复获得非堆叠装扮时转换得到的永久货币。",
+      "stackable": true,
+      "visible": true,
+      "sort_order": 30,
+      "currency": {
+        "currency_kind": "permanent",
+        "unit_name": "盆",
+        "rankable": false,
+        "reset_policy": "none"
+      }
+    },
+    {
       "item_id": "frame_default",
       "category": "cosmetic",
       "name": "默认头像框",
@@ -40,7 +55,7 @@
       "sort_order": 100,
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
-        "rarity": "N"
+        "rarity": 3
       }
     },
     {
@@ -53,59 +68,260 @@
       "sort_order": 110,
       "cosmetic": {
         "cosmetic_type": "title",
-        "rarity": "R"
+        "rarity": 4
       }
     },
     {
-      "item_id": "title_s1_champion",
+      "item_id": "theme_s1_sailing",
       "category": "cosmetic",
-      "name": "扬帆之星",
+      "name": "扬帆主题",
+      "description": "扬帆主题装扮。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 170,
+      "cosmetic": {
+        "cosmetic_type": "theme",
+        "rarity": 6
+      },
+      "metadata": {
+        "kit": "sailing",
+        "aliases": [
+          "扬帆",
+          "sailing"
+        ]
+      }
+    },
+    {
+      "item_id": "theme_kasumi_starbeat",
+      "category": "cosmetic",
+      "name": "星之鼓动主题",
+      "description": "香澄角色主题：抬头看，星星在跳动。キラキラドキドキ！",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 171,
+      "cosmetic": {
+        "cosmetic_type": "theme",
+        "rarity": 6
+      },
+      "metadata": {
+        "kit": "kasumi",
+        "aliases": [
+          "香澄",
+          "kasumi",
+          "星之鼓动",
+          "starbeat"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_placeholder_r5_001",
+      "category": "cosmetic",
+      "name": "占位角色立绘 5-1",
+      "description": "抽卡占位角色立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 190,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      }
+    },
+    {
+      "item_id": "standing_art_placeholder_r5_002",
+      "category": "cosmetic",
+      "name": "占位角色立绘 5-2",
+      "description": "抽卡占位角色立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 191,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      }
+    },
+    {
+      "item_id": "standing_art_placeholder_r4_001",
+      "category": "cosmetic",
+      "name": "占位角色立绘 4-1",
+      "description": "抽卡占位角色立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 192,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      }
+    },
+    {
+      "item_id": "standing_art_placeholder_r4_002",
+      "category": "cosmetic",
+      "name": "占位角色立绘 4-2",
+      "description": "抽卡占位角色立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 193,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      }
+    },
+    {
+      "item_id": "standing_art_placeholder_r3_001",
+      "category": "cosmetic",
+      "name": "占位角色立绘 3-1",
+      "description": "抽卡占位角色立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 194,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 3
+      }
+    },
+    {
+      "item_id": "standing_art_placeholder_r3_002",
+      "category": "cosmetic",
+      "name": "占位角色立绘 3-2",
+      "description": "抽卡占位角色立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 195,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 3
+      }
+    },
+    {
+      "item_id": "title_starbeat_champion",
+      "category": "cosmetic",
+      "name": "鼓动之星",
       "description": "第一赛季冠军限定称号。",
       "stackable": false,
       "visible": true,
-      "sort_order": 120,
+      "sort_order": 200,
       "cosmetic": {
         "cosmetic_type": "title",
-        "rarity": "UR"
+        "rarity": 6
       }
     },
     {
-      "item_id": "frame_s1_champion",
+      "item_id": "title_starbeat_podium",
       "category": "cosmetic",
-      "name": "扬帆冠军头像框",
+      "name": "鼓动领奖台",
+      "description": "第一赛季前三限定称号。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 201,
+      "cosmetic": {
+        "cosmetic_type": "title",
+        "rarity": 5
+      }
+    },
+    {
+      "item_id": "title_starbeat_top10",
+      "category": "cosmetic",
+      "name": "鼓动十强",
+      "description": "第一赛季前十限定称号。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 202,
+      "cosmetic": {
+        "cosmetic_type": "title",
+        "rarity": 5
+      }
+    },
+    {
+      "item_id": "title_starbeat_top50",
+      "category": "cosmetic",
+      "name": "鼓动同频",
+      "description": "第一赛季前五十限定称号。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 203,
+      "cosmetic": {
+        "cosmetic_type": "title",
+        "rarity": 4
+      }
+    },
+    {
+      "item_id": "title_starbeat_participant",
+      "category": "cosmetic",
+      "name": "鼓动启程",
+      "description": "第一赛季参与称号。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 204,
+      "cosmetic": {
+        "cosmetic_type": "title",
+        "rarity": 3
+      }
+    },
+    {
+      "item_id": "frame_starbeat_champion",
+      "category": "cosmetic",
+      "name": "星之鼓动冠军头像框",
       "description": "第一赛季冠军限定头像框。",
       "stackable": false,
       "visible": true,
-      "sort_order": 130,
+      "sort_order": 210,
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
-        "rarity": "UR"
+        "rarity": 6
       }
     },
     {
-      "item_id": "frame_s1_top3",
+      "item_id": "frame_starbeat_podium",
       "category": "cosmetic",
-      "name": "扬帆前三头像框",
+      "name": "星之鼓动前三头像框",
       "description": "第一赛季前三限定头像框。",
       "stackable": false,
       "visible": true,
-      "sort_order": 140,
+      "sort_order": 211,
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
-        "rarity": "SR"
+        "rarity": 5
       }
     },
     {
-      "item_id": "frame_s1_top10",
+      "item_id": "frame_starbeat_top10",
       "category": "cosmetic",
-      "name": "扬帆前十头像框",
+      "name": "星之鼓动前十头像框",
       "description": "第一赛季前十限定头像框。",
       "stackable": false,
       "visible": true,
-      "sort_order": 150,
+      "sort_order": 212,
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
-        "rarity": "R"
+        "rarity": 4
+      }
+    },
+    {
+      "item_id": "frame_kasumi_starbeat",
+      "category": "cosmetic",
+      "name": "星之鼓动六星角色头像框",
+      "description": "第一赛季六星角色共享头像框。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 213,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 6
+      }
+    },
+    {
+      "item_id": "standing_art_kasumi_starbeat",
+      "category": "cosmetic",
+      "name": "户山香澄 星之鼓动立绘",
+      "description": "第一赛季六星角色立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 220,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/render/kits/kasumi/resources/standing/kasumi_starry_after_training.png"
       }
     }
   ]

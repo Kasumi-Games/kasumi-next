@@ -20,6 +20,7 @@ from .models import ItemAmount
 from .models import SeasonReward
 from .models import SeasonRanking
 from .models import SeasonRankSnapshot
+from .models import SeasonParticipation
 from .database import get_session
 
 SEASONS_PATH = Path(__file__).with_name("seasons.json")
@@ -65,9 +66,42 @@ def sync_seasons_config() -> list[Season]:
         row.config_hash = hashlib.sha256(metadata_json.encode("utf-8")).hexdigest()
         seasons.append(row)
 
+    _prune_scrapped_seasons(session, {entry["season_key"] for entry in config.get("seasons", [])})
     session.commit()
     refresh_season_statuses()
     return seasons
+
+
+def _prune_scrapped_seasons(session, config_keys: set[str]) -> None:
+    """Delete database seasons that were scrapped from the config before running.
+
+    Only seasons that never happened are touched: a row is removed when its key
+    is gone from ``seasons.json``, it never left the ``planned`` state, and it
+    has no rankings, rewards, or participation. Anything a player interacted
+    with stays, even if its config disappears — that is a data problem to solve
+    by hand, not silently.
+    """
+
+    orphans = (
+        session.query(Season)
+        .filter(~Season.season_key.in_(config_keys))
+        .all()
+        if config_keys
+        else session.query(Season).all()
+    )
+    for season in orphans:
+        if season.status not in ("planned", ""):
+            continue
+        if season.settled_at:
+            continue
+        has_history = any(
+            session.query(model).filter(model.season_id == season.id).first()
+            is not None
+            for model in (SeasonRanking, SeasonReward, SeasonParticipation)
+        )
+        if has_history:
+            continue
+        session.delete(season)
 
 
 def refresh_season_statuses(now: int | None = None) -> None:
@@ -168,6 +202,30 @@ def get_season_metadata(season: Season) -> dict[str, Any]:
     return json.loads(season.metadata_json)
 
 
+def mark_participated(user_id: str, season_id: int, now: int | None = None) -> None:
+    now = int(time.time()) if now is None else now
+    session = get_session()
+    row = (
+        session.query(SeasonParticipation)
+        .filter(
+            SeasonParticipation.season_id == season_id,
+            SeasonParticipation.user_id == user_id,
+        )
+        .first()
+    )
+    if row is None:
+        row = SeasonParticipation(
+            season_id=season_id,
+            user_id=user_id,
+            first_participated_at=now,
+            last_participated_at=now,
+        )
+        session.add(row)
+        session.flush()
+        return
+    row.last_participated_at = now
+
+
 def get_active_ranking(limit: int = 50, season: Season | None = None) -> list[UserItem]:
     season = season or get_current_season()
     if season is None:
@@ -257,6 +315,8 @@ def settle_season(season_key: str, now: int | None = None) -> int:
     ranking_rows = _season_point_query(season.id).all()
     metadata = get_season_metadata(season)
     reward_tiers = metadata.get("reward_tiers", [])
+    participation_tier = _participation_tier(metadata)
+    participated_user_ids = _participated_user_ids(season.id)
     created_rewards = 0
 
     for idx, row in enumerate(ranking_rows, start=1):
@@ -275,6 +335,8 @@ def settle_season(season_key: str, now: int | None = None) -> int:
         ranking.rank = idx
 
         tier = _reward_tier_for_rank(reward_tiers, idx)
+        if row.user_id in participated_user_ids:
+            tier = _merge_reward_tiers(tier, participation_tier)
         if tier:
             reward_json = json.dumps(tier, ensure_ascii=False, sort_keys=True)
             ranking.reward_summary_json = reward_json
@@ -283,6 +345,12 @@ def settle_season(season_key: str, now: int | None = None) -> int:
         else:
             ranking.reward_summary_json = "{}"
 
+    ranked_user_ids = {row.user_id for row in ranking_rows}
+    if participation_tier:
+        for user_id in sorted(participated_user_ids - ranked_user_ids):
+            if _ensure_reward_mail(season, user_id, 0, 0, participation_tier, now):
+                created_rewards += 1
+
     season.settled_at = now
     season.status = "settled"
     session.commit()
@@ -290,6 +358,62 @@ def settle_season(season_key: str, now: int | None = None) -> int:
         f"Season settled: {season.season_key}, rankings={len(ranking_rows)}, rewards={created_rewards}"
     )
     return len(ranking_rows)
+
+
+def grant_featured_character_reward(
+    user_id: str,
+    season_key: str,
+    character_id: str,
+    *,
+    idempotency_key: str | None = None,
+):
+    season = get_season_by_key(season_key)
+    if season is None:
+        raise ValueError(f"unknown season: {season_key}")
+    metadata = get_season_metadata(season)
+    character = _featured_character(metadata, character_id)
+    if character is None:
+        raise ValueError(f"unknown featured character: {character_id}")
+
+    from .service import grant_item
+    from .service import get_quantity
+
+    featured = metadata.get("featured_characters", [])
+    owned_before = any(
+        get_quantity(user_id, _standing_art_item_id(entry)) > 0
+        for entry in featured
+        if _standing_art_item_id(entry)
+    )
+    results = [
+        grant_item(
+            user_id,
+            _standing_art_item_id(character),
+            1,
+            "season_gacha_featured_character",
+            source_type="season_gacha",
+            source_id=f"{season.season_key}:{character_id}",
+            idempotency_key=idempotency_key,
+        )
+    ]
+    if owned_before:
+        return results
+
+    frame_item_id = metadata.get("gacha_character_frame_item_id")
+    theme_item_id = metadata.get("gacha_theme_item_id")
+    for item_id in (frame_item_id, theme_item_id):
+        if item_id:
+            results.append(
+                grant_item(
+                    user_id,
+                    item_id,
+                    1,
+                    "season_gacha_first_featured_character",
+                    source_type="season_gacha",
+                    source_id=f"{season.season_key}:{character_id}",
+                    idempotency_key=idempotency_key,
+                )
+            )
+    return results
 
 
 def list_settled_rankings(season: Season, limit: int = 50) -> list[SeasonRanking]:
@@ -349,13 +473,20 @@ def _ensure_reward_mail(
         ItemAmount(item_id=item["item_id"], quantity=int(item["quantity"]))
         for item in tier.get("items", [])
     ]
+    if rank > 0:
+        content = (
+            f"{season.name} 已结束！你以 {points} Pt 获得第 {rank} 名。\n"
+            "奖励已经放在这封邮件里了，感谢参与本赛季。"
+        )
+    else:
+        content = (
+            f"{season.name} 已结束！你完成了本赛季参与。\n"
+            "奖励已经放在这封邮件里了，感谢参与本赛季。"
+        )
     mail_id = MailService().send_mail(
         recipient_id=user_id,
         title=f"{season.name} {tier.get('title', '赛季奖励')}",
-        content=(
-            f"{season.name} 已结束！你以 {points} Pt 获得第 {rank} 名。\n"
-            "奖励已经放在这封邮件里了，感谢参与本赛季。"
-        ),
+        content=content,
         attachments=attachments,
         expire_days=30,
         sender_id="season",
@@ -386,12 +517,81 @@ def _reward_tier_for_rank(
     return None
 
 
+def _participation_tier(metadata: dict[str, Any]) -> dict[str, Any] | None:
+    if tier := metadata.get("participation_reward"):
+        return tier
+    for tier in metadata.get("reward_tiers", []):
+        if tier.get("tier_key") == "participation":
+            return tier
+    return None
+
+
+def _participated_user_ids(season_id: int) -> set[str]:
+    rows = (
+        get_session()
+        .query(SeasonParticipation.user_id)
+        .filter(SeasonParticipation.season_id == season_id)
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def _merge_reward_tiers(
+    rank_tier: dict[str, Any] | None, participation_tier: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    if rank_tier is None:
+        return participation_tier
+    if participation_tier is None:
+        return rank_tier
+    items = list(rank_tier.get("items", []))
+    existing_item_ids = {item.get("item_id") for item in items}
+    for item in participation_tier.get("items", []):
+        if item.get("item_id") not in existing_item_ids:
+            items.append(item)
+    merged = dict(rank_tier)
+    merged["items"] = items
+    merged["participation_tier_key"] = participation_tier.get("tier_key")
+    return merged
+
+
+def _featured_character(
+    metadata: dict[str, Any], character_id: str
+) -> dict[str, Any] | None:
+    for character in metadata.get("featured_characters", []):
+        if str(character.get("character_id")) == character_id:
+            return character
+    return None
+
+
+def _standing_art_item_id(character: dict[str, Any]) -> str:
+    return character.get("standing_art_item_id") or character.get("item_id", "")
+
+
 def _validate_reward_items(config: dict[str, Any]) -> None:
     session = get_session()
     known_item_ids = {row.item_id for row in session.query(Item.item_id).all()}
     missing = []
     for season in config.get("seasons", []):
+        for item_id in (
+            season.get("gacha_character_frame_item_id"),
+            season.get("gacha_theme_item_id"),
+        ):
+            if item_id and item_id not in known_item_ids:
+                missing.append(item_id)
+        for character in season.get("featured_characters", []):
+            item_id = _standing_art_item_id(character)
+            if item_id and item_id not in known_item_ids:
+                missing.append(item_id)
+        if banner := season.get("gacha_banner"):
+            for entry in banner.get("entries", []):
+                item_id = entry.get("item_id")
+                if item_id and item_id not in known_item_ids:
+                    missing.append(item_id)
         for tier in season.get("reward_tiers", []):
+            for item in tier.get("items", []):
+                if item["item_id"] not in known_item_ids:
+                    missing.append(item["item_id"])
+        if tier := season.get("participation_reward"):
             for item in tier.get("items", []):
                 if item["item_id"] not in known_item_ids:
                     missing.append(item["item_id"])

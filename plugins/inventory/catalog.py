@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+from nonebot.log import logger
+
 from .models import Item
 from .models import CosmeticItem
 from .models import CurrencyItem
@@ -57,6 +59,18 @@ def sync_catalog() -> None:
                 row = CosmeticItem(item_id=item.item_id)
                 session.add(row)
             row.cosmetic_type = cosmetic["cosmetic_type"]
-            row.rarity = cosmetic.get("rarity", "N")
+            row.rarity = int(cosmetic.get("rarity", 1))
 
     session.commit()
+    _invalidate_theme_cache()
+
+
+def _invalidate_theme_cache() -> None:
+    """Drop cached theme metadata so a catalog edit takes effect immediately."""
+
+    try:
+        from utils.theming import invalidate_catalog
+
+        invalidate_catalog()
+    except Exception:
+        logger.opt(exception=True).debug("theme catalog cache invalidation skipped")

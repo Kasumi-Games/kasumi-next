@@ -2,6 +2,9 @@ import time
 import datetime
 from typing import List
 
+from utils.clock import bot_date
+from utils.clock import bot_today
+
 from .models import User
 from .models import TransactionCategory
 from .database import get_session
@@ -149,9 +152,10 @@ def daily_checkin(user_id: str) -> bool:
     session = get_session()
     user = get_user(user_id)
 
-    # Convert last_daily_time to date
-    last_checkin_date = datetime.datetime.fromtimestamp(user.last_daily_time).date()
-    today = datetime.datetime.now().date()
+    # Convert last_daily_time to date at the product-timezone day boundary
+    # (utils/clock.py): check-in must reset at Beijing midnight everywhere.
+    last_checkin_date = bot_date(user.last_daily_time)
+    today = bot_today()
 
     if last_checkin_date != today:
         user.last_daily_time = time.time()

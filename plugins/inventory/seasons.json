@@ -5,12 +5,113 @@
     {
       "season_key": "2026-s01",
       "number": 1,
-      "name": "Kasumi，扬帆起航",
-      "starts_at": "2026-06-01T00:00:00+08:00",
-      "ends_at": "2026-06-29T00:00:00+08:00",
+      "name": "星之鼓动",
+      "starts_at": "2026-08-01T00:00:00+08:00",
+      "ends_at": "2026-08-29T00:00:00+08:00",
       "starting_points": 0,
       "snapshot_interval_minutes": 60,
-      "snapshot_ranks": [10, 50],
+      "snapshot_ranks": [
+        10,
+        50
+      ],
+      "featured_characters": [
+        {
+          "character_id": "kasumi",
+          "name": "户山香澄",
+          "standing_art_item_id": "standing_art_kasumi_starbeat",
+          "rarity": 6
+        }
+      ],
+      "gacha_character_frame_item_id": "frame_kasumi_starbeat",
+      "gacha_theme_item_id": "theme_kasumi_starbeat",
+      "gacha_banner": {
+        "banner_key": "2026-s01-limited",
+        "name": "星之鼓动 限定卡池",
+        "single_cost": 120,
+        "ten_cost": 1200,
+        "soft_pity_start": 70,
+        "hard_pity": 90,
+        "rates": [
+          {
+            "rarity": 6,
+            "rate": 0.01
+          },
+          {
+            "rarity": 5,
+            "rate": 0.09
+          },
+          {
+            "rarity": 4,
+            "rate": 0.3
+          },
+          {
+            "rarity": 3,
+            "rate": 0.6
+          }
+        ],
+        "entries": [
+          {
+            "item_id": "standing_art_kasumi_starbeat",
+            "character_id": "kasumi",
+            "name": "户山香澄 星之鼓动立绘",
+            "rarity": 6,
+            "weight": 1,
+            "featured": true
+          },
+          {
+            "item_id": "standing_art_placeholder_r5_001",
+            "character_id": "placeholder_r5_001",
+            "name": "占位角色立绘 5-1",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_placeholder_r5_002",
+            "character_id": "placeholder_r5_002",
+            "name": "占位角色立绘 5-2",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_placeholder_r4_001",
+            "character_id": "placeholder_r4_001",
+            "name": "占位角色立绘 4-1",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_placeholder_r4_002",
+            "character_id": "placeholder_r4_002",
+            "name": "占位角色立绘 4-2",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_placeholder_r3_001",
+            "character_id": "placeholder_r3_001",
+            "name": "占位角色立绘 3-1",
+            "rarity": 3,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_placeholder_r3_002",
+            "character_id": "placeholder_r3_002",
+            "name": "占位角色立绘 3-2",
+            "rarity": 3,
+            "weight": 1
+          }
+        ]
+      },
+      "participation_reward": {
+        "tier_key": "participation",
+        "title": "赛季参与奖励",
+        "items": [
+          {
+            "item_id": "title_starbeat_participant",
+            "quantity": 1
+          }
+        ]
+      },
       "reward_tiers": [
         {
           "tier_key": "rank_1",
@@ -18,9 +119,22 @@
           "to_rank": 1,
           "title": "赛季冠军奖励",
           "items": [
-            {"item_id": "star_sticker", "quantity": 500},
-            {"item_id": "title_s1_champion", "quantity": 1},
-            {"item_id": "frame_s1_champion", "quantity": 1}
+            {
+              "item_id": "star_sticker",
+              "quantity": 500
+            },
+            {
+              "item_id": "title_starbeat_champion",
+              "quantity": 1
+            },
+            {
+              "item_id": "frame_starbeat_champion",
+              "quantity": 1
+            },
+            {
+              "item_id": "theme_kasumi_starbeat",
+              "quantity": 1
+            }
           ]
         },
         {
@@ -29,8 +143,22 @@
           "to_rank": 3,
           "title": "赛季前三奖励",
           "items": [
-            {"item_id": "star_sticker", "quantity": 300},
-            {"item_id": "frame_s1_top3", "quantity": 1}
+            {
+              "item_id": "star_sticker",
+              "quantity": 300
+            },
+            {
+              "item_id": "title_starbeat_podium",
+              "quantity": 1
+            },
+            {
+              "item_id": "frame_starbeat_podium",
+              "quantity": 1
+            },
+            {
+              "item_id": "theme_kasumi_starbeat",
+              "quantity": 1
+            }
           ]
         },
         {
@@ -39,8 +167,18 @@
           "to_rank": 10,
           "title": "赛季前十奖励",
           "items": [
-            {"item_id": "star_sticker", "quantity": 200},
-            {"item_id": "frame_s1_top10", "quantity": 1}
+            {
+              "item_id": "star_sticker",
+              "quantity": 200
+            },
+            {
+              "item_id": "title_starbeat_top10",
+              "quantity": 1
+            },
+            {
+              "item_id": "frame_starbeat_top10",
+              "quantity": 1
+            }
           ]
         },
         {
@@ -49,7 +187,14 @@
           "to_rank": 50,
           "title": "赛季前五十奖励",
           "items": [
-            {"item_id": "star_sticker", "quantity": 100}
+            {
+              "item_id": "star_sticker",
+              "quantity": 100
+            },
+            {
+              "item_id": "title_starbeat_top50",
+              "quantity": 1
+            }
           ]
         }
       ]

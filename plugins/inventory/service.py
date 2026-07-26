@@ -1,9 +1,13 @@
 """Inventory service APIs."""
 
+import re
 import time
 from typing import Iterable
 from typing import Optional
 
+from nonebot.log import logger
+
+from .models import BONSAI_ITEM_ID
 from .models import SEASON_SCOPE_TYPE
 from .models import PERMANENT_SCOPE_ID
 from .models import OFFSEASON_SCOPE_TYPE
@@ -15,12 +19,41 @@ from .models import UserItem
 from .models import ItemScope
 from .models import ItemAmount
 from .models import GrantResult
+from .models import UserProfile
 from .models import CosmeticItem
 from .models import EquippedItem
 from .models import ItemTransaction
 from .database import get_session
 from .season_service import get_point_scope
 from .season_service import get_offseason_starting_points
+
+PROFILE_DESCRIPTION_MAX_LENGTH = 100
+PROFILE_DESCRIPTION_PATTERN = re.compile(
+    r"^[A-Za-z0-9\u3400-\u4dbf\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff"
+    r" .,!?~\-_/：:;'\"()\[\]，。！？、；\n]*$"
+)
+
+DUPLICATE_BONSAI_COMPENSATION = {
+    "avatar_frame": {
+        6: 12,
+        5: 10,
+        4: 8,
+        3: 6,
+        2: 3,
+        1: 2,
+    },
+    "standing_art": {
+        6: 60,
+        5: 50,
+        4: 40,
+        3: 30,
+        2: 15,
+        1: 10,
+    },
+    "theme": {
+        6: 120,
+    },
+}
 
 
 def get_item(item_id: str) -> Item | None:
@@ -114,6 +147,16 @@ def grant_item(
 
     row = _ensure_user_item(user_id, item_id, scope_type, scope_id)
     if not item.stackable and row.quantity > 0:
+        compensation = _duplicate_compensation(item)
+        if compensation > 0:
+            _grant_duplicate_compensation(
+                user_id,
+                compensation,
+                reason,
+                source_type,
+                source_id,
+                tx_key,
+            )
         _log_transaction(
             user_id,
             item_id,
@@ -127,13 +170,21 @@ def grant_item(
             tx_key,
         )
         session.commit()
+        message = (
+            f"already_owned_compensated:{compensation}"
+            if compensation > 0
+            else "already_owned"
+        )
         return GrantResult(
-            item_id, quantity, 0, row.quantity, skipped=True, message="already_owned"
+            item_id, quantity, 0, row.quantity, skipped=True, message=message
         )
 
     granted = quantity if item.stackable else 1
     row.quantity += granted
     row.updated_at = int(time.time())
+    _mark_season_participation_if_needed(
+        user_id, item_id, scope_type, scope_id, granted
+    )
     _log_transaction(
         user_id,
         item_id,
@@ -171,6 +222,9 @@ def cost_item(
 
     row.quantity -= quantity
     row.updated_at = int(time.time())
+    _mark_season_participation_if_needed(
+        user_id, item_id, scope_type, scope_id, -quantity
+    )
     _log_transaction(
         user_id,
         item_id,
@@ -206,6 +260,7 @@ def set_quantity(
     delta = quantity - row.quantity
     row.quantity = quantity
     row.updated_at = int(time.time())
+    _mark_season_participation_if_needed(user_id, item_id, scope_type, scope_id, delta)
     _log_transaction(
         user_id,
         item_id,
@@ -248,7 +303,9 @@ def equip_cosmetic(user_id: str, item_id: str) -> EquippedItem:
 
     equipped = (
         session.query(EquippedItem)
-        .filter(EquippedItem.user_id == user_id, EquippedItem.slot == cosmetic.cosmetic_type)
+        .filter(
+            EquippedItem.user_id == user_id, EquippedItem.slot == cosmetic.cosmetic_type
+        )
         .first()
     )
     if equipped is None:
@@ -257,6 +314,7 @@ def equip_cosmetic(user_id: str, item_id: str) -> EquippedItem:
     equipped.item_id = item_id
     equipped.updated_at = int(time.time())
     session.commit()
+    _invalidate_theme_cache(user_id, cosmetic.cosmetic_type)
     return equipped
 
 
@@ -272,12 +330,64 @@ def unequip_cosmetic(user_id: str, slot: str) -> bool:
         return False
     session.delete(equipped)
     session.commit()
+    _invalidate_theme_cache(user_id, slot)
     return True
 
 
+def _invalidate_theme_cache(user_id: str, slot: str) -> None:
+    """Drop this user's cached render kit after a theme equip changes.
+
+    The theme cache has a TTL backstop, so a miss here costs at most a couple of
+    minutes of stale theme rather than correctness. Import is function-local
+    because ``utils.theming`` reaches back into this module.
+    """
+
+    if slot != "theme":
+        return
+    try:
+        from utils.theming import invalidate_user
+
+        invalidate_user(user_id)
+    except Exception:
+        logger.opt(exception=True).debug("theme cache invalidation skipped")
+
+
 def get_equipped(user_id: str) -> dict[str, str]:
-    rows = get_session().query(EquippedItem).filter(EquippedItem.user_id == user_id).all()
+    rows = (
+        get_session().query(EquippedItem).filter(EquippedItem.user_id == user_id).all()
+    )
     return {row.slot: row.item_id for row in rows}
+
+
+def set_profile_description(user_id: str, description: str) -> UserProfile:
+    normalized = validate_profile_description(description)
+    session = get_session()
+    profile = session.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+    if profile is None:
+        profile = UserProfile(user_id=user_id, updated_at=int(time.time()))
+        session.add(profile)
+    profile.profile_description = normalized
+    profile.updated_at = int(time.time())
+    session.commit()
+    return profile
+
+
+def get_profile_description(user_id: str) -> str:
+    profile = (
+        get_session().query(UserProfile).filter(UserProfile.user_id == user_id).first()
+    )
+    return profile.profile_description if profile else ""
+
+
+def validate_profile_description(description: str) -> str:
+    normalized = description.replace("\r\n", "\n").replace("\r", "\n")
+    normalized = "\n".join(line.strip() for line in normalized.split("\n"))
+    normalized = "\n".join(line for line in normalized.split("\n") if line)
+    if len(normalized) > PROFILE_DESCRIPTION_MAX_LENGTH:
+        raise ValueError("个人简介最多 100 个字符")
+    if not PROFILE_DESCRIPTION_PATTERN.fullmatch(normalized):
+        raise ValueError("个人简介只能使用常见中日英文字、数字、空格和基础标点")
+    return normalized
 
 
 def parse_item_amount(text: str) -> ItemAmount:
@@ -320,6 +430,10 @@ def _normalize_slot(slot: str) -> str:
         "avatar_frame": "avatar_frame",
         "称号": "title",
         "title": "title",
+        "主题": "theme",
+        "theme": "theme",
+        "立绘": "standing_art",
+        "standing_art": "standing_art",
     }
     if slot not in aliases:
         raise ValueError("unknown cosmetic slot")
@@ -368,6 +482,53 @@ def _ensure_user_item(
     return row
 
 
+def _duplicate_compensation(item: Item) -> int:
+    if item.cosmetic is None:
+        return 0
+    by_rarity = DUPLICATE_BONSAI_COMPENSATION.get(item.cosmetic.cosmetic_type, {})
+    return by_rarity.get(int(item.cosmetic.rarity), 0)
+
+
+def _grant_duplicate_compensation(
+    user_id: str,
+    amount: int,
+    reason: str,
+    source_type: str,
+    source_id: str,
+    idempotency_key: str | None,
+) -> None:
+    bonsai = _require_item(BONSAI_ITEM_ID)
+    scope_type, scope_id = resolve_scope(bonsai.item_id)
+    tx_key = None if idempotency_key is None else f"{idempotency_key}:duplicate_bonsai"
+    if tx_key and _has_transaction(tx_key):
+        return
+    row = _ensure_user_item(user_id, bonsai.item_id, scope_type, scope_id)
+    row.quantity += amount
+    row.updated_at = int(time.time())
+    _log_transaction(
+        user_id,
+        bonsai.item_id,
+        scope_type,
+        scope_id,
+        amount,
+        row.quantity,
+        f"duplicate_compensation:{reason}",
+        source_type,
+        source_id,
+        tx_key,
+    )
+
+
+def _mark_season_participation_if_needed(
+    user_id: str, item_id: str, scope_type: str, scope_id: str, delta: int
+) -> None:
+    if item_id != SEASON_POINT_ITEM_ID or scope_type != SEASON_SCOPE_TYPE or delta == 0:
+        return
+    from .season_service import mark_participated
+
+    mark_participated(user_id, int(scope_id))
+
+
 def _ensure_point_wallet(user_id: str, scope_type: str, scope_id: str) -> UserItem:
     session = get_session()
     row = _ensure_user_item(user_id, SEASON_POINT_ITEM_ID, scope_type, scope_id)
@@ -412,7 +573,9 @@ def _tx_key(
 ) -> str | None:
     if not idempotency_key:
         return None
-    return f"{idempotency_key}:user:{user_id}:item:{item_id}:scope:{scope_type}:{scope_id}"
+    return (
+        f"{idempotency_key}:user:{user_id}:item:{item_id}:scope:{scope_type}:{scope_id}"
+    )
 
 
 def _has_transaction(idempotency_key: str) -> bool:

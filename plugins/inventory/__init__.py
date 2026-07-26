@@ -3,22 +3,32 @@
 from nonebot import require
 from nonebot import get_driver
 from nonebot import on_command
+from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot.matcher import Matcher
 from nonebot.exception import MatcherException
 from nonebot.permission import SUPERUSER
 from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
-from nonebot.adapters.satori import MessageSegment
 
 from utils import PassiveGenerator
+from utils.clock import format_ts
+from utils.images import image_segment
+from utils.theming import kit_for_user
+from utils.identity import identity_for
 
 require("nonebot_plugin_apscheduler")
 
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
+from .. import monetary  # noqa: E402
+from .models import BONSAI_ITEM_ID  # noqa: E402
 from .models import SEASON_POINT_ITEM_ID  # noqa: E402
+from .models import STAR_STICKER_ITEM_ID  # noqa: E402
 from .models import ItemAmount  # noqa: E402
+from .render import ProfileData  # noqa: E402
+from .render import profile_page  # noqa: E402
+from .service import get_item  # noqa: E402
 from .service import get_equipped  # noqa: E402
 from .service import get_quantity  # noqa: E402
 from .service import display_scope  # noqa: E402
@@ -27,9 +37,13 @@ from .service import list_inventory  # noqa: E402
 from .service import unequip_cosmetic  # noqa: E402
 from .service import parse_item_amount  # noqa: E402
 from .service import display_item_amount  # noqa: E402
+from .service import get_profile_description  # noqa: E402
+from .service import set_profile_description  # noqa: E402
 from .database import init_database  # noqa: E402
-from .season_render import render_snapshot_trend  # noqa: E402
+from .season_render import season_trend_data  # noqa: E402
+from .season_render import season_trend_page  # noqa: E402
 from .season_service import settle_season  # noqa: E402
+from .season_service import list_snapshots  # noqa: E402
 from .season_service import get_latest_season  # noqa: E402
 from .season_service import get_season_by_key  # noqa: E402
 from .season_service import get_active_ranking  # noqa: E402
@@ -38,11 +52,30 @@ from .season_service import settle_due_seasons  # noqa: E402
 from .season_service import get_user_season_rank  # noqa: E402
 from .season_service import list_settled_rankings  # noqa: E402
 from .season_service import capture_rank_snapshots  # noqa: E402
+from .season_service import grant_featured_character_reward  # noqa: E402
 
 
 @get_driver().on_startup
 async def init():
     init_database()
+    _report_theme_catalog_problems()
+
+
+def _report_theme_catalog_problems() -> None:
+    """Log theme catalog problems at startup without blocking the boot.
+
+    A cosmetic mapped to a missing kit degrades to the default theme at render
+    time, so it must never stop the bot from starting. ``tests/test_theming.py``
+    turns the same check into a hard CI failure.
+    """
+
+    try:
+        from utils.theming import validate_theme_catalog
+
+        for problem in validate_theme_catalog():
+            logger.error(f"theme catalog: {problem}")
+    except Exception:
+        logger.opt(exception=True).error("theme catalog validation failed")
 
 
 @get_driver().on_startup
@@ -152,7 +185,7 @@ async def handle_cosmetic(
             )
 
         await matcher.finish(
-            "用法：装扮 / 装扮 装备 <item_id> / 装扮 卸下 <头像框|称号>"
+            "用法：装扮 / 装扮 装备 <item_id> / 装扮 卸下 <头像框|称号|主题|立绘>"
             + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
@@ -177,6 +210,24 @@ async def handle_season(
     passive_generator = PassiveGenerator(event)
 
     parts = text.split()
+    if len(parts) == 4 and parts[0] == "grant-character":
+        if user_id not in get_driver().config.superusers:
+            await matcher.finish(referrer=event.referrer)
+        results = grant_featured_character_reward(
+            parts[2],
+            parts[1],
+            parts[3],
+            idempotency_key=f"admin_grant_character:{parts[1]}:{parts[3]}",
+        )
+        lines = [
+            f"{result.item_id}: {result.message or 'granted'}"
+            for result in results
+        ]
+        await matcher.finish(
+            "已发放六星角色奖励：\n" + "\n".join(lines) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
     if len(parts) == 2 and parts[0] == "settle":
         if user_id not in get_driver().config.superusers:
             await matcher.finish(referrer=event.referrer)
@@ -194,7 +245,8 @@ async def handle_season(
 
     if text:
         await matcher.finish(
-            "用法：/赛季 或 /season settle <season_key>" + passive_generator.element,
+            "用法：/赛季 /season settle <season_key> /season grant-character <season_key> <user_id> <character_id>"
+            + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
@@ -270,6 +322,7 @@ season_trend_cmd = on_command(
 
 @season_trend_cmd.handle()
 async def handle_season_trend(matcher: Matcher, event: MessageEvent):
+    user_id = event.get_user_id()
     passive_generator = PassiveGenerator(event)
     season = get_current_season() or get_latest_season()
     if season is None:
@@ -278,16 +331,25 @@ async def handle_season_trend(matcher: Matcher, event: MessageEvent):
             referrer=passive_generator.event.referrer,
         )
 
+    # Data, kit, and identity resolve on the event loop thread — the
+    # inventory session is process-global and not thread safe — and only the
+    # raster is offloaded.
     try:
-        chart = render_snapshot_trend(season)
+        data = season_trend_data(
+            season,
+            list_snapshots(season),
+            owner_name=identity_for(user_id).nickname,
+        )
     except ValueError:
         await matcher.finish(
             "还没有足够的赛季趋势快照。" + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
+    kit = kit_for_user(user_id)
+    image = await season_trend_page(data, kit).render_async()
     await matcher.finish(
-        MessageSegment.image(raw=chart, mime="image/png") + passive_generator.element,
+        image_segment(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -343,6 +405,52 @@ async def handle_season_history(matcher: Matcher, event: MessageEvent):
     )
 
 
+profile_cmd = on_command(
+    "profile", aliases={"资料", "个人资料"}, priority=10, block=True
+)
+
+
+@profile_cmd.handle()
+async def handle_profile(
+    matcher: Matcher, event: MessageEvent, arg: Message = CommandArg()
+):
+    user_id = event.get_user_id()
+    text = arg.extract_plain_text().strip()
+    passive_generator = PassiveGenerator(event)
+
+    if not text:
+        # kit/identity/data on the event loop thread; only the raster is
+        # offloaded — the inventory session is process-global and not
+        # thread safe.
+        kit = kit_for_user(user_id)
+        data = _assemble_profile(user_id)
+        image = await profile_page(data, kit).render_async()
+        await matcher.finish(
+            image_segment(image) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    parts = text.split(maxsplit=1)
+    if parts[0] in {"简介", "description", "desc"}:
+        description = parts[1] if len(parts) > 1 else ""
+        try:
+            set_profile_description(user_id, description)
+        except ValueError as e:
+            await matcher.finish(
+                str(e) + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
+        await matcher.finish(
+            "已更新个人简介。" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    await matcher.finish(
+        "用法：/资料 或 /资料 简介 <100字以内文本>" + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )
+
+
 season_admin_cmd = on_command(
     "seasonadmin",
     aliases={"season-admin"},
@@ -380,10 +488,54 @@ async def handle_season_admin(
     )
 
 
+#: Fixed display order for equipped cosmetics on the profile card, matching
+#: the slot vocabulary of ``/装扮 卸下 <头像框|称号|主题|立绘>``.
+_COSMETIC_SLOT_LABELS = (
+    ("avatar_frame", "头像框"),
+    ("title", "称号"),
+    ("theme", "主题"),
+    ("standing_art", "立绘"),
+)
+
+
+def _assemble_profile(user_id: str) -> ProfileData:
+    """Gather everything the profile card shows.
+
+    Handler-side by design: the render function touches no database. Call on
+    the event loop thread only.
+    """
+
+    season = get_current_season()
+    season_rank: int | None = None
+    if season is not None:
+        rank, _points = get_user_season_rank(user_id, season)
+        season_rank = rank
+
+    equipped: list[tuple[str, str]] = []
+    equipped_map = get_equipped(user_id)
+    for slot, label in _COSMETIC_SLOT_LABELS:
+        item_id = equipped_map.get(slot)
+        if not item_id:
+            continue
+        item = get_item(item_id)
+        equipped.append((label, item.name if item else item_id))
+
+    return ProfileData(
+        identity=identity_for(user_id),
+        current_pt=monetary.get(user_id),
+        description=get_profile_description(user_id),
+        star_stickers=get_quantity(user_id, STAR_STICKER_ITEM_ID),
+        bonsai=get_quantity(user_id, BONSAI_ITEM_ID),
+        season_name=season.name if season else None,
+        season_rank=season_rank,
+        equipped=tuple(equipped),
+    )
+
+
 def _format_time(timestamp: int) -> str:
     import datetime
 
-    return datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
+    return format_ts(timestamp)
 
 
 def _display_name(user_id: str) -> str:

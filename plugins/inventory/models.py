@@ -22,6 +22,7 @@ OFFSEASON_SCOPE_TYPE = "offseason"
 
 STAR_STICKER_ITEM_ID = "star_sticker"
 SEASON_POINT_ITEM_ID = "season_point"
+BONSAI_ITEM_ID = "bonsai"
 
 
 class Item(Base):
@@ -56,8 +57,8 @@ class CosmeticItem(Base):
     __tablename__ = "cosmetic_items"
 
     item_id = Column(String, ForeignKey("items.item_id"), primary_key=True)
-    cosmetic_type = Column(String, nullable=False)  # avatar_frame | title
-    rarity = Column(String, default="N", nullable=False)
+    cosmetic_type = Column(String, nullable=False)  # avatar_frame | title | theme | standing_art
+    rarity = Column(Integer, default=1, nullable=False)
 
     item = relationship("Item", back_populates="cosmetic")
 
@@ -184,6 +185,28 @@ class SeasonReward(Base):
     __table_args__ = (
         UniqueConstraint("season_id", "user_id", name="uq_season_reward_user"),
     )
+
+
+class SeasonParticipation(Base):
+    __tablename__ = "season_participation"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    season_id = Column(Integer, nullable=False, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    first_participated_at = Column(Integer, nullable=False)
+    last_participated_at = Column(Integer, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("season_id", "user_id", name="uq_season_participation_user"),
+    )
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    user_id = Column(String, primary_key=True)
+    profile_description = Column(Text, default="", nullable=False)
+    updated_at = Column(Integer, nullable=False)
 
 
 class MigrationState(Base):
