@@ -20,12 +20,12 @@ def _ranking_rows(kit: BaseKit, rows: LeaderboardRows):
             name, elapsed = rows[idx]
             name_text = f"{idx + 1}. {name}"
             time_text = f"{elapsed:.2f}s"
-            color = (70, 70, 85, 255)
-            time_color = (90, 90, 105, 255)
+            color = kit.text_color
+            time_color = kit.text_color
         else:
             name_text = f"{idx + 1}. --"
             time_text = ""
-            color = (130, 130, 145, 255)
+            color = kit.muted_text_color
             time_color = color
         row_components.append(
             Frame(
@@ -144,7 +144,6 @@ def _ranking_panel(kit: BaseKit, title: str, rows: LeaderboardRows):
         width=Fixed(360),
         height=Fixed(759),
         padding=Insets.only(left=20, top=18, right=20, bottom=24),
-        fill=(255, 255, 255, 208),
         radius=48,
     )
 
@@ -169,7 +168,6 @@ def _title_bar(
             kit.text(
                 f"{title} - {subtitle}",
                 font_size=24,
-                color=(255, 255, 255, 255),
                 align="center",
                 max_lines=1,
             ),

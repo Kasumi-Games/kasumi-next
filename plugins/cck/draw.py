@@ -1,9 +1,10 @@
 import random
-from io import BytesIO
 
 from PIL import Image
 from PIL import ImageEnhance
 from nonebot.adapters.satori import MessageSegment
+
+from utils.images import image_segment
 
 
 def image_to_message(image: Image.Image) -> MessageSegment:
@@ -16,9 +17,7 @@ def image_to_message(image: Image.Image) -> MessageSegment:
     返回:
         MessageSegment: 返回 MessageSegment 对象
     """
-    buffer = BytesIO()
-    image.save(buffer, format="PNG")
-    return MessageSegment.image(raw=buffer, mime="image/png")
+    return image_segment(image)
 
 
 def random_crop_image(

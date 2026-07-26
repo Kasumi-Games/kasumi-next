@@ -8,16 +8,18 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
+from utils import cards
 from plugins.render import Rect
 from plugins.render import Size
 from plugins.render import Fixed
 from plugins.render import Frame
-from plugins.render import Insets
 from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
+from plugins.render import Component
 from plugins.render import Constraints
 from plugins.render import RenderContext
+from plugins.render import PlayerIdentity
 from plugins.render.primitives import load_font
 from plugins.render.primitives import draw_rounded_rectangle
 from plugins.render.kits.bangdream import BG_DIR
@@ -26,6 +28,9 @@ from plugins.render.kits.bangdream import BanGDreamKit
 
 from ..session import GameSession
 from ..difficulty import apply_time_decay
+
+#: Width of the board panel, which the identity strip matches.
+BOARD_WIDTH = 786
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -365,7 +370,6 @@ def _title_bar(
             kit.text(
                 f"{title} - {subtitle}",
                 font_size=24,
-                color=(255, 255, 255, 255),
                 align="center",
                 max_lines=1,
             ),
@@ -402,7 +406,12 @@ def _board_panel(kit: BaseKit, child):
     )
 
 
-def render(session: GameSession, kit: BaseKit | None = None) -> Image.Image:
+def render(
+    session: GameSession,
+    kit: BaseKit | None = None,
+    identity: PlayerIdentity | None = None,
+    detail: str | None = None,
+) -> Image.Image:
     live_reward = apply_time_decay(
         base_reward=session.reward,
         elapsed_seconds=session.elapsed_seconds(),
@@ -413,16 +422,19 @@ def render(session: GameSession, kit: BaseKit | None = None) -> Image.Image:
         f"{session.difficulty_name} | {session.drawn_count}/{session.total_edges} | "
         f"奖励 {live_reward}/{session.reward}"
     )
+    sections: list[Component] = [
+        _title_bar(kit, "一笔画", title, width=560, height=57)
+    ]
+    if identity is not None:
+        sections.append(
+            cards.game_identity(kit, identity, width=BOARD_WIDTH, detail=detail)
+        )
+    sections.append(_board_panel(kit, OneStrokeBoard(session)))
+
     page = AutoPage(
         min_width=896,
         background=_background(kit),
         padding=56,
-        child=VStack(
-            [
-                _title_bar(kit, "一笔画", title, width=560, height=57),
-                _board_panel(kit, OneStrokeBoard(session)),
-            ],
-            gap=24,
-        ),
+        child=VStack(sections, gap=24),
     )
     return page.render()

@@ -14,6 +14,7 @@ from PIL import ImageDraw
 from PIL import ImageFont
 from nonebot.log import logger
 
+from utils import cards
 from plugins.render import Fixed
 from plugins.render import Frame
 from plugins.render import HStack
@@ -21,7 +22,9 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import ColorLike
+from plugins.render import Component
 from plugins.render import RenderContext
+from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BanGDreamKit
 
 if TYPE_CHECKING:
@@ -427,24 +430,37 @@ class BlackjackRenderer:
 
         return final_canvas, generate_the_card
 
-    def generate_hand(self, hand: "Hand", second_card_back: bool) -> Image.Image:
+    def generate_hand(
+        self,
+        hand: "Hand",
+        second_card_back: bool,
+        identity: Optional[PlayerIdentity] = None,
+        detail: Optional[str] = None,
+    ) -> Image.Image:
         """生成手牌的图片"""
         if second_card_back:
             score_text = f"共 {hand.cards[0].get_value()} + ? 点"
         else:
             score_text = f"共 {hand.value} 点"
+        sections: list[Component] = []
+        strip = self._identity_strip(
+            identity, detail, width=self._cards_panel_width(len(hand.cards))
+        )
+        if strip is not None:
+            sections.append(strip)
+        sections.append(
+            self._hand_label(
+                "Kasumi",
+                score_text,
+                self.RenderLayout.DEALER_TAG_COLOR,
+            )
+        )
+        sections.append(self._cards_panel(hand, second_card_back))
         page = AutoPage(
             padding=self.RenderLayout.PAGE_PADDING,
             background=self.kit.background(),
             child=VStack(
-                [
-                    self._hand_label(
-                        "Kasumi",
-                        score_text,
-                        self.RenderLayout.DEALER_TAG_COLOR,
-                    ),
-                    self._cards_panel(hand, second_card_back),
-                ],
+                sections,
                 gap=self.RenderLayout.SECTION_GAP,
                 align="start",
             ),
@@ -457,6 +473,7 @@ class BlackjackRenderer:
         CARD_GAP = 32
         PANEL_PADDING = 32
         PANEL_RADIUS = 32
+        TABLE_MIN_WIDTH = 832
 
         CARD_SOURCE_WIDTH = 640
         CARD_SOURCE_HEIGHT = 896
@@ -516,6 +533,28 @@ class BlackjackRenderer:
             )
 
         return card_image
+
+    def _cards_panel_width(self, card_count: int) -> int:
+        """Width of a cards panel holding ``card_count`` cards."""
+        layout = self.RenderLayout
+        count = max(1, card_count)
+        return (
+            count * layout.CARD_WIDTH
+            + (count - 1) * layout.CARD_GAP
+            + layout.PANEL_PADDING * 2
+        )
+
+    def _identity_strip(
+        self,
+        identity: Optional[PlayerIdentity],
+        detail: Optional[str],
+        *,
+        width: int,
+    ) -> Optional[Component]:
+        """The player identity strip above the table, or ``None`` without one."""
+        if identity is None:
+            return None
+        return cards.game_identity(self.kit, identity, width=width, detail=detail)
 
     def _hand_label(self, name: str, score_text: str, fill: ColorLike):
         if isinstance(self.kit, BanGDreamKit):
@@ -597,7 +636,12 @@ class BlackjackRenderer:
             background.paste(card_image, (card_x, start_y), card_image.split()[3])
 
     def generate_table(
-        self, dealer_hand: "Hand", player_hand: "Hand", dealer_card_back: bool
+        self,
+        dealer_hand: "Hand",
+        player_hand: "Hand",
+        dealer_card_back: bool,
+        identity: Optional[PlayerIdentity] = None,
+        detail: Optional[str] = None,
     ) -> Image.Image:
         """生成包含庄家和玩家手牌的游戏桌面"""
         if dealer_card_back:
@@ -605,27 +649,40 @@ class BlackjackRenderer:
         else:
             dealer_score = f"共 {dealer_hand.value} 点"
         player_score = f"共 {player_hand.value} 点"
+        strip_width = max(
+            self.RenderLayout.TABLE_MIN_WIDTH - self.RenderLayout.PAGE_PADDING * 2,
+            self._cards_panel_width(
+                max(len(dealer_hand.cards), len(player_hand.cards))
+            ),
+        )
+        sections: list[Component] = []
+        strip = self._identity_strip(identity, detail, width=strip_width)
+        if strip is not None:
+            sections.append(strip)
+        sections.append(
+            self._hand_section(
+                "Kasumi",
+                dealer_hand,
+                dealer_score,
+                self.RenderLayout.DEALER_TAG_COLOR,
+                dealer_card_back,
+            )
+        )
+        sections.append(
+            self._hand_section(
+                "You",
+                player_hand,
+                player_score,
+                self.RenderLayout.PLAYER_TAG_COLOR,
+                False,
+            )
+        )
         page = AutoPage(
-            min_width=832,
+            min_width=self.RenderLayout.TABLE_MIN_WIDTH,
             padding=self.RenderLayout.PAGE_PADDING,
             background=self.kit.background(),
             child=VStack(
-                [
-                    self._hand_section(
-                        "Kasumi",
-                        dealer_hand,
-                        dealer_score,
-                        self.RenderLayout.DEALER_TAG_COLOR,
-                        dealer_card_back,
-                    ),
-                    self._hand_section(
-                        "You",
-                        player_hand,
-                        player_score,
-                        self.RenderLayout.PLAYER_TAG_COLOR,
-                        False,
-                    ),
-                ],
+                sections,
                 gap=self.RenderLayout.SECTION_GAP,
                 align="stretch",
             ),

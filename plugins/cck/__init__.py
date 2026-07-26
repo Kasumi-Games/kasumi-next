@@ -15,6 +15,7 @@ from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
+from nonebot.adapters.satori import MessageSegment
 
 require("daily_task")
 require("nonebot_plugin_waiter")
@@ -25,6 +26,9 @@ import nonebot_plugin_localstore as localstore  # noqa: E402
 from nonebot_plugin_waiter import waiter  # noqa: E402
 
 from utils import get_today_birthday  # noqa: E402
+from utils.images import image_segment  # noqa: E402
+from utils.theming import kit_for_user  # noqa: E402
+from utils.identity import identity_for  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
@@ -34,7 +38,13 @@ from .draw import image_to_message  # noqa: E402
 from .draw import random_crop_image  # noqa: E402
 from .store import GamersStore  # noqa: E402
 from .config import Config  # noqa: E402
+from .render import LevelGain  # noqa: E402
+from .render import CckRevealData  # noqa: E402
+from .render import TaskCompletion  # noqa: E402
+from .render import reveal_page  # noqa: E402
 from ..daily_task import check_progress  # noqa: E402
+from ..daily_task import get_today_task  # noqa: E402
+from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
 
 plugin_config = get_plugin_config(Config)
 
@@ -88,6 +98,46 @@ if plugin_config.enable_cck:
     # 运行 _get_data 后会阻塞，不清楚为什么，所以暂时注释掉，有空重启 Kasumi 就能更新
 
 
+#: Per-server value pick order, matching ``Card._get_res_info``.
+_SERVER_PICK_ORDER = (0, 3, 2, 1, 4)
+
+
+def _localized(values) -> str | None:
+    """First non-empty per-server value from a bestdori 5-tuple, or ``None``."""
+
+    if not isinstance(values, (list, tuple)):
+        return None
+    for index in _SERVER_PICK_ORDER:
+        if index < len(values) and values[index]:
+            return str(values[index])
+    return None
+
+
+def _completed_task(user_id: str) -> TaskCompletion | None:
+    """Structured info for the task ``check_progress`` just completed.
+
+    ``check_progress`` only returns a preformatted string, so the name and
+    reward come from today's task config instead of being parsed back out.
+    """
+
+    try:
+        config = get_today_task(user_id)
+        return TaskCompletion(name=config.name, reward=config.reward)
+    except Exception:
+        logger.opt(exception=True).warning("daily task config unavailable for reveal")
+        return None
+
+
+def _level_gain(old_level: int, new_level: int) -> LevelGain | None:
+    if new_level <= old_level:
+        return None
+    return LevelGain(
+        old_level=old_level,
+        new_level=new_level,
+        stickers=(new_level - old_level) * LEVEL_UP_STICKERS,
+    )
+
+
 start_cck = on_command(
     "猜卡面",
     aliases={"猜猜看", "cck"},
@@ -95,6 +145,35 @@ start_cck = on_command(
     block=True,
     rule=lambda: plugin_config.enable_cck,
 )
+
+
+async def _send_reveal_card(
+    data: CckRevealData,
+    kit,
+    pg: PG,
+    fallback_text: str,
+    fallback_image: MessageSegment,
+) -> None:
+    """Render and send the round-exit card as one message.
+
+    On a render failure the round must still resolve, so this falls back to
+    the pre-card shape: the answer as text plus the raw full card image.
+    """
+
+    try:
+        image = await reveal_page(data, kit).render_async()
+    except Exception:
+        logger.opt(exception=True).warning("cck reveal render failed; sending text")
+        await start_cck.send(
+            fallback_text + pg.element, referrer=pg.event.referrer
+        )
+        await start_cck.send(
+            fallback_image + pg.element, referrer=pg.event.referrer
+        )
+        return
+    await start_cck.send(
+        image_segment(image) + pg.element, referrer=pg.event.referrer
+    )
 
 
 @start_cck.handle()
@@ -164,6 +243,25 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         f"character_name: {character_name}, character_id: {character_id}, card_id: {card_id}"
     )
 
+    card_info = card_manager.__processed_data__.get(str(card_id), {})
+    card_title = _localized(card_info.get("prefix"))
+    card_rarity = card_info.get("rarity")
+    card_type = card_info.get("type")
+    difficulty_label = image_cut_setting["cut_name"].strip("[]")
+
+    def _reveal_data(outcome: str, **kwargs) -> CckRevealData:
+        return CckRevealData(
+            outcome=outcome,
+            character_name=character_name,
+            card_id=str(card_id),
+            card_image=image_path,
+            card_title=card_title,
+            rarity=card_rarity,
+            card_type=card_type,
+            difficulty=difficulty_label,
+            **kwargs,
+        )
+
     pil_full_image = Image.open(image_path)
     full_image = image_to_message(pil_full_image)
     image = random_crop_image(
@@ -201,14 +299,12 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
         if resp is None:
             gamers_store.remove(event.channel.id)
-            await start_cck.send(
-                f"时间到！答案是———{character_name}card_id: {card_id}"
-                + gens[latest_message_id].element,
-                referrer=gens[latest_message_id].event.referrer,
-            )
-            await start_cck.send(
-                full_image + gens[latest_message_id].element,
-                referrer=gens[latest_message_id].event.referrer,
+            await _send_reveal_card(
+                _reveal_data("timeout"),
+                kit_for_user(event.get_user_id()),
+                gens[latest_message_id],
+                f"时间到！答案是———{character_name} card_id: {card_id}",
+                full_image,
             )
             break
 
@@ -222,12 +318,12 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
         if msg == "bzd":
             gamers_store.remove(event.channel.id)
-            await start_cck.send(
-                f"答案是———{character_name}card_id: {card_id}" + gens[msg_id].element,
-                referrer=gens[msg_id].event.referrer,
-            )
-            await start_cck.send(
-                full_image + gens[msg_id].element, referrer=gens[msg_id].event.referrer
+            await _send_reveal_card(
+                _reveal_data("bzd"),
+                kit_for_user(event.get_user_id()),
+                gens[msg_id],
+                f"答案是———{character_name} card_id: {card_id}",
+                full_image,
             )
             break
 
@@ -254,27 +350,20 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
         gamers_store.remove(event.channel.id)
         characters = get_today_birthday()
-        msg = Message()
-        amount = random.randint(*cut_name_to_amount[image_cut_setting["cut_name"]])
+        base_amount = random.randint(
+            *cut_name_to_amount[image_cut_setting["cut_name"]]
+        )
+        multiplier = 1
+        birthday_names: tuple = ()
         if characters:
             if character_name not in characters:
-                characters_str = "和".join(characters)
-                msg += f"正确！因为今天是{characters_str}的生日，奖励你 {amount} × 2 个星之碎片！答案是———{character_name} card_id: {card_id}"
-                amount *= 2
+                multiplier = 2
+                birthday_names = tuple(characters)
             else:
-                msg += f"正确！答案是———{character_name} card_id: {card_id}。今天是她的生日哦，奖励你 {amount} × 4 个星之碎片！"
-                amount *= 4
-        else:
-            msg += f"正确！答案是———{character_name}，奖励你 {amount} 个星之碎片！card_id: {card_id}"
+                multiplier = 4
+                birthday_names = (character_name,)
+        amount = base_amount * multiplier
         monetary.add(user_id, amount, "cck")
-
-        # Plugin messages first
-        await start_cck.send(
-            msg + gens[msg_id].element, referrer=gens[msg_id].event.referrer
-        )
-        await start_cck.send(
-            full_image + gens[msg_id].element, referrer=gens[msg_id].event.referrer
-        )
 
         # Daily task callback (first-try win is checked via conditions)
         player_counts[user_id] += 1
@@ -283,16 +372,33 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             "cck_first_try",
             {"attempt": player_counts[user_id]},
         )
-        if task_msg:
-            await start_cck.send(
-                task_msg + gens[msg_id].element, referrer=gens[msg_id].event.referrer
-            )
 
         # Level-up
-        level_msg = await monetary.add_xp(user_id, amount)
-        if level_msg:
-            await start_cck.send(
-                level_msg + gens[msg_id].element, referrer=gens[msg_id].event.referrer
-            )
+        old_level = monetary.get_level(user_id)
+        await monetary.add_xp(user_id, amount)
+        new_level = monetary.get_level(user_id)
+
+        # One card replaces the old answer text + full image + task_msg +
+        # level_msg sequence. It renders in the WINNER's theme with their
+        # name on the signature — winning shows the theme off.
+        winner = identity_for(user_id)
+        await _send_reveal_card(
+            _reveal_data(
+                "win",
+                winner=winner,
+                winner_attempt=player_counts[user_id],
+                base_amount=base_amount,
+                final_amount=amount,
+                birthday_names=birthday_names,
+                multiplier=multiplier,
+                task=_completed_task(user_id) if task_msg else None,
+                level=_level_gain(old_level, new_level),
+                owner_name=winner.nickname,
+            ),
+            kit_for_user(user_id),
+            gens[msg_id],
+            f"正确！答案是———{character_name}，奖励你 {amount} 个Pt！card_id: {card_id}",
+            full_image,
+        )
 
         break

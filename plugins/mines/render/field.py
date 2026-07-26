@@ -2,6 +2,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from utils import cards
 from plugins.render import Grid
 from plugins.render import Fixed
 from plugins.render import Frame
@@ -9,11 +10,15 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
+from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BG_DIR
 from plugins.render.kits.bangdream import BanGDreamKit
 
 from ..models import Field
 from ..models import BlockType
+
+#: Width of the board panel, which the identity strip matches.
+BOARD_WIDTH = 786
 
 
 def generate_unrevealed_field(index: int, kit: BaseKit) -> Component:
@@ -78,7 +83,6 @@ def _title_bar(
             kit.text(
                 f"{title} - {subtitle}",
                 font_size=24,
-                color=(255, 255, 255, 255),
                 align="center",
                 max_lines=1,
             ),
@@ -104,12 +108,16 @@ def _board_panel(kit: BaseKit, child):
         ),
         width=Fixed(786),
         height=Fixed(786),
-        fill=(255, 255, 255, 200),
         radius=32,
     )
 
 
-def render(field: "Field", kit: BaseKit | None = None) -> Image.Image:
+def render(
+    field: "Field",
+    kit: BaseKit | None = None,
+    identity: PlayerIdentity | None = None,
+    detail: str | None = None,
+) -> Image.Image:
     kit = kit or BanGDreamKit()
     cells = []
 
@@ -132,26 +140,31 @@ def render(field: "Field", kit: BaseKit | None = None) -> Image.Image:
                 )
             cells.append(cell)
 
+    sections: list[Component] = [
+        _title_bar(kit, "探险", "Arisa的仓库", width=500, height=57)
+    ]
+    if identity is not None:
+        sections.append(
+            cards.game_identity(kit, identity, width=BOARD_WIDTH, detail=detail)
+        )
+    sections.append(
+        _board_panel(
+            kit,
+            Grid(
+                children=cells,
+                columns=field.width,
+                rows=field.height,
+                column_track=Fixed(120),
+                row_track=Fixed(120),
+                gap=21,
+            ),
+        )
+    )
+
     page = AutoPage(
         min_width=896,
         background=_background(kit),
         padding=56,
-        child=VStack(
-            [
-                _title_bar(kit, "探险", "Arisa的仓库", width=500, height=57),
-                _board_panel(
-                    kit,
-                    Grid(
-                        children=cells,
-                        columns=field.width,
-                        rows=field.height,
-                        column_track=Fixed(120),
-                        row_track=Fixed(120),
-                        gap=21,
-                    ),
-                ),
-            ],
-            gap=32,
-        ),
+        child=VStack(sections, gap=32),
     )
     return page.render()

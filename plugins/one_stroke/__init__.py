@@ -1,7 +1,5 @@
-import io
 import time
 
-from PIL import Image
 from nonebot import require
 from nonebot import on_command
 from nonebot.params import CommandArg
@@ -10,6 +8,9 @@ from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
 
+from utils.images import image_segment
+from utils.theming import kit_for_user
+from utils.identity import identity_for
 from utils.error_handler import handle_error
 
 require("nonebot_plugin_waiter")
@@ -23,30 +24,30 @@ from utils.passive_generator import generators as gens  # noqa: E402
 from .. import monetary  # noqa: E402
 from .models import MoveResult  # noqa: E402
 from .models import OneStrokeGame  # noqa: E402
+from .render import OneStrokeResultData  # noqa: E402
 from .render import render  # noqa: E402
+from .render import result_page  # noqa: E402
 from .render import render_leaderboard  # noqa: E402
 from .session import GameManager  # noqa: E402
 from .database import get_session as get_db_session  # noqa: E402
 from .database import get_leaderboard  # noqa: E402
+from .database import get_personal_best  # noqa: E402
 from .messages import Messages  # noqa: E402
 from ..nickname import get as get_nickname  # noqa: E402
 from .difficulty import apply_time_decay  # noqa: E402
 from .difficulty import calculate_reward  # noqa: E402
+from .difficulty import time_decay_factor  # noqa: E402
 from ..daily_task import check_progress  # noqa: E402
+from ..daily_task import get_today_task  # noqa: E402
 from .graph_generator import generate_graph  # noqa: E402
 from .graph_generator import parse_difficulty  # noqa: E402
+from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
 
 game_manager = GameManager()
 
 
-def _image_segment(img: Image.Image) -> MessageSegment:
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    return MessageSegment.image(raw=buffer, mime="image/png")
-
-
-def _render_image(session) -> MessageSegment:
-    return _image_segment(render(session))
+def _render_image(session, kit=None, identity=None, detail=None) -> MessageSegment:
+    return image_segment(render(session, kit=kit, identity=identity, detail=detail))
 
 
 def _mask_user_id(user_id: str) -> str:
@@ -93,7 +94,7 @@ async def handle_leaderboard(event: MessageEvent):
     hard_rows = _build_leaderboard_rows("困难")
     image = render_leaderboard(easy_rows, normal_rows, hard_rows)
     await leaderboard_cmd.finish(
-        _image_segment(image) + passive_generator.element,
+        image_segment(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -133,8 +134,14 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 referrer=gens[latest_message_id].event.referrer,
             )
 
+        # Resolved once per game on the event-loop thread, then passed into
+        # every render below; renderers never resolve theme or identity.
+        kit = kit_for_user(event.get_user_id())
+        identity = identity_for(event.get_user_id())
+        detail = f"难度 {config.label} · 奖励 {reward} Pt"
+
         await game_start.send(
-            _render_image(session)
+            _render_image(session, kit=kit, identity=identity, detail=detail)
             + MessageSegment.text(
                 Messages.START
                 + "\n"
@@ -170,7 +177,7 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
             if msg == "R":
                 session.reset()
                 await game_start.send(
-                    _render_image(session)
+                    _render_image(session, kit=kit, identity=identity, detail=detail)
                     + MessageSegment.text(Messages.RESET + "\n" + Messages.PROMPT)
                     + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
@@ -199,17 +206,22 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
 
             if session.is_complete:
                 elapsed_seconds = session.elapsed_seconds()
-                base_final_reward = apply_time_decay(
+                final_reward = apply_time_decay(
                     base_reward=session.reward,
                     elapsed_seconds=elapsed_seconds,
                     graph=session.graph,
                 )
-                final_reward = base_final_reward
+                decay_factor = time_decay_factor(elapsed_seconds, session.graph)
                 birthday_characters = get_today_birthday()
-                win_message = ""
                 if birthday_characters:
-                    birthday_characters_str = "和".join(birthday_characters)
                     final_reward *= 2
+
+                # Personal best BEFORE this round is recorded, so the run is
+                # compared against history (read-only; ambition review #8).
+                previous_best = get_personal_best(
+                    event.get_user_id(), session.difficulty_name
+                )
+
                 db = get_db_session()
                 db.add(
                     OneStrokeGame(
@@ -223,51 +235,75 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 )
                 db.commit()
                 monetary.add(event.get_user_id(), final_reward, "one_stroke")
-
                 balance = monetary.get(event.get_user_id())
-                if birthday_characters:
-                    win_message = Messages.BIRTHDAY_WIN.format(
-                        elapsed_seconds=round(elapsed_seconds, 2),
-                        birthday_characters=birthday_characters_str,
-                        reward=base_final_reward,
-                        bonus_reward=final_reward,
-                        balance=balance,
-                    )
-                else:
-                    win_message = Messages.WIN.format(
-                        elapsed_seconds=round(elapsed_seconds, 2),
-                        reward=final_reward,
-                        balance=balance,
-                    )
                 game_manager.end_game(event.get_user_id())
 
-                # Plugin message first
+                # The completed board first — the finished figure is the
+                # trophy; the result card that follows carries the outcome.
                 await game_start.send(
-                    _render_image(session)
-                    + MessageSegment.text(win_message)
+                    _render_image(session, kit=kit, identity=identity, detail=detail)
                     + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
                 )
 
-                # Daily task
+                # Daily task: its completion text becomes card rows, so keep
+                # only the structured name/reward of the task just completed.
+                task_name: str | None = None
+                task_reward = 0
                 task_msg = await check_progress(
                     event.get_user_id(),
                     "one_stroke_time",
                     {"difficulty": session.difficulty_name, "time": elapsed_seconds},
                 )
                 if task_msg:
-                    await game_start.send(
-                        task_msg + gens[latest_message_id].element,
-                        referrer=gens[latest_message_id].event.referrer,
-                    )
+                    try:
+                        task_config = get_today_task(event.get_user_id())
+                        task_name = task_config.name
+                        task_reward = task_config.reward
+                    except Exception:
+                        task_name = "每日任务"
 
-                # Level-up
+                # Level-up: read the level around add_xp so the card gets
+                # numbers rather than the service's preformatted text.
+                old_level = monetary.get_level(event.get_user_id())
                 level_msg = await monetary.add_xp(event.get_user_id(), final_reward)
-                if level_msg:
-                    await game_start.send(
-                        level_msg + gens[latest_message_id].element,
-                        referrer=gens[latest_message_id].event.referrer,
-                    )
+                new_level = (
+                    monetary.get_level(event.get_user_id())
+                    if level_msg
+                    else old_level
+                )
+                leveled = new_level > old_level
+
+                result_data = OneStrokeResultData(
+                    difficulty=session.difficulty_name,
+                    elapsed_seconds=elapsed_seconds,
+                    base_reward=session.reward,
+                    decay_factor=decay_factor,
+                    final_reward=final_reward,
+                    balance=balance,
+                    birthday_characters=tuple(birthday_characters),
+                    previous_best_seconds=previous_best,
+                    is_new_record=previous_best is None
+                    or elapsed_seconds < previous_best,
+                    task_name=task_name,
+                    task_reward=task_reward,
+                    old_level=old_level if leveled else None,
+                    new_level=new_level if leveled else None,
+                    level_stickers=(new_level - old_level) * LEVEL_UP_STICKERS
+                    if leveled
+                    else 0,
+                )
+                # Re-resolve the identity so a level-up this round already
+                # shows on the card's strip.
+                result_image = await result_page(
+                    result_data,
+                    kit=kit,
+                    identity=identity_for(event.get_user_id()),
+                ).render_async()
+                await game_start.send(
+                    image_segment(result_image) + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
+                )
 
                 await game_start.finish(referrer=event.referrer)
 
@@ -282,7 +318,7 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 status_text = fail_text + "\n" + status_text
 
             await game_start.send(
-                _render_image(session)
+                _render_image(session, kit=kit, identity=identity, detail=detail)
                 + MessageSegment.text(status_text)
                 + gens[latest_message_id].element,
                 referrer=gens[latest_message_id].event.referrer,

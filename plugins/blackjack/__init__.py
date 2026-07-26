@@ -13,6 +13,9 @@ from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
 
+from utils.images import image_segment
+from utils.theming import kit_for_user
+from utils.identity import identity_for
 from utils.error_handler import handle_error
 
 require("cck")  # for card images
@@ -36,8 +39,9 @@ from .handlers import handle_normal_game  # noqa: E402
 from .handlers import handle_split_decision  # noqa: E402
 from .handlers import handle_initial_blackjack  # noqa: E402
 from .messages import Messages  # noqa: E402
+from .stats_render import stats_page  # noqa: E402
+from .stats_render import stats_card_data  # noqa: E402
 from .stats_service import get_blackjack_stats  # noqa: E402
-from .stats_service import create_win_loss_chart  # noqa: E402
 
 HELP_MESSAGE = MessageSegment.image(
     raw=Path("plugins/blackjack/recourses/instruction.png").read_bytes(),
@@ -168,8 +172,17 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             dealer_hand,
         )
 
+        # Resolved once per game on the event-loop thread, then passed into
+        # every table/hand render; the renderer never resolves identity.
+        identity = identity_for(event.get_user_id())
+
         if await handle_initial_blackjack(
-            session, bet_amount, latest_message_id, game_start, game_manager
+            session,
+            bet_amount,
+            latest_message_id,
+            game_start,
+            game_manager,
+            identity=identity,
         ):
             return
 
@@ -181,6 +194,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             check,
             game_start,
             game_manager,
+            identity=identity,
         )
         session.bet_amount = bet_amount
 
@@ -193,6 +207,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 check,
                 game_start,
                 game_manager,
+                identity=identity,
             )
         else:
             await handle_normal_game(
@@ -203,6 +218,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 check,
                 game_start,
                 game_manager,
+                identity=identity,
             )
     except MatcherException:
         raise
@@ -236,27 +252,15 @@ async def handle_stats(event: MessageEvent):
                 referrer=gens[event.message.id].event.referrer,
             )
 
-        # 构建统计信息文本
-        stats_text = f"""🎴 黑香澄游戏统计
-📊 {stats.total_games}局 | 胜{stats.wins} 负{stats.losses} | 胜率{stats.win_rate:.1%}
-💰 投入{stats.total_wagered} | 得{stats.total_won} 失{stats.total_lost} | 净收益{stats.net_profit:+d}
-🎰 平均赌注{stats.avg_bet:.1f} | 平均赢{stats.avg_win:.1f} | 平均输{stats.avg_loss:.1f}
-🏆 最高赢{stats.biggest_win} | 最高输{stats.biggest_loss}"""
+        # 主题与身份都在事件循环线程解析，渲染函数只收现成数据
+        kit = kit_for_user(user_id)
+        identity = identity_for(user_id)
+        image = await stats_page(stats_card_data(stats, identity), kit).render_async()
 
-        # 尝试生成图表
-        chart_bytes = create_win_loss_chart(stats)
-
-        # 发送统计信息
-        response_message = MessageSegment.text(stats_text)
-
-        if chart_bytes:
-            # 如果成功生成图表，添加图表
-            response_message += MessageSegment.image(raw=chart_bytes, mime="image/png")
-        else:
-            response_message += MessageSegment.text("\n📊 图表生成失败")
-
-        response_message += gens[event.message.id].element
-        await game_stats.finish(response_message, referrer=event.referrer)
+        await game_stats.finish(
+            image_segment(image) + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
+        )
 
     except MatcherException:
         raise

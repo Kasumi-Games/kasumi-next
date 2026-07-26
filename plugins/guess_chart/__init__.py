@@ -1,9 +1,11 @@
+import io
 import random
 from typing import List
 from typing import Union
 from typing import Optional
 from pathlib import Path
 
+from PIL import Image
 from nonebot import require
 from nonebot import get_driver
 from nonebot import on_command
@@ -29,6 +31,9 @@ from nonebot_plugin_waiter import waiter  # noqa: E402
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import get_today_birthday  # noqa: E402
+from utils.images import image_segment  # noqa: E402
+from utils.theming import kit_for_user  # noqa: E402
+from utils.identity import identity_for  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
@@ -48,7 +53,13 @@ from .utils import sort_by_difficulty  # noqa: E402
 from .utils import get_value_from_list  # noqa: E402
 from .utils import build_enriched_dictionary  # noqa: E402
 from .config import Config  # noqa: E402
+from .render import LevelGain  # noqa: E402
+from .render import TaskCompletion  # noqa: E402
+from .render import GuessChartRevealData  # noqa: E402
+from .render import reveal_page  # noqa: E402
 from ..daily_task import check_progress  # noqa: E402
+from ..daily_task import get_today_task  # noqa: E402
+from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
 
 plugin_config = get_plugin_config(Config)
 settings.proxy = plugin_config.bestdori_proxy
@@ -72,6 +83,75 @@ game_start = on_command(
     block=True,
     rule=lambda: plugin_config.enable_guess_chart,
 )
+
+
+def _completed_task(user_id: str) -> Optional[TaskCompletion]:
+    """Structured info for the task ``check_progress`` just completed.
+
+    ``check_progress`` only returns a preformatted string, so the name and
+    reward come from today's task config instead of being parsed back out.
+    """
+
+    try:
+        config = get_today_task(user_id)
+        return TaskCompletion(name=config.name, reward=config.reward)
+    except Exception:
+        logger.opt(exception=True).warning("daily task config unavailable for reveal")
+        return None
+
+
+def _level_gain(old_level: int, new_level: int) -> Optional[LevelGain]:
+    if new_level <= old_level:
+        return None
+    return LevelGain(
+        old_level=old_level,
+        new_level=new_level,
+        stickers=(new_level - old_level) * LEVEL_UP_STICKERS,
+    )
+
+
+def _decode_jacket(jacket_image: bytes) -> Optional[Image.Image]:
+    """Decode the fetched jacket bytes; the card tolerates ``None``."""
+
+    try:
+        jacket = Image.open(io.BytesIO(jacket_image))
+        jacket.load()
+        return jacket
+    except Exception:
+        logger.opt(exception=True).warning("jacket image decode failed")
+        return None
+
+
+async def _send_reveal_card(
+    data: GuessChartRevealData,
+    kit,
+    pg: PG,
+    fallback_text: str,
+    jacket_image: bytes,
+) -> None:
+    """Render and send the round-exit card as one message.
+
+    On a render failure the round must still resolve, so this falls back to
+    the pre-card shape: the answer as text plus the raw jacket image.
+    """
+
+    try:
+        image = await reveal_page(data, kit).render_async()
+    except Exception:
+        logger.opt(exception=True).warning(
+            "guess_chart reveal render failed; sending text"
+        )
+        await game_start.send(
+            fallback_text + pg.element, referrer=pg.event.referrer
+        )
+        await game_start.send(
+            MessageSegment.image(raw=jacket_image, mime="image/png") + pg.element,
+            referrer=pg.event.referrer,
+        )
+        return
+    await game_start.send(
+        image_segment(image) + pg.element, referrer=pg.event.referrer
+    )
 
 
 if plugin_config.enable_guess_chart:
@@ -211,9 +291,10 @@ async def handle_start(
     level = song_info.get("difficulty", {}).get(diff_num[diff], {}).get("playLevel")
     song_name = song["song_name"]
 
-    # note_num = chart_statistics.notes
-    # note_num_range = num_to_range(note_num)
-    # removed because the information can be found in the chart image
+    # The note count no longer needs to stay hidden: the reveal card shows it
+    # once the round is over (the chart image itself remains the only in-round
+    # source).
+    note_num = int(chart_statistics.notes)
 
     band_id: int = song_info["bandId"]
     band_name = get_value_from_list(band_data[str(band_id)]["bandName"])
@@ -227,6 +308,24 @@ async def handle_start(
     ]
 
     logger.debug(f"谱面：{song_name} {diff.upper()} LV.{level}")
+
+    jacket_pil = _decode_jacket(jacket_image)
+    main_bpm = int(chart_statistics.main_bpm)
+
+    def _reveal_data(outcome: str, **kwargs) -> GuessChartRevealData:
+        return GuessChartRevealData(
+            outcome=outcome,
+            song_name=song_name,
+            band_name=band_name,
+            difficulty=diff,
+            play_level=level,
+            bpm=main_bpm,
+            notes=note_num,
+            pool_size=potential_song_number,
+            hints_used=3 - len(tips),
+            jacket=jacket_pil,
+            **kwargs,
+        )
 
     await game_start.send(
         MessageSegment.image(raw=pil_image_to_bytes(img), mime="image/png")
@@ -250,15 +349,12 @@ async def handle_start(
 
         if resp is None:
             gamers_store.remove(event.channel.id)
-            await game_start.send(
-                f"时间到了哦\n谱面：{song_name} "
-                f"{diff.upper()} LV.{level}" + gens[latest_message_id].element,
-                referrer=gens[latest_message_id].event.referrer,
-            )
-            await game_start.send(
-                MessageSegment.image(raw=jacket_image, mime="image/png")
-                + gens[latest_message_id].element,
-                referrer=gens[latest_message_id].event.referrer,
+            await _send_reveal_card(
+                _reveal_data("timeout"),
+                kit_for_user(event.get_user_id()),
+                gens[latest_message_id],
+                f"时间到了哦\n谱面：{song_name} {diff.upper()} LV.{level}",
+                jacket_image,
             )
             break
 
@@ -295,16 +391,12 @@ async def handle_start(
                 continue
             elif msg == "bzd" or msg == "不知道":
                 gamers_store.remove(event.channel.id)
-                await game_start.send(
-                    "要再试一次吗？\n"
-                    f"谱面：{song_name} "
-                    f"{diff.upper()} LV.{level}" + gens[message_id].element,
-                    referrer=gens[message_id].event.referrer,
-                )
-                await game_start.send(
-                    MessageSegment.image(raw=jacket_image, mime="image/png")
-                    + gens[message_id].element,
-                    referrer=gens[message_id].event.referrer,
+                await _send_reveal_card(
+                    _reveal_data("bzd"),
+                    kit_for_user(event.get_user_id()),
+                    gens[message_id],
+                    f"要再试一次吗？\n谱面：{song_name} {diff.upper()} LV.{level}",
+                    jacket_image,
                 )
                 break
 
@@ -332,25 +424,12 @@ async def handle_start(
                     referrer=gens[message_id].event.referrer,
                 )
 
-            msg = Message()
-
+            base_amount = amount
             birthday_characters = get_today_birthday()
-            birthday_characters_str = "和".join(birthday_characters)
-
-            if birthday_characters:
-                msg += f"回答正确！因为今天是{birthday_characters_str}的生日，奖励你 {amount} × 2 个星之碎片！\n"
-                amount *= 2
-            else:
-                msg += f"回答正确！奖励你 {amount} 个星之碎片\n"
+            multiplier = 2 if birthday_characters else 1
+            amount *= multiplier
 
             monetary.add(user_id, amount, "guess_chart")
-
-            # Plugin message first
-            await game_start.send(
-                msg + f"谱面：{song_name} "
-                f"{diff.upper()} LV.{level}" + gens[message_id].element,
-                referrer=gens[message_id].event.referrer,
-            )
 
             # Daily task callback for guess_chart win
             task_msg = await check_progress(
@@ -358,24 +437,32 @@ async def handle_start(
                 "guess_chart_win",
                 {"difficulty": game_difficulty},
             )
-            if task_msg:
-                await game_start.send(
-                    task_msg + gens[message_id].element,
-                    referrer=gens[message_id].event.referrer,
-                )
 
             # Level-up
-            level_msg = await monetary.add_xp(user_id, amount)
-            if level_msg:
-                await game_start.send(
-                    level_msg + gens[message_id].element,
-                    referrer=gens[message_id].event.referrer,
-                )
+            old_level = monetary.get_level(user_id)
+            await monetary.add_xp(user_id, amount)
+            new_level = monetary.get_level(user_id)
 
-            await game_start.send(
-                MessageSegment.image(raw=jacket_image, mime="image/png")
-                + gens[message_id].element,
-                referrer=gens[message_id].event.referrer,
+            # One card replaces the old answer text + task_msg + level_msg +
+            # trailing jacket sequence. It renders in the WINNER's theme with
+            # their name on the signature — winning shows the theme off.
+            winner = identity_for(user_id)
+            await _send_reveal_card(
+                _reveal_data(
+                    "win",
+                    winner=winner,
+                    base_amount=base_amount,
+                    final_amount=amount,
+                    birthday_names=tuple(birthday_characters),
+                    multiplier=multiplier,
+                    task=_completed_task(user_id) if task_msg else None,
+                    level=_level_gain(old_level, new_level),
+                    owner_name=winner.nickname,
+                ),
+                kit_for_user(user_id),
+                gens[message_id],
+                f"回答正确！奖励你 {amount} 个Pt\n谱面：{song_name} {diff.upper()} LV.{level}",
+                jacket_image,
             )
             break
         else:

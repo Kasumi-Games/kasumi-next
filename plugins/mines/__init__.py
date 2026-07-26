@@ -1,8 +1,6 @@
-import io
 from typing import Tuple
 from typing import Optional
 
-from PIL import Image
 from nonebot import require
 from nonebot import get_driver
 from nonebot import on_command
@@ -13,6 +11,11 @@ from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
 
+from utils.images import image_segment
+from utils.theming import kit_for_user
+from plugins.render import BaseKit
+from plugins.render import PlayerIdentity
+from utils.identity import identity_for
 from utils.error_handler import handle_error
 
 require("daily_task")
@@ -26,23 +29,98 @@ from utils.passive_generator import generators as gens  # noqa: E402
 from .. import monetary  # noqa: E402
 from .models import BlockType  # noqa: E402
 from .models import GameResult  # noqa: E402
+from .render import MinesResultData  # noqa: E402
 from .render import render  # noqa: E402
+from .render import stats_page  # noqa: E402
+from .render import result_page  # noqa: E402
 from .session import GameManager  # noqa: E402
+from .session import GameSession  # noqa: E402
 from .database import init_database  # noqa: E402
 from .messages import Messages  # noqa: E402
 from ..daily_task import check_progress  # noqa: E402
+from ..daily_task import get_today_task  # noqa: E402
 from .stats_service import get_mines_stats  # noqa: E402
-from .stats_service import create_win_loss_chart  # noqa: E402
+from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
 
 game_manager = GameManager()
 
 
-def _render_field_image(field) -> MessageSegment:
+def _render_field_image(
+    field, kit=None, identity=None, detail=None
+) -> MessageSegment:
     """Render the game field to an image MessageSegment."""
-    img: Image.Image = render(field)
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    return MessageSegment.image(raw=buffer, mime="image/png")
+    return image_segment(render(field, kit=kit, identity=identity, detail=detail))
+
+
+async def _send_result_card(
+    matcher,
+    session: GameSession,
+    result: GameResult,
+    payout: int,
+    multiplier: float,
+    kit: BaseKit,
+    identity: PlayerIdentity,
+    pg: PG,
+) -> None:
+    """Award round rewards, then send the single round-end result card.
+
+    Collapses what used to be three sends (result text, daily-task notice,
+    level-up notice) into one card. The reward services are awaited BEFORE
+    rendering, each individually guarded: a task/level failure degrades to a
+    card without that row, never to a missing result.
+    """
+    user_id = session.user_id
+    task_name: Optional[str] = None
+    task_reward: Optional[int] = None
+    old_level: Optional[int] = None
+    new_level: Optional[int] = None
+    level_stickers: Optional[int] = None
+
+    if result is not GameResult.LOSE:
+        try:
+            task_msg = await check_progress(
+                user_id, "mines_cashout", {"multiplier": multiplier}
+            )
+            if task_msg:
+                task_cfg = get_today_task(user_id)
+                task_name = task_cfg.name
+                task_reward = task_cfg.reward
+        except Exception:
+            logger.opt(exception=True).warning("探险每日任务结算失败")
+
+        # XP scales with multiplier: starts at 5 at 2.0x
+        if multiplier >= 2.0:
+            try:
+                level_before = monetary.get_level(user_id)
+                leveled = await monetary.add_xp(user_id, int(multiplier * 2.5))
+                level_after = monetary.get_level(user_id)
+                if leveled and level_after > level_before:
+                    old_level = level_before
+                    new_level = level_after
+                    level_stickers = (level_after - level_before) * LEVEL_UP_STICKERS
+            except Exception:
+                logger.opt(exception=True).warning("探险经验结算失败")
+
+    data = MinesResultData(
+        outcome=result,
+        bet_amount=session.bet_amount,
+        payout=payout,
+        multiplier=multiplier,
+        revealed_count=session.revealed_count,
+        safe_cells=session.safe_cells,
+        mines=session.mines,
+        balance=monetary.get(user_id),
+        task_name=task_name,
+        task_reward=task_reward,
+        old_level=old_level,
+        new_level=new_level,
+        level_stickers=level_stickers,
+    )
+    image = await result_page(data, kit, identity=identity).render_async()
+    await matcher.send(
+        image_segment(image) + pg.element,
+        referrer=pg.event.referrer,
+    )
 
 
 @get_driver().on_startup
@@ -207,8 +285,14 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             event.get_user_id(), event.channel.id, bet_amount, mines
         )
 
+        # Resolved once per game on the event-loop thread, then passed into
+        # every render below; renderers never resolve theme or identity.
+        kit = kit_for_user(event.get_user_id())
+        identity = identity_for(event.get_user_id())
+        detail = f"押注 {bet_amount} Pt · 剩 {mines} 雷"
+
         await game_start.send(
-            _render_field_image(session.field)
+            _render_field_image(session.field, kit=kit, identity=identity, detail=detail)
             + MessageSegment.text(
                 Messages.START.format(number=mines)
                 + "\n"
@@ -248,41 +332,25 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 )
                 session.field.reveal_all_mines()
 
-                # Plugin message first
+                # The final revealed board is the game state and keeps its
+                # own send; everything else collapses into one result card.
                 await game_start.send(
-                    _render_field_image(session.field)
-                    + MessageSegment.text(
-                        Messages.CASHOUT
-                        + "\n"
-                        + f"获得 {payout} 个Pt，"
-                        + f"现在有 {monetary.get(event.get_user_id())} 个Pt"
+                    _render_field_image(
+                        session.field, kit=kit, identity=identity, detail=detail
                     )
                     + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
                 )
-
-                # Daily task
-                task_msg = await check_progress(
-                    event.get_user_id(),
-                    "mines_cashout",
-                    {"multiplier": cashout_multiplier},
+                await _send_result_card(
+                    game_start,
+                    session,
+                    GameResult.CASHOUT,
+                    payout,
+                    cashout_multiplier,
+                    kit,
+                    identity,
+                    gens[latest_message_id],
                 )
-                if task_msg:
-                    await game_start.send(
-                        task_msg + gens[latest_message_id].element,
-                        referrer=gens[latest_message_id].event.referrer,
-                    )
-
-                # XP scales with multiplier: starts at 5 at 2.0x
-                if cashout_multiplier >= 2.0:
-                    xp = int(cashout_multiplier * 2.5)
-                    level_msg = await monetary.add_xp(event.get_user_id(), xp)
-                    if level_msg:
-                        await game_start.send(
-                            level_msg + gens[latest_message_id].element,
-                            referrer=gens[latest_message_id].event.referrer,
-                        )
-
                 await game_start.finish(referrer=event.referrer)
 
             if not msg.isdigit():
@@ -311,17 +379,24 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             if block == BlockType.MINE:
                 session.field.reveal_all_mines()
                 game_manager.end_game(event.get_user_id(), GameResult.LOSE, payout=0)
-                await game_start.finish(
-                    _render_field_image(session.field)
-                    + MessageSegment.text(
-                        Messages.HIT_MINE
-                        + "\n"
-                        + f"损失 {session.bet_amount} 个Pt，"
-                        + f"现在有 {monetary.get(event.get_user_id())} 个Pt"
+                await game_start.send(
+                    _render_field_image(
+                        session.field, kit=kit, identity=identity, detail=detail
                     )
                     + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
                 )
+                await _send_result_card(
+                    game_start,
+                    session,
+                    GameResult.LOSE,
+                    0,
+                    session.multiplier,
+                    kit,
+                    identity,
+                    gens[latest_message_id],
+                )
+                await game_start.finish(referrer=event.referrer)
 
             session.revealed_indices.add(index)
             session.update_multiplier()
@@ -334,45 +409,31 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 )
                 session.field.reveal_all_mines()
 
-                # Plugin message first
+                # The final revealed board is the game state and keeps its
+                # own send; everything else collapses into one result card.
                 await game_start.send(
-                    _render_field_image(session.field)
-                    + MessageSegment.text(
-                        Messages.CASHOUT
-                        + "\n"
-                        + f"获得 {payout} 个Pt，"
-                        + f"现在有 {monetary.get(event.get_user_id())} 个Pt"
+                    _render_field_image(
+                        session.field, kit=kit, identity=identity, detail=detail
                     )
                     + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
                 )
-
-                # Daily task
-                task_msg = await check_progress(
-                    event.get_user_id(),
-                    "mines_cashout",
-                    {"multiplier": win_multiplier},
+                await _send_result_card(
+                    game_start,
+                    session,
+                    GameResult.WIN,
+                    payout,
+                    win_multiplier,
+                    kit,
+                    identity,
+                    gens[latest_message_id],
                 )
-                if task_msg:
-                    await game_start.send(
-                        task_msg + gens[latest_message_id].element,
-                        referrer=gens[latest_message_id].event.referrer,
-                    )
-
-                # XP scales with multiplier: starts at 5 at 2.0x
-                if win_multiplier >= 2.0:
-                    xp = int(win_multiplier * 2.5)
-                    level_msg = await monetary.add_xp(event.get_user_id(), xp)
-                    if level_msg:
-                        await game_start.send(
-                            level_msg + gens[latest_message_id].element,
-                            referrer=gens[latest_message_id].event.referrer,
-                        )
-
                 await game_start.finish(referrer=event.referrer)
 
             await game_start.send(
-                _render_field_image(session.field)
+                _render_field_image(
+                    session.field, kit=kit, identity=identity, detail=detail
+                )
                 + MessageSegment.text(
                     Messages.SAFE_REVEAL
                     + "\n"
@@ -413,27 +474,13 @@ async def handle_stats(event: MessageEvent):
                 referrer=gens[event.message.id].event.referrer,
             )
 
-        # 构建统计信息文本
-        stats_text = f"""🏚️ 地下室探险统计
-📊 {stats.total_games}局 | 胜{stats.wins} 负{stats.losses} | 胜率{stats.win_rate:.1%}
-💰 投入{stats.total_wagered} | 得{stats.total_won} 失{stats.total_lost} | 净收益{stats.net_profit:+d}
-🎰 平均赌注{stats.avg_bet:.1f} | 平均赢{stats.avg_win:.1f} | 平均输{stats.avg_loss:.1f}
-🏆 最高赢{stats.biggest_win} | 最高输{stats.biggest_loss}"""
-
-        # 尝试生成图表
-        chart_bytes = create_win_loss_chart(stats)
-
-        # 发送统计信息
-        response_message = MessageSegment.text(stats_text)
-
-        if chart_bytes:
-            # 如果成功生成图表，添加图表
-            response_message += MessageSegment.image(raw=chart_bytes, mime="image/png")
-        else:
-            response_message += MessageSegment.text("\n📊 图表生成需要至少2局游戏记录")
-
-        response_message += gens[event.message.id].element
-        await game_stats.finish(response_message, referrer=event.referrer)
+        # Theme resolved on the event loop thread; the renderer only draws.
+        kit = kit_for_user(user_id)
+        image = await stats_page(stats, kit).render_async()
+        await game_stats.finish(
+            image_segment(image) + gens[event.message.id].element,
+            referrer=event.referrer,
+        )
 
     except MatcherException:
         raise

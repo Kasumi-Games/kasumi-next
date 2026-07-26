@@ -101,6 +101,7 @@ class BlackjackGameService:
                 "wins": 0,
                 "losses": 0,
                 "pushes": 0,
+                "blackjacks": 0,
                 "win_rate": 0.0,
                 "total_wagered": 0,
                 "total_won": 0,
@@ -124,6 +125,9 @@ class BlackjackGameService:
         )
         pushes = len([g for g in games if g.result == GameResult.PUSH.value])
         losses = total_games - wins - pushes
+        blackjacks = len(
+            [g for g in games if g.result == GameResult.BLACKJACK.value]
+        )
 
         # Win rate
         win_rate = wins / total_games if total_games > 0 else 0.0
@@ -151,6 +155,7 @@ class BlackjackGameService:
             "wins": wins,
             "losses": losses,
             "pushes": pushes,
+            "blackjacks": blackjacks,
             "win_rate": win_rate,
             "total_wagered": total_wagered,
             "total_won": total_won,

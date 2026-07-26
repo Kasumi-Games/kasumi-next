@@ -161,6 +161,34 @@ def calculate_time_decay_factor(
     return math.exp(-effective_elapsed / tau_seconds)
 
 
+def _decay_params(graph: Graph | None) -> tuple[float, float]:
+    """Resolve ``(delay_seconds, tau_seconds)`` for a graph's scale."""
+
+    if graph is None:
+        return DEFAULT_DECAY_DELAY_SECONDS, DEFAULT_DECAY_TAU_SECONDS
+    scale = max(graph.rows, graph.cols)
+    return (
+        DECAY_DELAY_BY_SCALE.get(scale, DEFAULT_DECAY_DELAY_SECONDS),
+        DECAY_TAU_BY_SCALE.get(scale, DEFAULT_DECAY_TAU_SECONDS),
+    )
+
+
+def time_decay_factor(elapsed_seconds: float, graph: Graph | None = None) -> float:
+    """The decay multiplier a clear at ``elapsed_seconds`` earns.
+
+    Exactly the factor :func:`apply_time_decay` applies, exposed separately so
+    the result card can show the multiplier instead of only the pre-multiplied
+    number.
+    """
+
+    delay, tau = _decay_params(graph)
+    return calculate_time_decay_factor(
+        elapsed_seconds=elapsed_seconds,
+        delay_seconds=delay,
+        tau_seconds=tau,
+    )
+
+
 def apply_time_decay(
     base_reward: int,
     elapsed_seconds: float,
@@ -168,13 +196,7 @@ def apply_time_decay(
     delay_seconds: float | None = None,
     tau_seconds: float | None = None,
 ) -> int:
-    if graph is not None:
-        scale = max(graph.rows, graph.cols)
-        resolved_delay = DECAY_DELAY_BY_SCALE.get(scale, DEFAULT_DECAY_DELAY_SECONDS)
-        resolved_tau = DECAY_TAU_BY_SCALE.get(scale, DEFAULT_DECAY_TAU_SECONDS)
-    else:
-        resolved_delay = DEFAULT_DECAY_DELAY_SECONDS
-        resolved_tau = DEFAULT_DECAY_TAU_SECONDS
+    resolved_delay, resolved_tau = _decay_params(graph)
     if delay_seconds is not None:
         resolved_delay = delay_seconds
     if tau_seconds is not None:

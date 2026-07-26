@@ -1,21 +1,16 @@
 """
 Blackjack game statistics service for analyzing player game data.
+
+The former ``create_win_loss_chart`` matplotlib figure is gone: ``/黑香澄统计``
+now answers with the themed card in ``stats_render``, so this module is pure
+data assembly.
 """
 
 from typing import List
-from typing import Optional
-from typing import cast
-from pathlib import Path
 from dataclasses import dataclass
-
-import matplotlib.font_manager as fm
-from matplotlib.axes import Axes
 
 from .models import BlackjackGame
 from .game_service import BlackjackGameService
-
-font_path = Path(__file__).parent / "recourses" / "old.ttf"
-font = fm.FontProperties(fname=font_path)
 
 
 @dataclass
@@ -37,6 +32,7 @@ class BlackjackStats:
     wins: int
     losses: int
     pushes: int  # 平局
+    blackjacks: int  # BlackJack获胜次数（已计入wins）
     win_rate: float
     total_wagered: int  # 总投入
     total_won: int  # 总赢得
@@ -100,6 +96,7 @@ def get_blackjack_stats(user_id: str) -> BlackjackStats:
             wins=0,
             losses=0,
             pushes=0,
+            blackjacks=0,
             win_rate=0.0,
             total_wagered=0,
             total_won=0,
@@ -123,6 +120,7 @@ def get_blackjack_stats(user_id: str) -> BlackjackStats:
         wins=stats_dict["wins"],
         losses=stats_dict["losses"],
         pushes=stats_dict["pushes"],
+        blackjacks=stats_dict["blackjacks"],
         win_rate=stats_dict["win_rate"],
         total_wagered=stats_dict["total_wagered"],
         total_won=stats_dict["total_won"],
@@ -135,124 +133,3 @@ def get_blackjack_stats(user_id: str) -> BlackjackStats:
         biggest_loss=stats_dict["biggest_loss"],
         recent_games=recent_games,
     )
-
-
-def create_win_loss_chart(stats: BlackjackStats) -> Optional[bytes]:
-    """
-    创建最近30次游戏的输赢图表
-
-    Args:
-        stats: blackjack统计数据
-
-    Returns:
-        图表的PNG字节数据，如果没有足够数据则返回None
-    """
-    try:
-        import matplotlib
-
-        matplotlib.use("Agg")  # 使用非交互式后端
-        from io import BytesIO
-
-        import numpy as np
-        import matplotlib.pyplot as plt
-    except ImportError:
-        # matplotlib未安装，返回None
-        return None
-
-    if len(stats.recent_games) < 2:
-        return None
-
-    plt.rcParams["font.family"] = font.get_name()
-    plt.rcParams["axes.unicode_minus"] = False
-
-    # 准备数据
-    games = stats.recent_games[::-1]  # 反转以按时间正序显示
-    game_numbers = list(range(1, len(games) + 1))
-    profits = [game.amount for game in games]
-
-    # 计算累计收益
-    cumulative_profit = np.cumsum(profits)
-
-    # 创建图表
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
-    ax1 = cast(Axes, ax1)
-    ax2 = cast(Axes, ax2)
-
-    # 第一个子图：单次游戏输赢
-    colors = ["green" if p > 0 else "red" if p < 0 else "gray" for p in profits]
-    bars = ax1.bar(game_numbers, profits, color=colors, alpha=0.7)
-    ax1.axhline(y=0, color="black", linestyle="-", linewidth=0.5)
-    ax1.set_title(
-        f"最近 {len(games)} 次黑香澄游戏单次输赢",
-        fontsize=14,
-        fontweight="bold",
-        fontproperties=font,
-    )
-    ax1.set_xlabel("游戏局数", fontproperties=font)
-    ax1.set_ylabel("输赢金额 (Pt)", fontproperties=font)
-    ax1.grid(True, alpha=0.3)
-
-    # 添加数值标签
-    for _, (bar, profit) in enumerate(zip(bars, profits)):
-        if profit != 0:
-            ax1.text(
-                bar.get_x() + bar.get_width() / 2,
-                bar.get_height() + (5 if profit > 0 else -15),
-                str(profit),
-                ha="center",
-                va="bottom" if profit > 0 else "top",
-                fontsize=8,
-                fontproperties=font,
-            )
-
-    # 第二个子图：累计收益曲线
-    ax2.plot(
-        game_numbers, cumulative_profit, "b-", linewidth=2, marker="o", markersize=4
-    )
-    ax2.axhline(y=0, color="gray", linestyle="--", alpha=0.7)
-
-    # 先填充整个区域为浅灰色作为基础
-    ax2.fill_between(game_numbers, cumulative_profit, 0, alpha=0.1, color="gray")
-
-    # 然后分别填充正负区域，使用interpolate确保连续性
-    ax2.fill_between(
-        game_numbers,
-        cumulative_profit,
-        0,
-        where=np.array(cumulative_profit) >= 0,
-        color="green",
-        alpha=0.3,
-        interpolate=True,
-        label="盈利区域",
-    )
-    ax2.fill_between(
-        game_numbers,
-        cumulative_profit,
-        0,
-        where=np.array(cumulative_profit) < 0,
-        color="red",
-        alpha=0.3,
-        interpolate=True,
-        label="亏损区域",
-    )
-    ax2.set_title("累计收益趋势", fontsize=14, fontweight="bold", fontproperties=font)
-    ax2.set_xlabel("游戏局数", fontproperties=font)
-    ax2.set_ylabel("累计收益 (Pt)", fontproperties=font)
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(prop=font)
-
-    # 添加统计信息
-    info_text = f"胜率: {stats.win_rate:.1%} | 净收益: {stats.net_profit} | 平均赌注: {stats.avg_bet:.1f}"
-    fig.suptitle(info_text, fontsize=11, y=0.95, fontproperties=font)
-
-    # 调整子图间距和边距
-    plt.subplots_adjust(top=0.88, bottom=0.12, hspace=0.35, left=0.08, right=0.95)
-
-    # 保存到字节流
-    buffer = BytesIO()
-    plt.savefig(buffer, format="png", dpi=150, bbox_inches=None)
-    buffer.seek(0)
-    chart_bytes = buffer.getvalue()
-    plt.close()
-
-    return chart_bytes
