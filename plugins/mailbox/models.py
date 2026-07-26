@@ -5,6 +5,7 @@
 import time
 import datetime
 from typing import Optional
+from dataclasses import dataclass
 
 from pydantic import Field
 from pydantic import BaseModel
@@ -17,6 +18,8 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.ext.declarative import declarative_base
+
+from ..inventory.models import GrantResult
 
 Base = declarative_base()
 
@@ -145,3 +148,48 @@ class ServiceMail(BaseModel):
     is_broadcast: bool
     is_read: bool
     read_at: Optional[datetime.datetime]
+
+
+@dataclass(frozen=True)
+class ClaimedMail:
+    """一封在批量领取中被领取的邮件及其发放结果
+
+    Attributes:
+        mail: 邮件本体
+        results: ``grant_many`` 的返回值，与 ``mail.attachments`` 一一对应
+    """
+
+    mail: ServiceMail
+    results: tuple[GrantResult, ...] = ()
+
+
+@dataclass(frozen=True)
+class ClaimTotal:
+    """一种物品在整次批量领取中的汇总
+
+    Attributes:
+        item_id: 物品 ID
+        granted: 本次实际发放数量
+        already_owned: 因幂等或已拥有而跳过的数量
+    """
+
+    item_id: str
+    granted: int = 0
+    already_owned: int = 0
+
+
+@dataclass(frozen=True)
+class ClaimOutcome:
+    """一次 ``/邮件 领取`` 的完整结果
+
+    Attributes:
+        claimed: 被领取的邮件，按邮箱顺序排列
+        totals: 按发放数量降序排列的物品汇总
+        remaining_notices: 仍未读的无附件通知数量
+        total_mails: 领取前邮箱中的邮件总数
+    """
+
+    claimed: tuple[ClaimedMail, ...] = ()
+    totals: tuple[ClaimTotal, ...] = ()
+    remaining_notices: int = 0
+    total_mails: int = 0

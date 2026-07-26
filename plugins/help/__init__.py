@@ -1,13 +1,27 @@
 from nonebot import on_command
 from nonebot.params import CommandArg
-from nonebot.adapters import Bot
 from nonebot.adapters import Message
 from nonebot.adapters.satori import MessageEvent
 
 from utils import PassiveGenerator
+from utils.images import image_segment
+from utils.theming import kit_for_user
+
+from .render import board_page
+from .render import detail_page
+from .entries import entries_from
+from .entries import find_entries
+from .entries import suggest_names
 
 
 def escape_text(text: str) -> str:
+    """Escape Satori markup in a text reply.
+
+    Only the text branches need this now: the board and the detail card are
+    images, and an image has no markup to escape. It survives because the miss
+    and ambiguity replies quote back whatever the player typed.
+    """
+
     return (
         text.replace("&", "&amp;")
         .replace("<", "&lt;")
@@ -159,52 +173,54 @@ plugin_data = {
 }
 
 
+#: The dict above, re-shaped into one record per plugin and one command per
+#: typeable string. Built once at import; ``plugin_data`` stays the source.
+HELP_ENTRIES = entries_from(plugin_data)
+
+
 help = on_command("help", priority=1, aliases={"帮助", "帮助信息"})
 
 
 @help.handle()
-async def _(bot: Bot, event: MessageEvent, plugin: Message = CommandArg()):  # type: ignore
-    plugin: str = plugin.extract_plain_text().strip()
+async def _(event: MessageEvent, plugin: Message = CommandArg()):  # type: ignore
+    token: str = plugin.extract_plain_text().strip()
     passive_generator = PassiveGenerator(event)
+    # Resolve the theme on the event loop thread: the inventory Session behind
+    # it is process-global and not thread safe, and render_async offloads to a
+    # worker. See utils/theming.py.
+    kit = kit_for_user(event.get_user_id())
 
-    if plugin == "":
-        plugin_msg = "\n    ".join(
-            [
-                f"{plugin_name} -{plugin_info['description']}"
-                for plugin_name, plugin_info in plugin_data.items()
-            ]
-        )
-        msg = (
-            "当前可用的插件有：\n"
-            f"    {plugin_msg}\n"
-            "输入“/help 插件名”查看特定插件的语法和使用示例。\n"
-            "需要帮助时请加入 QQ 群 908979461"
-        )
-
+    if token == "":
+        image = await board_page(HELP_ENTRIES, kit).render_async()
         await help.finish(
-            msg + passive_generator.element, referrer=passive_generator.event.referrer
-        )
-    elif plugin in plugin_data:
-        msg = (
-            f"插件 {plugin} 的使用方法：\n"
-            + "\n".join(
-                [
-                    f"    {command} -{usage}"
-                    for command, usage in plugin_data[plugin]["usage"].items()
-                ]
-            )
-            + "\n示例：\n    "
-            + "\n    ".join(plugin_data[plugin]["examples"])
-        )
-
-        if bot.adapter.get_name() == "Satori":
-            msg = escape_text(msg)
-
-        await help.finish(
-            msg + passive_generator.element, referrer=passive_generator.event.referrer
-        )
-    else:
-        await help.finish(
-            "未找到该插件！" + passive_generator.element,
+            image_segment(image) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
+
+    matches = find_entries(HELP_ENTRIES, token)
+
+    if len(matches) == 1:
+        image = await detail_page(matches[0], kit).render_async()
+        await help.finish(
+            image_segment(image) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    # Misses and ambiguity stay text: the player is mid-guess, the answer is a
+    # word they will retype immediately, and an image costs a render plus an
+    # upload to say it.
+    if matches:
+        names = " / ".join(entry.name for entry in matches)
+        message = f"「{token}」对应了好几个功能：{names}。发送 /help 加上其中一个看详情。"
+    else:
+        suggestions = suggest_names(HELP_ENTRIES, token)
+        message = (
+            f"没有叫「{token}」的功能，最接近的是 {' / '.join(suggestions)}。发送 /help 看全部。"
+            if suggestions
+            else f"没有叫「{token}」的功能，发送 /help 看看都有哪些吧。"
+        )
+
+    await help.finish(
+        escape_text(message) + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )

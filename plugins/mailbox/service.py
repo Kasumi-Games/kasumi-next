@@ -12,13 +12,19 @@ from typing import Optional
 from sqlalchemy import and_
 from nonebot.log import logger
 
+from utils.clock import to_bot_time
+
 from .models import Mail
+from .models import ClaimTotal
+from .models import ClaimedMail
 from .models import ServiceMail
+from .models import ClaimOutcome
 from .models import MailRecipient
 from .models import MailAttachment
 from .models import ServiceMailAttachment
 from .database import get_session
 from ..inventory.models import ItemAmount
+from ..inventory.service import grant_many
 
 
 class MailService:
@@ -343,6 +349,84 @@ class MailService:
             session.close()
 
 
+def claim_all_mails(mail_service: "MailService", user_id: str) -> ClaimOutcome:
+    """领取所有带附件的未读邮件
+
+    只处理带附件的未读邮件。无附件的通知保持未读，因为 ``is_read``
+    是系统里唯一的"玩家确实看过这条公告"的记录，批量领取不应该消费它。
+
+    每封邮件都使用与单封领取完全相同的幂等键 ``mail:<id>``，
+    否则已经单独领取过的邮件会被重复发放。
+
+    Args:
+        mail_service: 邮件服务实例
+        user_id: 用户ID
+
+    Returns:
+        ClaimOutcome: 领取结果，含每封邮件的明细与物品汇总
+    """
+
+    mails = mail_service.get_user_mails(user_id)
+    claimed: list[ClaimedMail] = []
+    granted_totals: dict[str, int] = {}
+    owned_totals: dict[str, int] = {}
+    remaining_notices = 0
+
+    for mail in mails:
+        if mail.is_read:
+            continue
+        if not mail.attachments:
+            remaining_notices += 1
+            continue
+
+        results = grant_many(
+            user_id,
+            [
+                ItemAmount(
+                    attachment.item_id,
+                    attachment.quantity,
+                    attachment.scope_type or None,
+                    attachment.scope_id or None,
+                )
+                for attachment in mail.attachments
+            ],
+            reason=f"mail_reward_{mail.id}",
+            source_type="mail",
+            source_id=str(mail.id),
+            idempotency_key=f"mail:{mail.id}",
+        )
+        mail_service.read_mail(user_id, mail.id)
+        claimed.append(ClaimedMail(mail=mail, results=tuple(results)))
+
+        for result in results:
+            if result.granted > 0:
+                granted_totals[result.item_id] = (
+                    granted_totals.get(result.item_id, 0) + result.granted
+                )
+            else:
+                owned_totals[result.item_id] = (
+                    owned_totals.get(result.item_id, 0) + result.quantity
+                )
+
+    totals = [
+        ClaimTotal(item_id=item_id, granted=granted)
+        for item_id, granted in granted_totals.items()
+    ]
+    totals.extend(
+        ClaimTotal(item_id=item_id, already_owned=quantity)
+        for item_id, quantity in owned_totals.items()
+        if item_id not in granted_totals
+    )
+    totals.sort(key=lambda total: (total.granted, total.already_owned), reverse=True)
+
+    return ClaimOutcome(
+        claimed=tuple(claimed),
+        totals=tuple(totals),
+        remaining_notices=remaining_notices,
+        total_mails=len(mails),
+    )
+
+
 def _normalize_attachments(
     star_kakeras: int = 0,
     star_stickers: int = 0,
@@ -388,11 +472,11 @@ def _to_service_mail(
         star_stickers=mail.star_stickers,
         attachments=attachments,
         sender_id=mail.sender_id,
-        created_at=datetime.datetime.fromtimestamp(mail.created_at),
-        expire_time=datetime.datetime.fromtimestamp(expire_time),
+        created_at=to_bot_time(mail.created_at),
+        expire_time=to_bot_time(expire_time),
         is_broadcast=mail.is_broadcast,
         is_read=recipient.is_read,
-        read_at=datetime.datetime.fromtimestamp(recipient.read_at)
+        read_at=to_bot_time(recipient.read_at)
         if recipient.read_at
         else None,
     )

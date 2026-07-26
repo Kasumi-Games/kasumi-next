@@ -34,8 +34,16 @@ from nonebot_plugin_alconna import on_alconna  # noqa: E402
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import PassiveGenerator  # noqa: E402
+from utils.clock import format_ts
+from utils.images import image_segment  # noqa: E402
+from utils.theming import kit_for_user  # noqa: E402
 
+from .models import ServiceMail  # noqa: E402
+from .render import mail_page  # noqa: E402
+from .render import inbox_page  # noqa: E402
+from .render import claim_all_page  # noqa: E402
 from .service import MailService  # noqa: E402
+from .service import claim_all_mails  # noqa: E402
 from .database import init_database  # noqa: E402
 from ..inventory.models import ItemAmount  # noqa: E402
 from .scheduled_service import ScheduledMailService  # noqa: E402
@@ -43,14 +51,8 @@ from ..inventory.service import grant_many  # noqa: E402
 from ..inventory.service import parse_item_amount  # noqa: E402
 from ..inventory.service import display_item_amount  # noqa: E402
 
-
-def escape_text(text: str) -> str:
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+#: 触发一键领取的参数写法
+CLAIM_KEYWORDS = {"领取", "一键领取", "全部领取", "claim", "claimall"}
 
 
 # 初始化数据库
@@ -103,112 +105,140 @@ async def handle_mailbox(event: MessageEvent, arg: Message = CommandArg()):
 
     passive_generator = PassiveGenerator(event)
 
-    if not text:
-        # 显示邮箱列表
-        mails = mail_service.get_user_mails(user_id)
-        if not mails:
-            await mailbox_cmd.finish(
-                "你的邮箱是空的呢~" + passive_generator.element,
-                referrer=passive_generator.event.referrer,
-            )
-
-        mail_list = []
-        for i, mail in enumerate(mails, 1):
-            status_icon = "📖" if mail.is_read else "📩"
-            reward_parts = [
-                "+" + display_item_amount(attachment.item_id, attachment.quantity)
-                for attachment in mail.attachments
-            ]
-            reward_info = f" ({'，'.join(reward_parts)})" if reward_parts else ""
-
-            # 格式化过期时间
-            expires_str = mail.expire_time.strftime("%Y-%m-%d")
-
-            mail_list.append(
-                f"{i}. {status_icon} {mail.title}{reward_info} (截止: {expires_str})"
-            )
-
-        await mailbox_cmd.finish(
-            f"📮 你的邮箱 ({len(mails)}封邮件):\n"
-            + "\n".join(mail_list)
-            + escape_text("\n\n发送 '邮件 <编号>' 查看详情")
-            + passive_generator.element,
-            referrer=passive_generator.event.referrer,
-        )
-
-    # 读取特定邮件
     try:
-        mail_index = int(text) - 1
-        mails = mail_service.get_user_mails(user_id)
-
-        if mail_index < 0 or mail_index >= len(mails):
-            await mailbox_cmd.finish(
-                "邮件编号无效！" + passive_generator.element,
-                referrer=passive_generator.event.referrer,
-            )
-
-        mail = mails[mail_index]
-
-        # 检查邮件是否过期
-        if time.time() > mail.expire_time.timestamp():
-            await mailbox_cmd.finish(
-                "这封邮件已经过期了！" + passive_generator.element,
-                referrer=passive_generator.event.referrer,
-            )
-
-        # 标记为已读并领取奖励
-        reward_message = ""
-        if not mail.is_read:
-            results = grant_many(
-                user_id,
-                [
-                    ItemAmount(
-                        attachment.item_id,
-                        attachment.quantity,
-                        attachment.scope_type or None,
-                        attachment.scope_id or None,
-                    )
-                    for attachment in mail.attachments
-                ],
-                reason=f"mail_reward_{mail.id}",
-                source_type="mail",
-                source_id=str(mail.id),
-                idempotency_key=f"mail:{mail.id}",
-            )
-            for result in results:
-                if result.granted > 0:
-                    reward_message += (
-                        "\n\n🎁 你获得了 "
-                        + display_item_amount(result.item_id, result.granted)
-                        + "！"
-                    )
-                elif result.skipped:
-                    reward_message += (
-                        "\n\n🎁 "
-                        + display_item_amount(result.item_id, result.quantity)
-                        + " 已拥有或已领取。"
-                    )
-
-        mail_service.read_mail(user_id, mail.id)
-
-        # 构建邮件内容
-        content = "📧 邮件详情\n"
-        content += f"标题: {mail.title}\n"
-        content += f"发送时间: {mail.created_at.strftime('%Y-%m-%d %H:%M')}\n"
-        content += f"过期时间: {mail.expire_time.strftime('%Y-%m-%d %H:%M')}\n"
-        content += f"\n{mail.content}"
-        content += reward_message
-        content += passive_generator.element
-
-        await mailbox_cmd.finish(content, referrer=event.referrer)
-
+        if not text:
+            await send_inbox(user_id, passive_generator)
+        if text.lower() in CLAIM_KEYWORDS:
+            await send_claim_all(user_id, passive_generator)
+        await send_mail_detail(user_id, text, passive_generator)
     except MatcherException:
         raise
-    except ValueError:
+    except Exception as e:
+        code = handle_error(e, context="mailbox_view", user_id=user_id)
         await mailbox_cmd.finish(
-            "请输入有效的邮件编号！" + passive_generator.element,
+            f"打开邮箱失败\n错误码：{code}" + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
+
+
+async def send_inbox(user_id: str, passive_generator: PassiveGenerator):
+    """渲染并发送邮箱列表卡片"""
+    # 主题解析必须留在事件循环线程：库存 Session 是进程级共享且非线程安全，
+    # 而 render_async 会把光栅化交给工作线程。
+    kit = kit_for_user(user_id)
+    mails = mail_service.get_user_mails(user_id)
+    image = await inbox_page(mails, kit).render_async()
+
+    await mailbox_cmd.finish(
+        image_segment(image) + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )
+
+
+async def send_claim_all(user_id: str, passive_generator: PassiveGenerator):
+    """一键领取所有带附件的未读邮件并发送汇总卡片"""
+    kit = kit_for_user(user_id)
+    outcome = claim_all_mails(mail_service, user_id)
+    image = await claim_all_page(outcome, kit).render_async()
+
+    await mailbox_cmd.finish(
+        image_segment(image) + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )
+
+
+async def send_mail_detail(
+    user_id: str, text: str, passive_generator: PassiveGenerator
+):
+    """读取指定邮件（编号或 M<id> 代码），领取附件并发送详情卡片"""
+    mails = mail_service.get_user_mails(user_id)
+    mail = select_mail(mails, text)
+
+    if mail is None:
+        await mailbox_cmd.finish(
+            select_error_text(text, len(mails)) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    if time.time() > mail.expire_time.timestamp():
+        await mailbox_cmd.finish(
+            "这封邮件已经过期了！" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    # 先发放再标记已读，与批量领取保持同一顺序和同一幂等键
+    results = []
+    if not mail.is_read:
+        results = grant_many(
+            user_id,
+            [
+                ItemAmount(
+                    attachment.item_id,
+                    attachment.quantity,
+                    attachment.scope_type or None,
+                    attachment.scope_id or None,
+                )
+                for attachment in mail.attachments
+            ],
+            reason=f"mail_reward_{mail.id}",
+            source_type="mail",
+            source_id=str(mail.id),
+            idempotency_key=f"mail:{mail.id}",
+        )
+
+    mail_service.read_mail(user_id, mail.id)
+
+    kit = kit_for_user(user_id)
+    image = await mail_page(mail, results, kit).render_async()
+
+    await mailbox_cmd.finish(
+        image_segment(image) + passive_generator.element,
+        referrer=passive_generator.event.referrer,
+    )
+
+
+def select_mail(mails: list[ServiceMail], text: str) -> Optional[ServiceMail]:
+    """按序号或 M<id> 代码选中一封邮件
+
+    序号是主要写法；代码是备用写法，用于从一键领取的明细里回看某封邮件。
+    M 前缀让两者不会互相误认。
+
+    Args:
+        mails: 用户邮件列表
+        text: 用户输入的参数
+
+    Returns:
+        Optional[ServiceMail]: 选中的邮件，无法解析或越界时返回 None
+    """
+
+    token = text.strip().lstrip("#").upper()
+
+    if token.startswith("M") and token[1:].isdigit():
+        mail_id = int(token[1:])
+        return next((mail for mail in mails if mail.id == mail_id), None)
+
+    if not token.isdigit():
+        return None
+
+    index = int(token) - 1
+    if 0 <= index < len(mails):
+        return mails[index]
+    return None
+
+
+def select_error_text(text: str, total: int) -> str:
+    """选不中邮件时的纯文本提示
+
+    保持文本：错误提示必须便宜且可复制，不值得一次渲染加一次上传。
+    """
+
+    if total == 0:
+        return "你的邮箱是空的呢~"
+
+    token = text.strip().lstrip("#").upper()
+    if token.isdigit() or (token.startswith("M") and token[1:].isdigit()):
+        return f"邮件编号无效，当前有 {total} 封邮件（1-{total}）"
+    return f"请输入有效的邮件编号！当前有 {total} 封邮件（1-{total}）"
 
 
 # schedulemail add -r all -w +1m -e 1 -k 10 -t "This Is A Test Mail Title" -c "Oh no"
@@ -632,9 +662,7 @@ async def create_scheduled_mail(
         mails = scheduled_service.get_scheduled_mails(include_sent=True)
         created_mail = next((m for m in mails if m.id == mail_id), None)
 
-        time_str_formatted = time.strftime(
-            "%Y-%m-%d %H:%M:%S", time.localtime(scheduled_time)
-        )
+        time_str_formatted = format_ts(scheduled_time, "%Y-%m-%d %H:%M:%S")
 
         name_info = f" (ID: {created_mail.name})" if created_mail else ""
         await schedule_mail_cmd.finish(
@@ -678,7 +706,7 @@ async def handle_schedule_list(event: MessageEvent):
         if mail.scheduled_time <= current_time:
             status = "🔥 已到期"
 
-        time_str = time.strftime("%m-%d %H:%M", time.localtime(mail.scheduled_time))
+        time_str = format_ts(mail.scheduled_time, "%m-%d %H:%M")
         reward_info = f" (+{mail.star_kakeras})" if mail.star_kakeras > 0 else ""
         if mail.attachments:
             reward_info = (
@@ -715,12 +743,8 @@ async def handle_schedule_info(event: MessageEvent, name: str):
         )
 
     status = "✅ 已发送" if mail.is_sent else "⏰ 待发送"
-    scheduled_time_str = time.strftime(
-        "%Y-%m-%d %H:%M:%S", time.localtime(mail.scheduled_time)
-    )
-    created_time_str = time.strftime(
-        "%Y-%m-%d %H:%M:%S", time.localtime(mail.created_at)
-    )
+    scheduled_time_str = format_ts(mail.scheduled_time, "%Y-%m-%d %H:%M:%S")
+    created_time_str = format_ts(mail.created_at, "%Y-%m-%d %H:%M:%S")
 
     info = f"""📧 定时邮件详情
 
@@ -738,7 +762,7 @@ Pt: {mail.star_kakeras}
 创建者: {mail.created_by}"""
 
     if mail.is_sent and mail.sent_at:
-        sent_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mail.sent_at))
+        sent_time_str = format_ts(mail.sent_at, "%Y-%m-%d %H:%M:%S")
         info += f"\n实际发送时间: {sent_time_str}"
 
     await schedule_mail_cmd.finish(
@@ -787,7 +811,7 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
                 success = scheduled_service.update_scheduled_mail(
                     name, scheduled_time=new_time
                 )
-                time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(new_time))
+                time_str = format_ts(new_time, "%Y-%m-%d %H:%M:%S")
                 updated_fields.append(f"时间: {time_str}")
             elif field == "kakeras":
                 kakeras = int(new_value)
@@ -846,8 +870,10 @@ async def handle_schedule_edit_alconna(event: MessageEvent, name: str, updates: 
                 )
 
         await schedule_mail_cmd.finish(
-            f"✅ 已更新定时邮件 '{name}':\n" + "\n".join(updated_fields),
-            referrer=event.referrer,
+            f"✅ 已更新定时邮件 '{name}':\n"
+            + "\n".join(updated_fields)
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     except MatcherException:

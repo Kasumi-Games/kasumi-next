@@ -9,6 +9,8 @@ from typing import Optional
 from sqlalchemy import and_
 from nonebot.log import logger
 
+from utils.clock import format_ts
+
 from .models import ScheduledMail
 from .models import ScheduledMailAttachment
 from .service import MailService
@@ -103,7 +105,7 @@ class ScheduledMailService:
         session.commit()
 
         logger.info(
-            f"已创建定时邮件: {name} (预定时间: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(scheduled_time))})"
+            f"已创建定时邮件: {name} (预定时间: {format_ts(scheduled_time, '%Y-%m-%d %H:%M:%S')})"
         )
         return scheduled_mail.id
 
