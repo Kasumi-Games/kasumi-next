@@ -236,17 +236,17 @@ class KasumiFrameTest(unittest.TestCase):
         self.assertEqual(overlay.getpixel((center, center))[3], 0)
 
     def test_asset_preserves_the_face_safe_zone(self) -> None:
-        # Character-shaped frames may use hair or ornaments to frame the face,
-        # but the central 128px square must remain clear for the avatar.
+        # The revised hand-drawn fringe may enter the top of the old square,
+        # but the central 96×128 face window must stay fully clear.
         from PIL import Image
 
         asset = Image.open(AVATAR_FRAME).convert("RGBA")
         alpha = asset.getchannel("A")
-        face_safe_zone = alpha.crop((192, 192, 320, 320))
+        face_safe_zone = alpha.crop((208, 224, 304, 352))
         self.assertEqual(
             face_safe_zone.getextrema(),
             (0, 0),
-            "avatar-frame art overlaps the central 128px face-safe zone",
+            "avatar-frame art overlaps the central face-safe window",
         )
 
     def test_sparkle_helper_produces_requested_size(self) -> None:

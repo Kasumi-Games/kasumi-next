@@ -380,15 +380,37 @@ class BanGDreamKit(BaseKit):
         if not _fits() and detail_component is not None:
             detail_component = None
 
+        avatar: Component = BanGDreamRingedAvatar(
+            source=identity.avatar,
+            initial=identity.nickname[:1] or "?",
+            size=avatar_size,
+            ring_color=self.primary,
+            initial_color=self.text_color,
+            initial_font=CHINESE_FONT,
+        )
+        if identity.avatar_frame is not None:
+            frame_size = round(avatar_size * 512 / 416)
+            avatar = Frame(
+                Overlay(
+                    [
+                        Frame(avatar, align_x="center", align_y="center"),
+                        self.image(
+                            identity.avatar_frame,
+                            width=Fixed(frame_size),
+                            height=Fixed(frame_size),
+                        ),
+                    ],
+                    align_x="center",
+                    align_y="center",
+                ),
+                width=Fixed(frame_size),
+                height=Fixed(frame_size),
+                align_x="center",
+                align_y="center",
+            )
+
         cells: list[Component] = [
-            BanGDreamRingedAvatar(
-                source=identity.avatar,
-                initial=identity.nickname[:1] or "?",
-                size=avatar_size,
-                ring_color=self.primary,
-                initial_color=self.text_color,
-                initial_font=CHINESE_FONT,
-            ),
+            avatar,
             Frame(
                 self.text(identity.nickname, font_size=26, wrap=False, max_lines=1),
                 width=Fill(),

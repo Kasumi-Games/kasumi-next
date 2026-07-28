@@ -22,10 +22,44 @@ from plugins.render import BaseKit
 from plugins.render import PlayerIdentity
 from plugins.render.kits.minimal import MinimalKit
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.kasumi import KasumiKit
 
 ROOT = Path(__file__).resolve().parents[1]
 
 IDENTITY = PlayerIdentity(nickname="香澄", level=12)
+
+
+def _image_sources(component) -> set[object]:
+    sources: set[object] = set()
+
+    def visit(node) -> None:
+        for attr in ("source", "image"):
+            value = getattr(node, attr, None)
+            if value is not None:
+                try:
+                    sources.add(value)
+                except TypeError:
+                    pass
+        for attr in ("children", "child"):
+            value = getattr(node, attr, None)
+            if isinstance(value, (list, tuple)):
+                for child in value:
+                    visit(child)
+            elif value is not None:
+                visit(value)
+
+    visit(component)
+    return sources
+
+
+def test_game_identity_uses_the_equipped_avatar_frame_in_every_tier_a_path() -> None:
+    frame = ROOT / "plugins/inventory/resources/items/avatar_frames/frame_starbeat_top50.png"
+    identity = PlayerIdentity(
+        nickname="香澄", level=12, avatar_frame=frame
+    )
+    for kit in (MinimalKit(), BanGDreamKit(), KasumiKit()):
+        component = cards.game_identity(kit, identity, width=720)
+        assert frame in _image_sources(component)
 
 
 def _bind_to_parent(name: str, module) -> None:

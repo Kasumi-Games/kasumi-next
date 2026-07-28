@@ -180,7 +180,7 @@ requiring two different themes for the same seasonal content.
 | Rank 1 | 1st-place title, champion frame, theme item |
 | Rank 2-3 | podium title, podium frame, theme item |
 | Top 10 | top-10 title, top-10 frame |
-| Top 50 | top-50 title |
+| Top 50 | top-50 title, top-50 frame |
 | All participated players | participation title |
 
 Participation should require a minimal season action, not merely existing in the
@@ -253,6 +253,7 @@ Recommended frame categories:
 | Champion frame | Rank 1 | `frame_s05_champion` |
 | Podium frame | Rank 2-3 | `frame_s05_podium` |
 | Top-10 frame | Top 10 | `frame_s05_top10` |
+| Top-50 frame | Top 50 | `frame_s05_top50` |
 
 The rank frames should look more like competitive status. The character frame
 should visually match the character standing art and configured theme item.

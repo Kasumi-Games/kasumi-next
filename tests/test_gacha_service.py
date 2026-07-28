@@ -509,6 +509,18 @@ class StarbeatRealConfigTest(unittest.TestCase):
         self.assertIn("theme_kasumi_starbeat", tier_items["rank_2_3"])
         self.assertNotIn("theme_kasumi_starbeat", tier_items["rank_4_10"])
 
+        tiers = {
+            tier["tier_key"]: {
+                item["item_id"]: item["quantity"] for item in tier["items"]
+            }
+            for tier in starbeat["reward_tiers"]
+        }
+        self.assertEqual(tiers["rank_1"]["star_sticker"], 2400)
+        self.assertEqual(tiers["rank_2_3"]["star_sticker"], 1200)
+        self.assertEqual(tiers["rank_4_10"]["star_sticker"], 600)
+        self.assertEqual(tiers["rank_11_50"]["star_sticker"], 300)
+        self.assertEqual(tiers["rank_11_50"]["frame_starbeat_top50"], 1)
+
     def test_theme_catalog_stays_clean(self) -> None:
         from utils.theming import validate_theme_catalog
 

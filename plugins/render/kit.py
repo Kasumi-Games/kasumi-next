@@ -29,11 +29,15 @@ class PlayerIdentity:
             fallback (typically an initial-letter badge) instead of leaving a
             hole; avatar fetching currently costs one HTTP call per lookup, so
             most surfaces pass ``None`` until a cache exists.
+        avatar_frame: Optional equipped avatar-frame art. Keeping it beside the
+            avatar makes every identity surface (games, profile, rankings) use
+            the same cosmetic instead of querying inventory at render sites.
     """
 
     nickname: str
     level: int | None = None
     avatar: ImageSource | None = None
+    avatar_frame: ImageSource | None = None
 
 
 @dataclass(frozen=True)

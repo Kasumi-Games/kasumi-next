@@ -34,6 +34,7 @@ from plugins.render import Fixed
 from plugins.render import Frame
 from plugins.render import HStack
 from plugins.render import Insets
+from plugins.render import Overlay
 from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
@@ -421,7 +422,7 @@ def level_up(kit: BaseKit, old_level: int, new_level: int) -> Component:
 
 def ladder_rows(
     kit: BaseKit,
-    rows: list[tuple[int, str, str]],
+    rows: Sequence[tuple],
     *,
     highlight: str | None = None,
     width: int = INNER_WIDTH,
@@ -436,7 +437,8 @@ def ladder_rows(
 
     Args:
         kit: Active kit.
-        rows: ``(rank, name, value)`` triples.
+        rows: ``(rank, name, value)`` triples, optionally followed by a
+            :class:`PlayerIdentity` to show the player's avatar and frame.
         highlight: Name whose row belongs to the viewer.
         width: Row width.
         row_height: Height of one row.
@@ -448,7 +450,9 @@ def ladder_rows(
 
     rank_cell = 72
     built: list[Component] = []
-    for rank, name, value in rows:
+    for row in rows:
+        rank, name, value = row[:3]
+        identity = row[3] if len(row) > 3 else None
         is_self = highlight is not None and name == highlight
         if rank <= 3:
             marker: Component = badge(kit, str(rank), width=rank_cell, height=40)
@@ -472,6 +476,8 @@ def ladder_rows(
             cells.append(
                 kit.separator(orientation="vertical", length=Fixed(28), thickness=6)
             )
+        if identity is not None:
+            cells.append(avatar_or_initial(kit, identity, size=44))
         cells.append(
             Frame(
                 kit.text(name, font_size=BODY_SIZE, wrap=False, max_lines=1),
@@ -823,15 +829,39 @@ def avatar_or_initial(
     """
 
     if identity.avatar is not None:
-        return kit.image(
+        base: Component = kit.image(
             identity.avatar,
             width=Fixed(size),
             height=Fixed(size),
             fit="cover",
             radius=size // 2,
         )
-    initial = identity.nickname[:1] or "?"
-    return badge(kit, initial, width=size, height=size, font_size=max(22, size // 2))
+    else:
+        initial = identity.nickname[:1] or "?"
+        base = badge(
+            kit, initial, width=size, height=size, font_size=max(22, size // 2)
+        )
+    if identity.avatar_frame is None:
+        return base
+    frame_size = round(size * 512 / 416)
+    return Frame(
+        Overlay(
+            [
+                Frame(base, align_x="center", align_y="center"),
+                kit.image(
+                    identity.avatar_frame,
+                    width=Fixed(frame_size),
+                    height=Fixed(frame_size),
+                ),
+            ],
+            align_x="center",
+            align_y="center",
+        ),
+        width=Fixed(frame_size),
+        height=Fixed(frame_size),
+        align_x="center",
+        align_y="center",
+    )
 
 
 def _generic_game_identity(

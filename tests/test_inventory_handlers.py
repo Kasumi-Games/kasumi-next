@@ -366,7 +366,17 @@ async def test_inventory_listing_has_stable_numbered_pages(
             matcher, event, Message("2")
         )  # type: ignore[arg-type]
 
-    reply = str(matcher.calls[0][1])
-    assert "仓库（第 2/2 页）" in reply
-    assert "11. item-10" in reply
-    assert "12. item-11" in reply
+    _, message, _ = matcher.calls[0]
+    assert [segment.type for segment in message] == ["img", "qq:passive"]
+    data = inventory._inventory_list_data(
+        rows[10:],
+        page=2,
+        total_pages=2,
+        offset=10,
+        category="全部",
+    )
+    assert data.subtitle == "全部 · 第 2/2 页"
+    assert [(row.index, row.name) for row in data.rows] == [
+        (11, "item-10"),
+        (12, "item-11"),
+    ]

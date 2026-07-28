@@ -1,6 +1,5 @@
 """Inventory plugin commands, season commands, and exports."""
 
-import json
 import time
 from pathlib import Path
 
@@ -22,6 +21,7 @@ from utils.images import image_segment
 from utils.theming import kit_for_user
 from utils.theming import theme_by_token
 from utils.identity import identity_for
+from utils.identity import identities_for
 
 require("nonebot_plugin_apscheduler")
 
@@ -37,10 +37,14 @@ from .render import SeasonInfoData  # noqa: E402
 from .render import SeasonRankRow  # noqa: E402
 from .render import SeasonRankData  # noqa: E402
 from .render import SeasonRewardRow  # noqa: E402
+from .render import InventoryListData  # noqa: E402
+from .render import InventoryListRow  # noqa: E402
+from .render import inventory_list_page  # noqa: E402
 from .render import profile_page  # noqa: E402
 from .render import season_info_page  # noqa: E402
 from .render import season_rank_page  # noqa: E402
 from .service import get_item  # noqa: E402
+from .service import get_item_art  # noqa: E402
 from .service import get_equipped  # noqa: E402
 from .service import get_quantity  # noqa: E402
 from .service import display_scope  # noqa: E402
@@ -72,10 +76,6 @@ from .season_service import list_settled_rankings  # noqa: E402
 from .season_service import capture_rank_snapshots  # noqa: E402
 from .season_service import dispatch_pending_season_rewards  # noqa: E402
 from .season_service import grant_featured_character_reward  # noqa: E402
-
-#: Repo root; ``metadata.art`` paths in ``items.json`` are relative to it.
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
 
 @get_driver().on_startup
 async def init():
@@ -200,8 +200,24 @@ async def handle_inventory(
         category_hint = f" {category_text}" if category_text else ""
         lines.append(f"翻页：仓库{category_hint} <页码>")
 
+    kit = kit_for_user(user_id)
+    try:
+        data = _inventory_list_data(
+            page_rows,
+            page=page,
+            total_pages=total_pages,
+            offset=offset,
+            category=category_text or "全部",
+        )
+        image = await inventory_list_page(data, kit).render_async()
+    except Exception:
+        logger.opt(exception=True).warning("inventory list card render failed")
+        await matcher.finish(
+            "\n".join(lines) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
     await matcher.finish(
-        "\n".join(lines) + passive_generator.element,
+        image_segment(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -219,9 +235,30 @@ async def handle_cosmetic(
 
     try:
         if not text or text.isdigit():
+            page = int(text or "1")
+            rows = list_inventory(
+                user_id, category="cosmetic", include_season=False
+            )
+            page_rows, total_pages, offset = _page(rows, page)
+            kit = kit_for_user(user_id)
+            try:
+                data = _cosmetic_list_data(
+                    user_id,
+                    page_rows,
+                    page=page,
+                    total_pages=total_pages,
+                    offset=offset,
+                )
+                image = await inventory_list_page(data, kit).render_async()
+            except Exception:
+                logger.opt(exception=True).warning("cosmetic list card render failed")
+                await matcher.finish(
+                    _cosmetic_listing(user_id, page=page)
+                    + passive_generator.element,
+                    referrer=passive_generator.event.referrer,
+                )
             await matcher.finish(
-                _cosmetic_listing(user_id, page=int(text or "1"))
-                + passive_generator.element,
+                image_segment(image) + passive_generator.element,
                 referrer=passive_generator.event.referrer,
             )
 
@@ -309,6 +346,113 @@ def _cosmetic_listing(user_id: str, *, page: int = 1) -> str:
         lines.insert(0, "装扮：")
         lines.append("还没有可用装扮。")
     return "\n".join(lines)
+
+
+def _inventory_list_data(
+    rows: list,
+    *,
+    page: int,
+    total_pages: int,
+    offset: int,
+    category: str,
+) -> InventoryListData:
+    built: list[InventoryListRow] = []
+    for index, row in enumerate(rows, start=offset + 1):
+        item = getattr(row, "item", None) or get_item(row.item_id)
+        name = item.name if item is not None else row.item_id
+        scope_name = display_scope(row.scope_type, row.scope_id)
+        amount = display_item_amount(row.item_id, row.quantity)
+        detail = amount if not scope_name else f"{amount} · {scope_name}"
+        cosmetic = item.cosmetic if item is not None else None
+        currency = item.currency if item is not None else None
+        kind = (
+            _COSMETIC_SLOT_NAMES.get(
+                cosmetic.cosmetic_type, cosmetic.cosmetic_type
+            )
+            if cosmetic is not None
+            else "货币"
+            if currency is not None
+            else "道具"
+        )
+        built.append(
+            InventoryListRow(
+                index=index,
+                name=name,
+                detail=detail,
+                kind=kind,
+                rarity=int(cosmetic.rarity) if cosmetic is not None else 0,
+                art=get_item_art(row.item_id),
+            )
+        )
+    return InventoryListData(
+        title="仓库",
+        subtitle=f"{category} · 第 {page}/{total_pages} 页",
+        page=page,
+        total_pages=total_pages,
+        rows=tuple(built),
+        footer=(
+            f"/仓库 {category} <页码> 翻页"
+            if total_pages > 1 and category != "全部"
+            else "/仓库 <页码> 翻页"
+            if total_pages > 1
+            else ""
+        ),
+    )
+
+
+def _cosmetic_list_data(
+    user_id: str,
+    rows: list,
+    *,
+    page: int,
+    total_pages: int,
+    offset: int,
+) -> InventoryListData:
+    equipped = get_equipped(user_id)
+    equipped_ids = set(equipped.values())
+    built: list[InventoryListRow] = []
+    for index, row in enumerate(rows, start=offset + 1):
+        item = getattr(row, "item", None) or get_item(row.item_id)
+        if item is None:
+            continue
+        cosmetic = item.cosmetic
+        kind = (
+            _COSMETIC_SLOT_NAMES.get(
+                cosmetic.cosmetic_type, cosmetic.cosmetic_type
+            )
+            if cosmetic is not None
+            else "装扮"
+        )
+        built.append(
+            InventoryListRow(
+                index=index,
+                name=item.name,
+                detail=item.description or kind,
+                kind=kind,
+                rarity=int(cosmetic.rarity) if cosmetic is not None else 0,
+                art=get_item_art(item.item_id),
+                equipped=item.item_id in equipped_ids,
+            )
+        )
+    worn: list[str] = []
+    for slot, label in _COSMETIC_SLOT_LABELS:
+        item_id = equipped.get(slot)
+        if item_id:
+            item = get_item(item_id)
+            worn.append(f"{label}：{item.name if item else item_id}")
+    return InventoryListData(
+        title="装扮",
+        subtitle=f"我的装扮 · 第 {page}/{total_pages} 页",
+        page=page,
+        total_pages=total_pages,
+        rows=tuple(built),
+        equipped_summary="当前装备 · " + " · ".join(worn) if worn else "当前未装备装扮",
+        footer=(
+            "/装扮 <页码> 翻页 · /装扮 装备 <序号或名称>"
+            if total_pages > 1
+            else "/装扮 装备 <序号或名称>"
+        ),
+    )
 
 
 def _page(rows: list, page: int) -> tuple[list, int, int]:
@@ -626,7 +770,7 @@ async def handle_season_rank(matcher: Matcher, event: MessageEvent):
     # In season the Pt ladder is a card. Data and kit resolve on the event
     # loop thread — the inventory session is process-global and not thread
     # safe — and only the raster is offloaded.
-    data = _assemble_season_rank(user_id, season)
+    data = await _hydrate_season_rank(_assemble_season_rank(user_id, season))
     kit = kit_for_user(user_id)
     try:
         image = await season_rank_page(data, kit).render_async()
@@ -660,7 +804,10 @@ def _assemble_season_rank(user_id: str, season) -> SeasonRankData:
     top_rows = get_active_ranking(limit=_LADDER_TOP, season=season)
     rows = tuple(
         SeasonRankRow(
-            rank=idx, name=_display_name(row.user_id), points=row.quantity
+            rank=idx,
+            name=_display_name(row.user_id),
+            points=row.quantity,
+            user_id=row.user_id,
         )
         for idx, row in enumerate(top_rows, start=1)
     )
@@ -681,6 +828,7 @@ def _assemble_season_rank(user_id: str, season) -> SeasonRankData:
                 rank=start + offset + 1,
                 name=_display_name(row.user_id),
                 points=row.quantity,
+                user_id=row.user_id,
             )
             for offset, row in enumerate(window)
         ]
@@ -690,7 +838,10 @@ def _assemble_season_rank(user_id: str, season) -> SeasonRankData:
             # 「你的附近」 anchored on the viewer.
             built.append(
                 SeasonRankRow(
-                    rank=viewer_rank, name=viewer_name, points=viewer_points
+                    rank=viewer_rank,
+                    name=viewer_name,
+                    points=viewer_points,
+                    user_id=user_id,
                 )
             )
         nearby = tuple(built)
@@ -702,6 +853,28 @@ def _assemble_season_rank(user_id: str, season) -> SeasonRankData:
         viewer_name=viewer_name,
         viewer_rank=viewer_rank,
         viewer_points=viewer_points,
+    )
+
+
+async def _hydrate_season_rank(data: SeasonRankData) -> SeasonRankData:
+    """Attach cached avatars and equipped frames to every visible ladder row."""
+
+    from dataclasses import replace
+
+    user_ids = [
+        row.user_id
+        for row in (*data.rows, *data.nearby)
+        if row.user_id
+    ]
+    identities = await identities_for(user_ids)
+
+    def hydrate(row: SeasonRankRow) -> SeasonRankRow:
+        return replace(row, identity=identities.get(row.user_id))
+
+    return replace(
+        data,
+        rows=tuple(hydrate(row) for row in data.rows),
+        nearby=tuple(hydrate(row) for row in data.nearby),
     )
 
 
@@ -1003,8 +1176,8 @@ def assemble_profile(
         xp_in_level=max(0, user.xp - level_base),
         xp_level_span=max(0, next_level_total - level_base),
         offseason=monetary.is_using_offseason_points(),
-        standing_art=_equipped_cosmetic_art(equipped_map.get("standing_art")),
-        avatar_frame=_equipped_cosmetic_art(equipped_map.get("avatar_frame")),
+        standing_art=get_item_art(equipped_map.get("standing_art")),
+        avatar_frame=get_item_art(equipped_map.get("avatar_frame")),
     )
 
 
@@ -1017,22 +1190,7 @@ def _equipped_cosmetic_art(item_id: str | None) -> Path | None:
     ``None`` and the profile card keeps its art-less treatment.
     """
 
-    if not item_id:
-        return None
-    item = get_item(item_id)
-    if item is None:
-        return None
-    try:
-        metadata = json.loads(item.metadata_json or "{}")
-    except ValueError:
-        return None
-    art_value = metadata.get("art") if isinstance(metadata, dict) else None
-    if not art_value:
-        return None
-    path = Path(art_value)
-    if not path.is_absolute():
-        path = _PROJECT_ROOT / path
-    return path if path.exists() else None
+    return get_item_art(item_id)
 
 
 def _format_time(timestamp: int) -> str:

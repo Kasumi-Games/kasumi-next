@@ -22,6 +22,7 @@ from utils.avatar import get_avatar  # noqa: E402
 from utils.images import image_segment  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
+from utils.identity import identities_for  # noqa: E402
 
 from .utils import is_number  # noqa: E402
 from .render import RankRow  # noqa: E402
@@ -311,12 +312,19 @@ async def handle_levelrank(matcher: Matcher, event: MessageEvent):
     rank_info = get_user_rank(user_id)
     passive_generator = PassiveGenerator(event)
 
+    visible_ids = [user.user_id for user in top_users]
+    if all(user.user_id != user_id for user in top_users):
+        visible_ids.append(user_id)
+    identities = await identities_for(visible_ids)
+
     rows = tuple(
         RankRow(
             rank=index + 1,
             name=_display_name(user.user_id),
             level=user.level,
             xp=user.xp,
+            user_id=user.user_id,
+            identity=identities.get(user.user_id),
         )
         for index, user in enumerate(top_users)
     )
@@ -329,6 +337,8 @@ async def handle_levelrank(matcher: Matcher, event: MessageEvent):
             name=viewer_name,
             level=viewer.level,
             xp=viewer.xp,
+            user_id=user_id,
+            identity=identities.get(user_id),
         )
 
     data = RankData(

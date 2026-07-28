@@ -8,6 +8,7 @@ import pytest
 
 from plugins.render.kits import MangaKit
 from plugins.render.kits import MinimalKit
+from plugins.render import PlayerIdentity
 from plugins.inventory.render import SeasonRankRow
 from plugins.inventory.render import SeasonRankData
 from plugins.inventory.render import season_rank_page
@@ -82,6 +83,43 @@ def test_season_rank_card_renders(kit_cls):
 
 def test_season_rank_card_defaults_to_the_bangdream_kit():
     assert render_season_rank(_data()).size[0] == 864
+
+
+def test_season_rank_rows_render_avatar_frames() -> None:
+    frame = (
+        ROOT
+        / "plugins/inventory/resources/items/avatar_frames/frame_starbeat_top50.png"
+    )
+    first = _row(1)
+    first = SeasonRankRow(
+        rank=first.rank,
+        name=first.name,
+        points=first.points,
+        user_id="u1",
+        identity=PlayerIdentity("成员1", 42, avatar_frame=frame),
+    )
+    data = SeasonRankData(
+        season_name="2026 第一赛季",
+        rows=(first,),
+        nearby=(),
+        viewer_name="别人",
+        viewer_rank=2,
+        viewer_points=1,
+    )
+    stack = [season_rank_page(data, MinimalKit()).child]
+    sources: list[object] = []
+    while stack:
+        node = stack.pop()
+        source = getattr(node, "source", None)
+        if source is not None:
+            sources.append(source)
+        for attr in ("children", "child"):
+            value = getattr(node, attr, None)
+            if isinstance(value, (list, tuple)):
+                stack.extend(value)
+            elif value is not None:
+                stack.append(value)
+    assert frame in sources
 
 
 def test_season_rank_card_names_the_season_and_the_ladder():

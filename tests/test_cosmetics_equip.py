@@ -289,11 +289,18 @@ async def test_listing_shows_typeable_names_and_the_profile_hint(
     service.equip_cosmetic("user", "standing_art_kasumi_starbeat")
 
     reply = await _invoke("", make_satori_event)
-    assert "1. 星之鼓动主题（主题）" in reply
-    assert "2. 户山香澄 抬头看，星星在跳动（立绘）" in reply
-    assert "当前装备：立绘: 户山香澄 抬头看，星星在跳动" in reply
-    assert "装扮 装备 <序号或名称>" in reply
-    assert "/资料" in reply and "立绘" in reply
+    assert "<img" in reply
+    rows = service.list_inventory("user", category="cosmetic", include_season=False)
+    data = inventory._cosmetic_list_data(
+        "user", rows, page=1, total_pages=1, offset=0
+    )
+    assert [(row.index, row.name, row.kind) for row in data.rows] == [
+        (1, "星之鼓动主题", "主题"),
+        (2, "户山香澄 抬头看，星星在跳动", "立绘"),
+    ]
+    assert data.rows[1].equipped is True
+    assert "立绘：户山香澄 抬头看，星星在跳动" in data.equipped_summary
+    assert "装扮 装备 <序号或名称>" in data.footer
 
 
 async def test_cosmetic_listing_paginates_and_number_can_be_equipped(
@@ -305,10 +312,17 @@ async def test_cosmetic_listing_paginates_and_number_can_be_equipped(
 
     first = await _invoke("", make_satori_event)
     second = await _invoke("2", make_satori_event)
-    assert "第 1/2 页" in first
-    assert "1. " in first and "10. " in first
-    assert "第 2/2 页" in second
-    assert "11. " in second and "12. " in second
+    assert "<img" in first
+    assert "<img" in second
+    rows = service.list_inventory("user", category="cosmetic", include_season=False)
+    page1 = inventory._cosmetic_list_data(
+        "user", rows[:10], page=1, total_pages=2, offset=0
+    )
+    page2 = inventory._cosmetic_list_data(
+        "user", rows[10:12], page=2, total_pages=2, offset=10
+    )
+    assert [row.index for row in page1.rows] == list(range(1, 11))
+    assert [row.index for row in page2.rows] == [11, 12]
 
     reply = await _invoke("装备 12", make_satori_event)
     assert f"已装备 {cosmetics[11].name}" in reply

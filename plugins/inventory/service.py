@@ -1,7 +1,9 @@
 """Inventory service APIs."""
 
+import json
 import re
 import time
+from pathlib import Path
 from typing import Iterable
 from typing import Optional
 
@@ -33,6 +35,8 @@ PROFILE_DESCRIPTION_PATTERN = re.compile(
     r" .,!?~\-_/：:;'\"()\[\]，。！？、；\n]*$"
 )
 
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 DUPLICATE_BONSAI_COMPENSATION = {
     "avatar_frame": {
         6: 12,
@@ -58,6 +62,27 @@ DUPLICATE_BONSAI_COMPENSATION = {
 
 def get_item(item_id: str) -> Item | None:
     return get_session().query(Item).filter(Item.item_id == item_id).first()
+
+
+def get_item_art(item_id: str | None) -> Path | None:
+    """Resolve a catalog item's repo-relative ``metadata.art`` safely."""
+
+    if not item_id:
+        return None
+    item = get_item(item_id)
+    if item is None:
+        return None
+    try:
+        metadata = json.loads(item.metadata_json or "{}")
+    except (TypeError, ValueError):
+        return None
+    value = metadata.get("art") if isinstance(metadata, dict) else None
+    if not value:
+        return None
+    path = Path(value)
+    if not path.is_absolute():
+        path = _PROJECT_ROOT / path
+    return path if path.exists() else None
 
 
 def resolve_scope(item_id: str, scope: Optional[ItemScope | tuple[str, str]] = None):

@@ -36,9 +36,12 @@ from plugins.render.kits.kasumi import KasumiKit
 from plugins.render.kits.kasumi.components import STANDING_ART
 
 
-_ART_WIDTH = 288
+_WIDE_CONTENT_WIDTH = 1364
+_ART_WIDTH = 680
+_LEFT_COLUMN_WIDTH = _WIDE_CONTENT_WIDTH - _ART_WIDTH - 20
 _SHOWCASE_GAP = 20
 _SHOWCASE_HEIGHT = 420
+_ART_HEIGHT = 720
 
 
 @dataclass(frozen=True)
@@ -116,18 +119,46 @@ def profile_page(data: ProfileData, kit: BaseKit | None = None) -> AutoPage:
 
     kit = kit or BanGDreamKit()
 
-    body = VStack(
+    art = data.standing_art
+    if art is None and isinstance(kit, KasumiKit):
+        art = STANDING_ART
+
+    content_width = _WIDE_CONTENT_WIDTH if art is not None else CONTENT_WIDTH
+    left_width = _LEFT_COLUMN_WIDTH if art is not None else CONTENT_WIDTH
+    left = VStack(
         [
-            _profile_showcase(kit, data),
+            _profile_identity(kit, data, width=left_width),
             panel_section(
                 kit,
                 VStack(_stat_rows(kit, data), gap=18, align="stretch"),
+                width=left_width,
                 fill=(255, 255, 255, 255) if isinstance(kit, BanGDreamKit) else None,
             ),
         ],
         gap=24,
         align="stretch",
     )
+    body: Component = left
+    if art is not None:
+        body = HStack(
+            [
+                left,
+                Frame(
+                    kit.image(
+                        art,
+                        width=Fixed(_ART_WIDTH),
+                        height=Fixed(_ART_HEIGHT),
+                        fit="contain",
+                    ),
+                    width=Fixed(_ART_WIDTH),
+                    height=Fixed(_ART_HEIGHT),
+                    align_x="end",
+                    align_y="end",
+                ),
+            ],
+            gap=_SHOWCASE_GAP,
+            align="end",
+        )
 
     return card_page(
         kit,
@@ -136,46 +167,23 @@ def profile_page(data: ProfileData, kit: BaseKit | None = None) -> AutoPage:
         body=body,
         footer=_footer(kit),
         owner_name=data.identity.nickname,
+        width=content_width,
     )
 
 
-def _profile_showcase(kit: BaseKit, data: ProfileData) -> Component:
-    """Keep identity information and standing art in separate layout regions."""
+def _profile_identity(
+    kit: BaseKit, data: ProfileData, *, width: int = CONTENT_WIDTH
+) -> Component:
+    """Build the left identity panel; standing art is a sibling of both panels."""
 
-    art = data.standing_art
-    if art is None and isinstance(kit, KasumiKit):
-        art = STANDING_ART
-
-    identity_width = (
-        CONTENT_WIDTH
-        if art is None
-        else CONTENT_WIDTH - _ART_WIDTH - _SHOWCASE_GAP
-    )
-    identity = player_card(
+    return player_card(
         kit,
         data.identity,
         current_pt=data.current_pt,
         description=data.description,
-        width=identity_width,
+        width=width,
         height=_SHOWCASE_HEIGHT,
         frame_image=data.avatar_frame,
-    )
-    if art is None:
-        return identity
-
-    return HStack(
-        [
-            identity,
-            Frame(
-                kit.image(art, height=Fixed(_SHOWCASE_HEIGHT), fit="contain"),
-                width=Fixed(_ART_WIDTH),
-                height=Fixed(_SHOWCASE_HEIGHT),
-                align_x="end",
-                align_y="end",
-            ),
-        ],
-        gap=_SHOWCASE_GAP,
-        align="stretch",
     )
 
 

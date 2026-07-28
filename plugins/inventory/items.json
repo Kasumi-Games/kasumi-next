@@ -457,6 +457,22 @@
       }
     },
     {
+      "item_id": "frame_starbeat_top50",
+      "category": "cosmetic",
+      "name": "星之鼓动前五十头像框",
+      "description": "第一赛季前五十限定头像框。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 214,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 3
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_starbeat_top50.png"
+      }
+    },
+    {
       "item_id": "standing_art_kasumi_starbeat",
       "category": "cosmetic",
       "name": "户山香澄 抬头看，星星在跳动",

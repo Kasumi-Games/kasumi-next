@@ -29,6 +29,7 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
+from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BanGDreamKit
 
 
@@ -45,6 +46,8 @@ class SeasonRankRow:
     rank: int
     name: str
     points: int
+    user_id: str = ""
+    identity: PlayerIdentity | None = None
 
 
 @dataclass(frozen=True)
@@ -116,7 +119,10 @@ def _ladder(kit: BaseKit, data: SeasonRankData) -> Component:
     children: list[Component] = [
         ladder_rows(
             kit,
-            [(row.rank, row.name, _value(row)) for row in data.rows],
+            [
+                (row.rank, row.name, _value(row), row.identity)
+                for row in data.rows
+            ],
             highlight=data.viewer_name,
         )
     ]
@@ -134,7 +140,10 @@ def _ladder(kit: BaseKit, data: SeasonRankData) -> Component:
         children.append(
             ladder_rows(
                 kit,
-                [(row.rank, row.name, _value(row)) for row in data.nearby],
+                [
+                    (row.rank, row.name, _value(row), row.identity)
+                    for row in data.nearby
+                ],
                 highlight=data.viewer_name,
             )
         )

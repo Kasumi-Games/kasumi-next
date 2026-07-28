@@ -17,6 +17,9 @@ no cache, which is unacceptable on a surface that renders once per game move.
 Callers that already hold an avatar image pass it via ``avatar=``.
 """
 
+import asyncio
+from collections.abc import Iterable
+
 from nonebot.log import logger
 
 from plugins.render import PlayerIdentity
@@ -42,7 +45,27 @@ def identity_for(
         nickname=_nickname(user_id),
         level=_level(user_id),
         avatar=avatar,
+        avatar_frame=_avatar_frame(user_id),
     )
+
+
+async def identities_for(user_ids: Iterable[str]) -> dict[str, PlayerIdentity]:
+    """Fetch and assemble several identities concurrently for leaderboard rows."""
+
+    from utils.avatar import get_avatar
+
+    ordered = tuple(dict.fromkeys(str(user_id) for user_id in user_ids))
+    avatars = await asyncio.gather(
+        *(get_avatar(user_id) for user_id in ordered),
+        return_exceptions=True,
+    )
+    return {
+        user_id: identity_for(
+            user_id,
+            avatar=None if isinstance(avatar, BaseException) else avatar,
+        )
+        for user_id, avatar in zip(ordered, avatars)
+    }
 
 
 def _nickname(user_id: str) -> str:
@@ -67,4 +90,17 @@ def _level(user_id: str) -> int | None:
         return int(monetary.get_level(user_id))
     except Exception:
         logger.opt(exception=True).warning("level unavailable for identity")
+        return None
+
+
+def _avatar_frame(user_id: str) -> ImageSource | None:
+    """Return equipped frame art without ever making identity rendering fail."""
+
+    try:
+        from plugins.inventory.service import get_equipped
+        from plugins.inventory.service import get_item_art
+
+        return get_item_art(get_equipped(user_id).get("avatar_frame"))
+    except Exception:
+        logger.opt(exception=True).warning("avatar frame unavailable for identity")
         return None

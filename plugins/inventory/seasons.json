@@ -223,7 +223,7 @@
           "items": [
             {
               "item_id": "star_sticker",
-              "quantity": 500
+              "quantity": 2400
             },
             {
               "item_id": "frame_starbeat_champion",
@@ -243,7 +243,7 @@
           "items": [
             {
               "item_id": "star_sticker",
-              "quantity": 300
+              "quantity": 1200
             },
             {
               "item_id": "frame_starbeat_podium",
@@ -263,7 +263,7 @@
           "items": [
             {
               "item_id": "star_sticker",
-              "quantity": 200
+              "quantity": 600
             },
             {
               "item_id": "frame_starbeat_top10",
@@ -279,7 +279,11 @@
           "items": [
             {
               "item_id": "star_sticker",
-              "quantity": 100
+              "quantity": 300
+            },
+            {
+              "item_id": "frame_starbeat_top50",
+              "quantity": 1
             }
           ]
         }

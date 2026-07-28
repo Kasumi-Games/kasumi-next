@@ -477,10 +477,11 @@ class KasumiKit(BaseKit):
                 ),
                 Frame(
                     self.text(
-                        f"{current_pt} Pt",
+                        f"{current_pt:,} Pt",
                         font_size=24,
                         wrap=False,
                         max_lines=1,
+                        overflow="shrink",
                         font="display",
                     ),
                     width=Fill(),
@@ -518,11 +519,12 @@ class KasumiKit(BaseKit):
             ),
             self.separator(length=Fill()),
             self.text(
-                description or "抬头看，星星在跳动。",
+                description or "这个人还没有写简介。",
                 font_size=22,
                 color=self.text_color if description else self.muted_text_color,
-                max_lines=3,
+                max_lines=7,
                 overflow="ellipsis",
+                line_height=30,
             ),
         ]
         if title_slot is not None:
@@ -609,7 +611,13 @@ class KasumiKit(BaseKit):
         size: int,
         frame: ImageSource | None = None,
     ) -> Component:
-        overlay = frame if frame is not None else frame_overlay(size)
+        overlay = (
+            frame
+            if frame is not None
+            else identity.avatar_frame
+            if identity.avatar_frame is not None
+            else frame_overlay(size)
+        )
         frame_size = round(size * 512 / 416)
         return Frame(
             Overlay(

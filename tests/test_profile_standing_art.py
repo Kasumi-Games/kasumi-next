@@ -75,6 +75,24 @@ def _image_sources(component) -> list:
     return sources
 
 
+def _text_nodes(component) -> list:
+    """Collect text components from a component tree."""
+
+    nodes = []
+    stack = [component]
+    while stack:
+        node = stack.pop()
+        if isinstance(getattr(node, "text", None), str):
+            nodes.append(node)
+        for attribute in ("children", "child"):
+            value = getattr(node, attribute, None)
+            if isinstance(value, (list, tuple)):
+                stack.extend(value)
+            elif value is not None:
+                stack.append(value)
+    return nodes
+
+
 def _data(**overrides) -> ProfileData:
     defaults = dict(
         identity=IDENTITY,
@@ -172,7 +190,7 @@ def test_profile_page_renders_the_equipped_art(kit_cls) -> None:
     page = profile_page(_data(standing_art=CUSTOM_ART), kit_cls())
     assert CUSTOM_ART in _image_sources(page.child)
     image = page.render()
-    assert image.size[0] == 864
+    assert image.size[0] == 1444
     assert image.size[1] > 0
 
 
@@ -183,23 +201,43 @@ def test_profile_page_without_art_keeps_the_art_less_card() -> None:
 
 
 def test_kasumi_profile_uses_default_art_in_a_separate_frame() -> None:
-    from plugins.inventory.render.profile import _profile_showcase
     from plugins.render import Frame
     from plugins.render import HStack
 
-    showcase = _profile_showcase(KasumiKit(), _data())
-    assert isinstance(showcase, HStack)
-    assert len(showcase.children) == 2
-    assert isinstance(showcase.children[1], Frame)
-    assert STANDING_ART in _image_sources(showcase.children[1])
-    assert STANDING_ART not in _image_sources(showcase.children[0])
+    page = profile_page(_data(), KasumiKit())
+    body = page.child.children[1]
+    assert isinstance(body, HStack)
+    assert len(body.children) == 2
+    assert isinstance(body.children[1], Frame)
+    assert STANDING_ART in _image_sources(body.children[1])
+    # Both the identity and stats panels live together in the left column.
+    assert len(body.children[0].children) == 2
+    assert STANDING_ART not in _image_sources(body.children[0])
+
+
+def test_kasumi_profile_uses_shared_placeholder_and_expands_description_budget() -> None:
+    card = cards.player_card(KasumiKit(), IDENTITY, current_pt=100)
+    texts = _text_nodes(card)
+    placeholder = next(node for node in texts if node.text == "这个人还没有写简介。")
+    assert placeholder.max_lines == 7
+    assert placeholder.overflow == "ellipsis"
+
+
+def test_kasumi_profile_pt_shrinks_instead_of_ellipsizing() -> None:
+    card = cards.player_card(
+        KasumiKit(), IDENTITY, current_pt=2_025_012_380, width=664
+    )
+    pt = next(node for node in _text_nodes(card) if node.text.endswith(" Pt"))
+    assert pt.text == "2,025,012,380 Pt"
+    assert pt.overflow == "shrink"
 
 
 @pytest.mark.parametrize("kit_cls", [BanGDreamKit, KasumiKit])
 def test_profile_page_renders_the_equipped_avatar_frame(kit_cls) -> None:
     page = profile_page(_data(avatar_frame=FRAME_ART), kit_cls())
     assert FRAME_ART in _image_sources(page.child)
-    assert page.render().size[0] == 864
+    expected_width = 1444 if kit_cls is KasumiKit else 864
+    assert page.render().size[0] == expected_width
 
 
 def test_profile_page_with_art_renders_deterministically() -> None:
