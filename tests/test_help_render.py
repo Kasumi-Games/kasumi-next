@@ -150,7 +150,7 @@ def test_command_tiles_use_a_tighter_corner_than_the_footer() -> None:
     assert board._meta_panel(kit).radius == 48
 
 
-def test_footer_keeps_the_usage_hint_and_right_aligns_both_lines() -> None:
+def test_footer_left_aligns_usage_and_right_aligns_support() -> None:
     from plugins.help.render import board
 
     footer = board._meta_panel(KITS["bangdream"]())
@@ -173,4 +173,6 @@ def test_footer_keeps_the_usage_hint_and_right_aligns_both_lines() -> None:
         "输入 /help 功能名，查看用法和示例",
     ]
     assert footer.child.align_x == "end"
-    assert footer.child.child.align == "end"
+    usage, support = footer.child.child.children
+    assert usage.align_x == "start"
+    assert support.align_x == "end"

@@ -293,23 +293,33 @@ def _meta_panel(kit: BaseKit) -> Component:
         Frame(
             VStack(
                 [
-                    kit.text(
-                        "输入 /help 功能名，查看用法和示例",
-                        font_size=BODY_SIZE,
-                        align="right",
-                        wrap=False,
-                        max_lines=1,
+                    Frame(
+                        kit.text(
+                            "输入 /help 功能名，查看用法和示例",
+                            font_size=BODY_SIZE,
+                            align="left",
+                            wrap=False,
+                            max_lines=1,
+                        ),
+                        width=Fill(),
+                        align_x="start",
+                        align_y="center",
                     ),
-                    kit.text(
-                        f"需要帮助？QQ 群 {SUPPORT_GROUP}",
-                        font_size=BODY_SIZE,
-                        align="right",
-                        wrap=False,
-                        max_lines=1,
+                    Frame(
+                        kit.text(
+                            f"需要帮助？QQ 群 {SUPPORT_GROUP}",
+                            font_size=BODY_SIZE,
+                            align="right",
+                            wrap=False,
+                            max_lines=1,
+                        ),
+                        width=Fill(),
+                        align_x="end",
+                        align_y="center",
                     ),
                 ],
                 gap=14,
-                align="end",
+                align="stretch",
             ),
             width=Fill(),
             align_x="end",
