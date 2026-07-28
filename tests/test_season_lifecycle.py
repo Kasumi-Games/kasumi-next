@@ -27,6 +27,7 @@ from plugins.inventory.models import UserItem
 from plugins.inventory.models import CurrencyItem
 from plugins.inventory.models import SeasonReward
 from plugins.inventory.models import SeasonRanking
+from plugins.inventory.models import SeasonParticipation
 from plugins.inventory.service import grant_item
 from plugins.inventory.service import get_quantity
 
@@ -388,6 +389,13 @@ def test_opening_adds_legacy_balances_without_losing_preseason_inventory(
     )
     assert new_user_points.quantity == 77
     assert stickers.quantity == 6980
+    participants = {
+        row.user_id
+        for row in session.query(SeasonParticipation)
+        .filter(SeasonParticipation.season_id == season.id)
+        .all()
+    }
+    assert participants == {"legacy-user", "new-user"}
 
     # The old off-season wallet remains archived rather than being deleted,
     # and the migration marker makes every later lifecycle retry a no-op.
@@ -406,11 +414,56 @@ def test_opening_adds_legacy_balances_without_losing_preseason_inventory(
     assert stickers.quantity == 6980
 
 
+def test_participation_backfill_repairs_an_already_migrated_live_season(
+    lifecycle_db,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    session, config = lifecycle_db
+    config["seasons"][0]["starting_points"] = 0
+    season = season_service.sync_seasons_config()[0]
+    monkeypatch.setattr(season_service.time, "time", lambda: START + 1)
+    season_service.activate_due_seasons(now=START + 1)
+    session.add_all(
+        [
+            UserItem(
+                user_id="historical-player",
+                item_id=SEASON_POINT_ITEM_ID,
+                scope_type=SEASON_SCOPE_TYPE,
+                scope_id=str(season.id),
+                quantity=3_000_000,
+                updated_at=START,
+            ),
+            MigrationState(
+                key=migration.LEGACY_MIGRATION_KEY,
+                applied_at=START,
+            ),
+        ]
+    )
+    session.commit()
+
+    assert season_service.get_active_ranking(season=season) == []
+    assert migration.migrate_legacy_season_participation(season=season) == 1
+    rows = season_service.get_active_ranking(season=season)
+    assert [(row.user_id, row.quantity) for row in rows] == [
+        ("historical-player", 3_000_000)
+    ]
+
+    # A restart must neither duplicate participation nor rewrite the marker.
+    assert migration.migrate_legacy_season_participation(season=season) == 0
+    assert (
+        session.query(SeasonParticipation)
+        .filter(SeasonParticipation.season_id == season.id)
+        .count()
+        == 1
+    )
+
+
 async def test_lifecycle_retries_deferred_legacy_migration(
     monkeypatch: pytest.MonkeyPatch,
 ):
     calls: list[str] = []
     due_season = object()
+    active_season = object()
     monkeypatch.setattr(
         inventory_plugin,
         "get_due_seasons",
@@ -420,6 +473,11 @@ async def test_lifecycle_retries_deferred_legacy_migration(
         inventory_plugin,
         "activate_due_seasons",
         lambda *, now=None: calls.append("open") or 1,
+    )
+    monkeypatch.setattr(
+        inventory_plugin,
+        "get_current_season",
+        lambda *, now=None: active_season,
     )
     monkeypatch.setattr(inventory_plugin, "settle_due_seasons", lambda: 0)
     monkeypatch.setattr(
@@ -434,10 +492,19 @@ async def test_lifecycle_retries_deferred_legacy_migration(
             "migration:due" if season is due_season else "migration:wrong"
         ),
     )
+    monkeypatch.setattr(
+        migration,
+        "migrate_legacy_season_participation",
+        lambda *, season=None: calls.append(
+            "participation:active"
+            if season is active_season
+            else "participation:wrong"
+        ),
+    )
 
     await inventory_plugin.process_season_lifecycle()
 
-    assert calls == ["migration:due", "open"]
+    assert calls == ["migration:due", "open", "participation:active"]
 
 
 async def test_lifecycle_does_not_open_when_legacy_migration_fails(

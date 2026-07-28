@@ -105,11 +105,15 @@ def _report_theme_catalog_problems() -> None:
 async def process_season_lifecycle():
     try:
         from .migration import migrate_legacy_monetary_balances
+        from .migration import migrate_legacy_season_participation
 
         opening_time = int(time.time())
         for season in get_due_seasons(now=opening_time):
             migrate_legacy_monetary_balances(season=season)
         opened = activate_due_seasons(now=opening_time)
+        active_season = get_current_season(now=opening_time)
+        if active_season is not None:
+            migrate_legacy_season_participation(season=active_season)
         settled = settle_due_seasons()
         delivered = dispatch_pending_season_rewards()
         if opened or settled or delivered:

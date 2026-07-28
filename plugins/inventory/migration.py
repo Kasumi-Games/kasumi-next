@@ -19,10 +19,12 @@ from .models import STAR_STICKER_ITEM_ID  # noqa: E402
 from .models import UserItem  # noqa: E402
 from .models import MigrationState  # noqa: E402
 from .models import ItemTransaction  # noqa: E402
+from .models import SeasonParticipation  # noqa: E402
 from .database import get_session  # noqa: E402
 
 LEGACY_MIGRATION_KEY = "legacy_monetary_balances_v1"
 LEGACY_BRIDGE_KEY = "legacy_monetary_balance_bridge_v1"
+LEGACY_PARTICIPATION_MIGRATION_KEY = "legacy_season_participation_v1"
 
 
 def migrate_inventory_schema() -> None:
@@ -205,7 +207,78 @@ def migrate_legacy_monetary_balances(*, season=None) -> None:
 
     session.add(MigrationState(key=LEGACY_MIGRATION_KEY, applied_at=int(time.time())))
     session.commit()
+    migrate_legacy_season_participation(season=season)
     logger.info(f"Inventory migration completed for {migrated} users")
+
+
+def migrate_legacy_season_participation(*, season=None) -> int:
+    """Put inherited positive Pt wallets on season one's live ladder.
+
+    The live ranking intentionally joins ``season_participation`` so merely
+    reading a zero-point wallet does not put someone on the ladder. Season one
+    is exceptional: its migrated historical Pt already represents real play,
+    so every positive inherited wallet must count as participation.
+
+    This has its own marker because some deployments already applied the
+    balance migration before this backfill existed.
+    """
+
+    session = get_session()
+    marker = (
+        session.query(MigrationState)
+        .filter(MigrationState.key == LEGACY_PARTICIPATION_MIGRATION_KEY)
+        .first()
+    )
+    if marker is not None:
+        return 0
+
+    if season is None:
+        from .season_service import get_current_season
+
+        season = get_current_season()
+    if season is None:
+        return 0
+
+    eligible_users = {
+        user_id
+        for (user_id,) in session.query(UserItem.user_id)
+        .filter(
+            UserItem.item_id == SEASON_POINT_ITEM_ID,
+            UserItem.scope_type == SEASON_SCOPE_TYPE,
+            UserItem.scope_id == str(season.id),
+            UserItem.quantity > 0,
+        )
+        .all()
+    }
+    existing_users = {
+        user_id
+        for (user_id,) in session.query(SeasonParticipation.user_id)
+        .filter(SeasonParticipation.season_id == season.id)
+        .all()
+    }
+    participated_at = int(time.time())
+    missing_users = eligible_users - existing_users
+    session.add_all(
+        SeasonParticipation(
+            season_id=season.id,
+            user_id=user_id,
+            first_participated_at=participated_at,
+            last_participated_at=participated_at,
+        )
+        for user_id in missing_users
+    )
+    session.add(
+        MigrationState(
+            key=LEGACY_PARTICIPATION_MIGRATION_KEY,
+            applied_at=participated_at,
+        )
+    )
+    session.commit()
+    logger.info(
+        "Legacy season participation backfill completed for "
+        f"{len(missing_users)} users"
+    )
+    return len(missing_users)
 
 
 def _bridged_point_balances(season_key: str) -> dict[str, int]:
