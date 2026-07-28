@@ -70,7 +70,7 @@ def _pull_row(
 def _display_data(**overrides: Any) -> HistoryPageData:
     defaults: dict[str, Any] = dict(
         rows=(
-            HistoryRow(6, "户山香澄 抬头看，星星在跳动立绘", "今天 21:04", ""),
+            HistoryRow(6, "户山香澄 抬头看，星星在跳动", "今天 21:04", ""),
             HistoryRow(3, "美竹兰 脚尖的方向立绘", "今天 21:04", "盆栽 +6"),
             HistoryRow(5, "市谷有咲 向着大海展翅的天马立绘", "昨天 09:31", ""),
             HistoryRow(4, "山吹沙绫 无私的陪伴者立绘", "07-20 18:22", "盆栽 +12"),
@@ -114,7 +114,7 @@ def test_history_page_data_maps_rows_names_and_notes(
         history,
         pity_count=17,
         hard_pity=90,
-        item_names={"standing_art_kasumi_starbeat": "户山香澄 抬头看，星星在跳动立绘"},
+        item_names={"standing_art_kasumi_starbeat": "户山香澄 抬头看，星星在跳动"},
     )
     assert data.page == 2
     assert data.total_pages == 5
@@ -122,7 +122,7 @@ def test_history_page_data_maps_rows_names_and_notes(
     assert data.pity_count == 17
     assert data.hard_pity == 90
     first, second = data.rows
-    assert first.name == "户山香澄 抬头看，星星在跳动立绘"
+    assert first.name == "户山香澄 抬头看，星星在跳动"
     assert first.rarity == 6
     assert first.time_text == "今天 21:04"
     assert first.note == "盆栽 +60"
@@ -182,7 +182,7 @@ def test_history_render_is_deterministic() -> None:
 def test_history_texts_land_on_the_page() -> None:
     joined = " ".join(_collect_text(history_page(_display_data(), MinimalKit()).child))
     assert "抽卡记录" in joined
-    assert "户山香澄 抬头看，星星在跳动立绘" in joined
+    assert "户山香澄 抬头看，星星在跳动" in joined
     assert "★6" in joined
     assert "★3" in joined
     assert "今天 21:04" in joined

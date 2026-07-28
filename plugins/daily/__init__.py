@@ -59,7 +59,7 @@ STREAK_BONUS_STICKERS = 120
 
 @on_command(
     "info",
-    aliases={"balance", "余额", "信息", "个人信息", "我的信息", "资料"},
+    aliases={"balance", "余额", "信息", "个人信息", "我的信息"},
     priority=10,
     block=True,
     rule=has_no_argument,

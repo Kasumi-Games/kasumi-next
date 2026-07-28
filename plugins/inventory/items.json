@@ -106,7 +106,7 @@
     {
       "item_id": "standing_art_placeholder_r5_001",
       "category": "cosmetic",
-      "name": "市谷有咲 向着大海展翅的天马立绘",
+      "name": "市谷有咲 向着大海展翅的天马",
       "description": "卡池常驻立绘：来自卡面「向着大海展翅的天马」。",
       "stackable": false,
       "visible": true,
@@ -123,7 +123,7 @@
     {
       "item_id": "standing_art_placeholder_r5_002",
       "category": "cosmetic",
-      "name": "花园多惠 你终将跑过的天空立绘",
+      "name": "花园多惠 你终将跑过的天空",
       "description": "卡池常驻立绘：来自卡面「你终将跑过的天空」。",
       "stackable": false,
       "visible": true,
@@ -140,7 +140,7 @@
     {
       "item_id": "standing_art_placeholder_r4_001",
       "category": "cosmetic",
-      "name": "牛込里美 守望着的应援立绘",
+      "name": "牛込里美 守望着的应援",
       "description": "卡池常驻立绘：来自卡面「守望着的应援」。",
       "stackable": false,
       "visible": true,
@@ -157,7 +157,7 @@
     {
       "item_id": "standing_art_placeholder_r4_002",
       "category": "cosmetic",
-      "name": "山吹沙绫 无私的陪伴者立绘",
+      "name": "山吹沙绫 无私的陪伴者",
       "description": "卡池常驻立绘：来自卡面「无私的陪伴者」。",
       "stackable": false,
       "visible": true,
@@ -174,7 +174,7 @@
     {
       "item_id": "standing_art_placeholder_r3_001",
       "category": "cosmetic",
-      "name": "美竹兰 脚尖的方向立绘",
+      "name": "美竹兰 脚尖的方向",
       "description": "卡池常驻立绘：来自卡面「脚尖的方向」。",
       "stackable": false,
       "visible": true,
@@ -191,7 +191,7 @@
     {
       "item_id": "standing_art_placeholder_r3_002",
       "category": "cosmetic",
-      "name": "凑友希那 专注于指尖立绘",
+      "name": "凑友希那 专注于指尖",
       "description": "卡池常驻立绘：来自卡面「专注于指尖」。",
       "stackable": false,
       "visible": true,
@@ -208,7 +208,7 @@
     {
       "item_id": "standing_art_standard_aya_self_search",
       "category": "cosmetic",
-      "name": "丸山彩 心跳加速的自我搜索立绘",
+      "name": "丸山彩 心跳加速的自我搜索",
       "description": "卡池常驻立绘：来自卡面「心跳加速的自我搜索」。",
       "stackable": false,
       "visible": true,
@@ -225,7 +225,7 @@
     {
       "item_id": "standing_art_standard_kokoro_prayer",
       "category": "cosmetic",
-      "name": "弦卷心 愿祈祷传向天空立绘",
+      "name": "弦卷心 愿祈祷传向天空",
       "description": "卡池常驻立绘：来自卡面「愿祈祷传向天空」。",
       "stackable": false,
       "visible": true,
@@ -242,7 +242,7 @@
     {
       "item_id": "standing_art_standard_mashiro_sea_story",
       "category": "cosmetic",
-      "name": "仓田真白 海上的梦幻故事立绘",
+      "name": "仓田真白 海上的梦幻故事",
       "description": "卡池常驻立绘：来自卡面「海上的梦幻故事」。",
       "stackable": false,
       "visible": true,
@@ -259,7 +259,7 @@
     {
       "item_id": "standing_art_standard_rokka_home_run",
       "category": "cosmetic",
-      "name": "朝日六花 是全垒打！立绘",
+      "name": "朝日六花 是全垒打！",
       "description": "卡池常驻立绘：来自卡面「是全垒打！」。",
       "stackable": false,
       "visible": true,
@@ -276,7 +276,7 @@
     {
       "item_id": "standing_art_standard_moca_warm_moment",
       "category": "cosmetic",
-      "name": "青叶摩卡 温暖的时刻立绘",
+      "name": "青叶摩卡 温暖的时刻",
       "description": "卡池常驻立绘：来自卡面「温暖的时刻」。",
       "stackable": false,
       "visible": true,
@@ -293,7 +293,7 @@
     {
       "item_id": "standing_art_standard_misaki_aquarium",
       "category": "cosmetic",
-      "name": "奥泽美咲 水族馆的后台立绘",
+      "name": "奥泽美咲 水族馆的后台",
       "description": "卡池常驻立绘：来自卡面「水族馆的后台」。",
       "stackable": false,
       "visible": true,
@@ -310,7 +310,7 @@
     {
       "item_id": "standing_art_standard_hina_on_my_mind",
       "category": "cosmetic",
-      "name": "冰川日菜 在意的事情是立绘",
+      "name": "冰川日菜 在意的事情是",
       "description": "卡池常驻立绘：来自卡面「在意的事情是」。",
       "stackable": false,
       "visible": true,
@@ -327,7 +327,7 @@
     {
       "item_id": "standing_art_standard_lisa_dont_worry",
       "category": "cosmetic",
-      "name": "今井莉莎 别担心之类的话立绘",
+      "name": "今井莉莎 别担心之类的话",
       "description": "卡池常驻立绘：来自卡面「别担心之类的话」。",
       "stackable": false,
       "visible": true,
@@ -344,7 +344,7 @@
     {
       "item_id": "standing_art_standard_tomori_little_animal",
       "category": "cosmetic",
-      "name": "高松灯 不可思议的小动物立绘",
+      "name": "高松灯 不可思议的小动物",
       "description": "卡池常驻立绘：来自卡面「不可思议的小动物」。",
       "stackable": false,
       "visible": true,
@@ -361,7 +361,7 @@
     {
       "item_id": "standing_art_standard_anon_getting_along",
       "category": "cosmetic",
-      "name": "千早爱音 要搞好关系的是……立绘",
+      "name": "千早爱音 要搞好关系的是……",
       "description": "卡池常驻立绘：来自卡面「要搞好关系的是……」。",
       "stackable": false,
       "visible": true,
@@ -378,7 +378,7 @@
     {
       "item_id": "standing_art_standard_soyo_calm_mediator",
       "category": "cosmetic",
-      "name": "长崎爽世 冷静的调停者立绘",
+      "name": "长崎爽世 冷静的调停者",
       "description": "卡池常驻立绘：来自卡面「冷静的调停者」。",
       "stackable": false,
       "visible": true,
@@ -459,7 +459,7 @@
     {
       "item_id": "standing_art_kasumi_starbeat",
       "category": "cosmetic",
-      "name": "户山香澄 抬头看，星星在跳动立绘",
+      "name": "户山香澄 抬头看，星星在跳动",
       "description": "第一赛季六星角色立绘。",
       "stackable": false,
       "visible": true,

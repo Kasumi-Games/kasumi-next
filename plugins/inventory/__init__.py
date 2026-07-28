@@ -144,6 +144,8 @@ inventory_cmd = on_command(
     "inventory", aliases={"仓库", "背包"}, priority=10, block=True
 )
 
+_LIST_PAGE_SIZE = 10
+
 
 @inventory_cmd.handle()
 async def handle_inventory(
@@ -163,24 +165,40 @@ async def handle_inventory(
         "cosmetic": "cosmetic",
         "item": "item",
     }
-    if text not in category_map:
+    tokens = text.split()
+    page = 1
+    if tokens and tokens[-1].isdigit():
+        page = int(tokens.pop())
+    category_text = " ".join(tokens)
+    if category_text not in category_map or page < 1:
         await matcher.finish(
-            "仓库分类可用：全部 / 货币 / 装扮 / 道具" + passive_generator.element,
+            "用法：仓库 [全部|货币|装扮|道具] [页码]" + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
-    rows = list_inventory(user_id, category=category_map[text])
+    rows = list_inventory(user_id, category=category_map[category_text])
     if not rows:
         await matcher.finish(
             "仓库里还没有对应物品。" + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
-    lines = ["仓库："]
-    for row in rows:
+    try:
+        page_rows, total_pages, offset = _page(rows, page)
+    except ValueError as exc:
+        await matcher.finish(
+            str(exc) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    lines = [f"仓库（第 {page}/{total_pages} 页）："]
+    for index, row in enumerate(page_rows, start=offset + 1):
         scope_name = display_scope(row.scope_type, row.scope_id)
         scope = f" [{scope_name}]" if scope_name else ""
-        lines.append(f"- {display_item_amount(row.item_id, row.quantity)}{scope}")
+        lines.append(f"{index}. {display_item_amount(row.item_id, row.quantity)}{scope}")
+    if total_pages > 1:
+        category_hint = f" {category_text}" if category_text else ""
+        lines.append(f"翻页：仓库{category_hint} <页码>")
 
     await matcher.finish(
         "\n".join(lines) + passive_generator.element,
@@ -200,9 +218,10 @@ async def handle_cosmetic(
     passive_generator = PassiveGenerator(event)
 
     try:
-        if not text:
+        if not text or text.isdigit():
             await matcher.finish(
-                _cosmetic_listing(user_id) + passive_generator.element,
+                _cosmetic_listing(user_id, page=int(text or "1"))
+                + passive_generator.element,
                 referrer=passive_generator.event.referrer,
             )
 
@@ -233,7 +252,7 @@ async def handle_cosmetic(
             )
 
         await matcher.finish(
-            "用法：装扮 / 装扮 装备 <名称或item_id> / 装扮 卸下 <头像框|主题|立绘>"
+            "用法：装扮 [页码] / 装扮 装备 <序号|名称|item_id> / 装扮 卸下 <头像框|主题|立绘>"
             + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
@@ -246,7 +265,7 @@ async def handle_cosmetic(
         )
 
 
-def _cosmetic_listing(user_id: str) -> str:
+def _cosmetic_listing(user_id: str, *, page: int = 1) -> str:
     """Build the ``/装扮`` overview text.
 
     Every row shows the display name the player can type back into
@@ -255,7 +274,9 @@ def _cosmetic_listing(user_id: str) -> str:
 
     rows = list_inventory(user_id, category="cosmetic", include_season=False)
     equipped_map = get_equipped(user_id)
-    lines = ["装扮："]
+    if page < 1:
+        raise ValueError("页码必须从 1 开始。")
+    lines = []
     if equipped_map:
         worn: list[str] = []
         for slot, label in _COSMETIC_SLOT_LABELS:
@@ -269,7 +290,9 @@ def _cosmetic_listing(user_id: str) -> str:
                 worn.append(f"{slot}: {item_id}")
         lines.append("当前装备：" + "，".join(worn))
     if rows:
-        for row in rows:
+        page_rows, total_pages, offset = _page(rows, page)
+        lines.insert(0, f"装扮（第 {page}/{total_pages} 页）：")
+        for index, row in enumerate(page_rows, start=offset + 1):
             cosmetic = row.item.cosmetic
             slot_name = (
                 _COSMETIC_SLOT_NAMES.get(cosmetic.cosmetic_type, cosmetic.cosmetic_type)
@@ -277,12 +300,25 @@ def _cosmetic_listing(user_id: str) -> str:
                 else ""
             )
             suffix = f"（{slot_name}）" if slot_name else ""
-            lines.append(f"- {row.item.name}{suffix}")
-        lines.append("发送 装扮 装备 <名称> 即可装备，主题也可以用别名。")
+            lines.append(f"{index}. {row.item.name}{suffix}")
+        if total_pages > 1:
+            lines.append("翻页：装扮 <页码>")
+        lines.append("发送 装扮 装备 <序号或名称> 即可装备，主题也可以用别名。")
         lines.append("装备立绘后，/资料 的资料卡会展示这张立绘。")
     else:
+        lines.insert(0, "装扮：")
         lines.append("还没有可用装扮。")
     return "\n".join(lines)
+
+
+def _page(rows: list, page: int) -> tuple[list, int, int]:
+    """Return one stable 1-based page and its global item-number offset."""
+
+    total_pages = max(1, (len(rows) + _LIST_PAGE_SIZE - 1) // _LIST_PAGE_SIZE)
+    if page < 1 or page > total_pages:
+        raise ValueError(f"页码超出范围，共 {total_pages} 页。")
+    offset = (page - 1) * _LIST_PAGE_SIZE
+    return rows[offset : offset + _LIST_PAGE_SIZE], total_pages, offset
 
 
 def _resolve_cosmetic_token(user_id: str, token: str):
@@ -301,6 +337,13 @@ def _resolve_cosmetic_token(user_id: str, token: str):
     needle = token.strip()
     folded = needle.casefold()
     catalog = _catalog_cosmetics()
+
+    if needle.isdigit():
+        rows = list_inventory(user_id, category="cosmetic", include_season=False)
+        index = int(needle)
+        if 1 <= index <= len(rows):
+            return rows[index - 1].item
+        raise ValueError(f"装扮序号超出范围，目前共有 {len(rows)} 件装扮。")
 
     for item in catalog:
         if item.item_id.casefold() == folded:
@@ -770,7 +813,7 @@ async def handle_season_history(matcher: Matcher, event: MessageEvent):
 
 
 profile_cmd = on_command(
-    "profile", aliases={"个人资料", "档案"}, priority=10, block=True
+    "profile", aliases={"资料", "个人资料", "档案"}, priority=10, block=True
 )
 
 

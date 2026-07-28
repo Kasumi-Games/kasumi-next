@@ -54,7 +54,7 @@
           {
             "item_id": "standing_art_kasumi_starbeat",
             "character_id": "kasumi",
-            "name": "户山香澄 抬头看，星星在跳动立绘",
+            "name": "户山香澄 抬头看，星星在跳动",
             "rarity": 6,
             "weight": 1,
             "featured": true
@@ -62,7 +62,7 @@
           {
             "item_id": "standing_art_placeholder_r5_001",
             "character_id": "arisa",
-            "name": "市谷有咲 向着大海展翅的天马立绘",
+            "name": "市谷有咲 向着大海展翅的天马",
             "rarity": 5,
             "weight": 1,
             "bestdori_card_id": 2242,
@@ -71,7 +71,7 @@
           {
             "item_id": "standing_art_placeholder_r5_002",
             "character_id": "tae",
-            "name": "花园多惠 你终将跑过的天空立绘",
+            "name": "花园多惠 你终将跑过的天空",
             "rarity": 4,
             "weight": 1,
             "bestdori_card_id": 2300,
@@ -80,7 +80,7 @@
           {
             "item_id": "standing_art_placeholder_r4_001",
             "character_id": "rimi",
-            "name": "牛込里美 守望着的应援立绘",
+            "name": "牛込里美 守望着的应援",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 2168,
@@ -89,7 +89,7 @@
           {
             "item_id": "standing_art_placeholder_r4_002",
             "character_id": "saya",
-            "name": "山吹沙绫 无私的陪伴者立绘",
+            "name": "山吹沙绫 无私的陪伴者",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 1861,
@@ -98,7 +98,7 @@
           {
             "item_id": "standing_art_placeholder_r3_001",
             "character_id": "ran",
-            "name": "美竹兰 脚尖的方向立绘",
+            "name": "美竹兰 脚尖的方向",
             "rarity": 5,
             "weight": 1,
             "bestdori_card_id": 1984,
@@ -107,7 +107,7 @@
           {
             "item_id": "standing_art_placeholder_r3_002",
             "character_id": "yukina",
-            "name": "凑友希那 专注于指尖立绘",
+            "name": "凑友希那 专注于指尖",
             "rarity": 4,
             "weight": 1,
             "bestdori_card_id": 2148,
@@ -116,7 +116,7 @@
           {
             "item_id": "standing_art_standard_aya_self_search",
             "character_id": "aya",
-            "name": "丸山彩 心跳加速的自我搜索立绘",
+            "name": "丸山彩 心跳加速的自我搜索",
             "rarity": 5,
             "weight": 1,
             "bestdori_card_id": 2103,
@@ -125,7 +125,7 @@
           {
             "item_id": "standing_art_standard_kokoro_prayer",
             "character_id": "kokoro",
-            "name": "弦卷心 愿祈祷传向天空立绘",
+            "name": "弦卷心 愿祈祷传向天空",
             "rarity": 4,
             "weight": 1,
             "bestdori_card_id": 2143,
@@ -134,7 +134,7 @@
           {
             "item_id": "standing_art_standard_mashiro_sea_story",
             "character_id": "mashiro",
-            "name": "仓田真白 海上的梦幻故事立绘",
+            "name": "仓田真白 海上的梦幻故事",
             "rarity": 4,
             "weight": 1,
             "bestdori_card_id": 2029,
@@ -143,7 +143,7 @@
           {
             "item_id": "standing_art_standard_rokka_home_run",
             "character_id": "rokka",
-            "name": "朝日六花 是全垒打！立绘",
+            "name": "朝日六花 是全垒打！",
             "rarity": 4,
             "weight": 1,
             "bestdori_card_id": 1933,
@@ -152,7 +152,7 @@
           {
             "item_id": "standing_art_standard_moca_warm_moment",
             "character_id": "moca",
-            "name": "青叶摩卡 温暖的时刻立绘",
+            "name": "青叶摩卡 温暖的时刻",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 1956,
@@ -161,7 +161,7 @@
           {
             "item_id": "standing_art_standard_misaki_aquarium",
             "character_id": "misaki",
-            "name": "奥泽美咲 水族馆的后台立绘",
+            "name": "奥泽美咲 水族馆的后台",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 2087,
@@ -170,7 +170,7 @@
           {
             "item_id": "standing_art_standard_hina_on_my_mind",
             "character_id": "hina",
-            "name": "冰川日菜 在意的事情是立绘",
+            "name": "冰川日菜 在意的事情是",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 1913,
@@ -179,7 +179,7 @@
           {
             "item_id": "standing_art_standard_lisa_dont_worry",
             "character_id": "lisa",
-            "name": "今井莉莎 别担心之类的话立绘",
+            "name": "今井莉莎 别担心之类的话",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 2194,
@@ -188,7 +188,7 @@
           {
             "item_id": "standing_art_standard_tomori_little_animal",
             "character_id": "tomori",
-            "name": "高松灯 不可思议的小动物立绘",
+            "name": "高松灯 不可思议的小动物",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 1818,
@@ -197,7 +197,7 @@
           {
             "item_id": "standing_art_standard_anon_getting_along",
             "character_id": "anon",
-            "name": "千早爱音 要搞好关系的是……立绘",
+            "name": "千早爱音 要搞好关系的是……",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 1819,
@@ -206,7 +206,7 @@
           {
             "item_id": "standing_art_standard_soyo_calm_mediator",
             "character_id": "soyo",
-            "name": "长崎爽世 冷静的调停者立绘",
+            "name": "长崎爽世 冷静的调停者",
             "rarity": 3,
             "weight": 1,
             "bestdori_card_id": 1821,

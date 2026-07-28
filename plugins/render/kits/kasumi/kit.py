@@ -47,7 +47,6 @@ from ..atoms import KitImage
 from ..atoms import KitSeparator
 from ..fonts import CHINESE_FONT
 from ..fonts import DISPLAY_FONT
-from .components import STANDING_ART
 from .components import KasumiPanel
 from .components import SparkleScatter
 from .components import KasumiAvatarDisc
@@ -445,9 +444,9 @@ class KasumiKit(BaseKit):
         assets the row simply disappears so it never turns into a decorative
         rule below the player's identity.
 
-        An equipped standing art (``standing_art``, dispatcher-threaded — see
-        the authoring guide §2) replaces the kit's built-in Kasumi art in the
-        right column; ``None`` keeps the built-in default.
+        An explicitly supplied standing art is shown in the right column.
+        The profile surface now owns the theme's default art and places it
+        beside this panel, so ``None`` keeps this identity card art-free.
         """
 
         identity = PlayerIdentity(nickname=nickname, level=level, avatar=avatar_image)
@@ -529,30 +528,26 @@ class KasumiKit(BaseKit):
         if title_slot is not None:
             left_rows.insert(1, title_slot)
 
-        art_column = Frame(
-            self.image(
-                standing_art if standing_art is not None else STANDING_ART,
-                height=Fill(),
-                fit="contain",
-            ),
-            width=Fixed(288),
-            align_x="end",
-            align_y="end",
+        content: Component = Frame(
+            VStack(left_rows, gap=14, align="stretch"),
+            width=Fill(),
+            align_x="stretch",
+            align_y="start",
         )
-
-        content = HStack(
-            [
-                Frame(
-                    VStack(left_rows, gap=14, align="stretch"),
-                    width=Fill(),
-                    align_x="stretch",
-                    align_y="start",
-                ),
-                art_column,
-            ],
-            gap=16,
-            align="stretch",
-        )
+        if standing_art is not None:
+            content = HStack(
+                [
+                    content,
+                    Frame(
+                        self.image(standing_art, height=Fill(), fit="contain"),
+                        width=Fixed(288),
+                        align_x="end",
+                        align_y="end",
+                    ),
+                ],
+                gap=16,
+                align="stretch",
+            )
 
         return KasumiPanel(
             content,

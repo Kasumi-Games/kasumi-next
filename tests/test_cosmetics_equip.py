@@ -165,7 +165,7 @@ def test_resolves_theme_alias(catalog_db) -> None:
 
 
 def test_resolves_non_theme_cosmetic_by_name_with_space(catalog_db) -> None:
-    item = inventory._resolve_cosmetic_token("user", "户山香澄 抬头看，星星在跳动立绘")
+    item = inventory._resolve_cosmetic_token("user", "户山香澄 抬头看，星星在跳动")
     assert item.item_id == "standing_art_kasumi_starbeat"
 
 
@@ -258,8 +258,8 @@ async def test_equip_standing_art_name_with_space(
     catalog_db, make_satori_event: Callable[..., Any]
 ) -> None:
     service.grant_item("user", "standing_art_kasumi_starbeat", 1, "test")
-    reply = await _invoke("装备 户山香澄 抬头看，星星在跳动立绘", make_satori_event)
-    assert "已装备 户山香澄 抬头看，星星在跳动立绘 到 立绘。" in reply
+    reply = await _invoke("装备 户山香澄 抬头看，星星在跳动", make_satori_event)
+    assert "已装备 户山香澄 抬头看，星星在跳动 到 立绘。" in reply
     assert (
         service.get_equipped("user")["standing_art"]
         == "standing_art_kasumi_starbeat"
@@ -289,11 +289,29 @@ async def test_listing_shows_typeable_names_and_the_profile_hint(
     service.equip_cosmetic("user", "standing_art_kasumi_starbeat")
 
     reply = await _invoke("", make_satori_event)
-    assert "- 星之鼓动主题（主题）" in reply
-    assert "- 户山香澄 抬头看，星星在跳动立绘（立绘）" in reply
-    assert "当前装备：立绘: 户山香澄 抬头看，星星在跳动立绘" in reply
-    assert "装扮 装备 <名称>" in reply
+    assert "1. 星之鼓动主题（主题）" in reply
+    assert "2. 户山香澄 抬头看，星星在跳动（立绘）" in reply
+    assert "当前装备：立绘: 户山香澄 抬头看，星星在跳动" in reply
+    assert "装扮 装备 <序号或名称>" in reply
     assert "/资料" in reply and "立绘" in reply
+
+
+async def test_cosmetic_listing_paginates_and_number_can_be_equipped(
+    catalog_db, make_satori_event: Callable[..., Any]
+) -> None:
+    cosmetics = inventory._catalog_cosmetics()[:12]
+    for item in cosmetics:
+        service.grant_item("user", item.item_id, 1, "test")
+
+    first = await _invoke("", make_satori_event)
+    second = await _invoke("2", make_satori_event)
+    assert "第 1/2 页" in first
+    assert "1. " in first and "10. " in first
+    assert "第 2/2 页" in second
+    assert "11. " in second and "12. " in second
+
+    reply = await _invoke("装备 12", make_satori_event)
+    assert f"已装备 {cosmetics[11].name}" in reply
 
 
 async def test_unequip_keeps_chinese_slot_words(

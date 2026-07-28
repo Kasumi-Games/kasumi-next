@@ -148,3 +148,25 @@ def test_command_tiles_use_a_tighter_corner_than_the_footer() -> None:
     assert board.TILE_RADIUS == 20
     assert tile.radius == board.TILE_RADIUS
     assert board._meta_panel(kit).radius == 48
+
+
+def test_footer_is_one_right_aligned_support_line() -> None:
+    from plugins.help.render import board
+
+    footer = board._meta_panel(KITS["bangdream"]())
+    texts: list[str] = []
+    stack = [footer]
+    while stack:
+        node = stack.pop()
+        value = getattr(node, "text", None)
+        if isinstance(value, str):
+            texts.append(value)
+        for attribute in ("child", "children"):
+            child = getattr(node, attribute, None)
+            if isinstance(child, (list, tuple)):
+                stack.extend(child)
+            elif child is not None:
+                stack.append(child)
+
+    assert texts == ["需要帮助？QQ 群 908979461"]
+    assert footer.child.align_x == "end"

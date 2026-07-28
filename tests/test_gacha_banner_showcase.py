@@ -64,7 +64,7 @@ def _banner(entries: tuple[GachaEntry, ...] | None = None) -> GachaBanner:
             GachaEntry(
                 item_id="standing_art_kasumi_starbeat",
                 character_id="kasumi",
-                name="户山香澄 抬头看，星星在跳动立绘",
+                name="户山香澄 抬头看，星星在跳动",
                 rarity=6,
                 weight=1,
                 featured=True,
@@ -102,7 +102,7 @@ def _showcase_data(**overrides: Any) -> BannerPageData:
     defaults: dict[str, Any] = dict(
         banner_name="星之鼓动 限定卡池",
         season_name="星之鼓动",
-        featured_name="户山香澄 抬头看，星星在跳动立绘",
+        featured_name="户山香澄 抬头看，星星在跳动",
         featured_rarity=6,
         featured_art=KASUMI_ART,
         bundle_names=BUNDLE_NAMES,
@@ -134,7 +134,7 @@ def test_banner_page_data_maps_the_featured_entry_and_bundle():
     )
     assert data.banner_name == "星之鼓动 限定卡池"
     assert data.season_name == "星之鼓动"
-    assert data.featured_name == "户山香澄 抬头看，星星在跳动立绘"
+    assert data.featured_name == "户山香澄 抬头看，星星在跳动"
     assert data.featured_rarity == 6
     assert data.featured_art == KASUMI_ART
     assert data.bundle_names == BUNDLE_NAMES
@@ -241,7 +241,7 @@ def test_banner_hero_and_detail_deck_fill_the_content_column():
 def test_showcase_texts_land_on_the_page_in_sell_order():
     page = banner_page(_showcase_data(), KasumiKit())
     joined = " ".join(_collect_text(page.child))
-    assert "户山香澄 抬头看，星星在跳动立绘" in joined
+    assert "户山香澄 抬头看，星星在跳动" in joined
     assert "★6" in joined
     assert "首次入手加赠" in joined
     assert "星之鼓动六星角色头像框 · 星之鼓动主题" in joined
@@ -366,7 +366,7 @@ class SeasonKitResolutionTest(unittest.TestCase):
         self.assertEqual(data.pity_count, 37)
         self.assertEqual(data.hard_pity, 90)
         self.assertEqual(data.bundle_names, BUNDLE_NAMES)
-        self.assertEqual(data.featured_name, "户山香澄 抬头看，星星在跳动立绘")
+        self.assertEqual(data.featured_name, "户山香澄 抬头看，星星在跳动")
         self.assertEqual(data.featured_art, KASUMI_ART)
 
         joined = " ".join(_collect_text(banner_page(data, MinimalKit()).child))
@@ -416,7 +416,7 @@ class SeasonKitResolutionTest(unittest.TestCase):
                             {
                                 "item_id": "standing_art_kasumi_starbeat",
                                 "character_id": "kasumi",
-                                "name": "户山香澄 抬头看，星星在跳动立绘",
+                                "name": "户山香澄 抬头看，星星在跳动",
                                 "rarity": 6,
                                 "weight": 1,
                                 "featured": True,

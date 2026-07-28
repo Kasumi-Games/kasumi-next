@@ -16,12 +16,15 @@ from dataclasses import dataclass
 from PIL import Image
 
 from utils.cards import LABEL_SIZE
+from utils.cards import CONTENT_WIDTH
 from utils.cards import meter
 from utils.cards import stat_row
 from utils.cards import card_page
 from utils.cards import player_card
 from utils.cards import panel_section
 from plugins.render import Frame
+from plugins.render import Fixed
+from plugins.render import HStack
 from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
@@ -29,6 +32,13 @@ from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render.types import ImageSource
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.kasumi import KasumiKit
+from plugins.render.kits.kasumi.components import STANDING_ART
+
+
+_ART_WIDTH = 288
+_SHOWCASE_GAP = 20
+_SHOWCASE_HEIGHT = 420
 
 
 @dataclass(frozen=True)
@@ -54,9 +64,9 @@ class ProfileData:
             (``monetary.is_using_offseason_points()``). Labels the Pt row
             休赛期临时 Pt and adds the not-carried-over note.
         standing_art: Art asset of the equipped 立绘 cosmetic, resolved by the
-            handler from the item's ``metadata.art`` path. ``None`` — no 立绘
-            equipped, or the item carries no art — keeps the kit's default
-            player-card treatment.
+            handler from the item's ``metadata.art`` path. The page renders it
+            in a sibling frame beside the identity panel. ``None`` uses the
+            Kasumi theme's built-in art, and no art in other themes.
         avatar_frame: Art asset of the equipped 头像框 cosmetic. ``None`` keeps
             the kit's unequipped avatar treatment.
     """
@@ -108,14 +118,7 @@ def profile_page(data: ProfileData, kit: BaseKit | None = None) -> AutoPage:
 
     body = VStack(
         [
-            player_card(
-                kit,
-                data.identity,
-                current_pt=data.current_pt,
-                description=data.description,
-                frame_image=data.avatar_frame,
-                standing_art=data.standing_art,
-            ),
+            _profile_showcase(kit, data),
             panel_section(
                 kit,
                 VStack(_stat_rows(kit, data), gap=18, align="stretch"),
@@ -133,6 +136,46 @@ def profile_page(data: ProfileData, kit: BaseKit | None = None) -> AutoPage:
         body=body,
         footer=_footer(kit),
         owner_name=data.identity.nickname,
+    )
+
+
+def _profile_showcase(kit: BaseKit, data: ProfileData) -> Component:
+    """Keep identity information and standing art in separate layout regions."""
+
+    art = data.standing_art
+    if art is None and isinstance(kit, KasumiKit):
+        art = STANDING_ART
+
+    identity_width = (
+        CONTENT_WIDTH
+        if art is None
+        else CONTENT_WIDTH - _ART_WIDTH - _SHOWCASE_GAP
+    )
+    identity = player_card(
+        kit,
+        data.identity,
+        current_pt=data.current_pt,
+        description=data.description,
+        width=identity_width,
+        height=_SHOWCASE_HEIGHT,
+        frame_image=data.avatar_frame,
+    )
+    if art is None:
+        return identity
+
+    return HStack(
+        [
+            identity,
+            Frame(
+                kit.image(art, height=Fixed(_SHOWCASE_HEIGHT), fit="contain"),
+                width=Fixed(_ART_WIDTH),
+                height=Fixed(_SHOWCASE_HEIGHT),
+                align_x="end",
+                align_y="end",
+            ),
+        ],
+        gap=_SHOWCASE_GAP,
+        align="stretch",
     )
 
 

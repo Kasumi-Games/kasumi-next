@@ -1,11 +1,11 @@
 """Equipped standing art (立绘) on the profile card.
 
 Pulled 立绘 are now displayable: when a player equips a ``standing_art``
-cosmetic whose item carries ``metadata.art``, the profile card renders that
-art. The dispatcher threads ``standing_art`` to bespoke kits only —
-``BaseKit.player_card`` keeps its original signature — and ``None`` keeps
-every kit's former layout byte-identical in intent: kasumi falls back to its
-built-in art, bangdream and the generic fallback add no art column at all.
+cosmetic whose item carries ``metadata.art``, the profile page renders that
+art in a sibling Frame beside the identity panel. The dispatcher still
+supports explicit art for other player-card callers, while ``None`` keeps
+the identity card art-free. The Kasumi theme's built-in default is selected
+at the profile-page layer.
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ def _data(**overrides) -> ProfileData:
         bonsai=7,
         season_name="2026 第一赛季",
         season_rank=3,
-        equipped=(("立绘", "户山香澄 抬头看，星星在跳动立绘"),),
+        equipped=(("立绘", "户山香澄 抬头看，星星在跳动"),),
     )
     defaults.update(overrides)
     return ProfileData(**defaults)
@@ -96,14 +96,14 @@ def test_custom_art_asset_exists() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Kasumi bespoke: explicit art wins over the built-in default
+# Kasumi bespoke: the identity card is art-free unless explicitly supplied
 # ---------------------------------------------------------------------------
 
 
-def test_kasumi_defaults_to_its_built_in_standing_art() -> None:
+def test_kasumi_identity_card_is_art_free_by_default() -> None:
     card = cards.player_card(KasumiKit(), IDENTITY, current_pt=100)
     sources = _image_sources(card)
-    assert STANDING_ART in sources
+    assert STANDING_ART not in sources
     assert CUSTOM_ART not in sources
 
 
@@ -180,6 +180,19 @@ def test_profile_page_without_art_keeps_the_art_less_card() -> None:
     page = profile_page(_data(), MangaKit())
     assert CUSTOM_ART not in _image_sources(page.child)
     assert page.render().size[0] == 864
+
+
+def test_kasumi_profile_uses_default_art_in_a_separate_frame() -> None:
+    from plugins.inventory.render.profile import _profile_showcase
+    from plugins.render import Frame
+    from plugins.render import HStack
+
+    showcase = _profile_showcase(KasumiKit(), _data())
+    assert isinstance(showcase, HStack)
+    assert len(showcase.children) == 2
+    assert isinstance(showcase.children[1], Frame)
+    assert STANDING_ART in _image_sources(showcase.children[1])
+    assert STANDING_ART not in _image_sources(showcase.children[0])
 
 
 @pytest.mark.parametrize("kit_cls", [BanGDreamKit, KasumiKit])

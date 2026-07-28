@@ -315,3 +315,58 @@ async def test_profile_passes_the_fetched_avatar_into_assembly(
     _, message, kwargs = matcher.calls[0]
     assert [segment.type for segment in message] == ["img", "qq:passive"]
     assert kwargs["referrer"] is event.referrer
+
+
+async def test_profile_description_subcommand_updates_long_text(
+    monkeypatch: pytest.MonkeyPatch, make_satori_event: Callable[..., Any]
+) -> None:
+    description = "这是一段长文本" * 11
+    recorded: dict[str, str] = {}
+    monkeypatch.setattr(
+        inventory,
+        "set_profile_description",
+        lambda user_id, value: recorded.update(user_id=user_id, value=value),
+    )
+
+    matcher = RecordingMatcher()
+    event = make_satori_event(f"#资料 简介 {description}")
+    with pytest.raises(FinishedException):
+        await inventory.handle_profile(
+            matcher, event, Message(f"简介 {description}")
+        )  # type: ignore[arg-type]
+
+    assert recorded == {"user_id": "user", "value": description}
+    assert "已更新个人简介" in str(matcher.calls[0][1])
+
+
+async def test_inventory_listing_has_stable_numbered_pages(
+    monkeypatch: pytest.MonkeyPatch, make_satori_event: Callable[..., Any]
+) -> None:
+    rows = [
+        SimpleNamespace(
+            item_id=f"item-{index}",
+            quantity=1,
+            scope_type="permanent",
+            scope_id="",
+        )
+        for index in range(12)
+    ]
+    monkeypatch.setattr(inventory, "list_inventory", lambda *args, **kwargs: rows)
+    monkeypatch.setattr(
+        inventory,
+        "display_item_amount",
+        lambda item_id, quantity: item_id,
+    )
+    monkeypatch.setattr(inventory, "display_scope", lambda *args: "")
+
+    matcher = RecordingMatcher()
+    event = make_satori_event("#仓库 2")
+    with pytest.raises(FinishedException):
+        await inventory.handle_inventory(
+            matcher, event, Message("2")
+        )  # type: ignore[arg-type]
+
+    reply = str(matcher.calls[0][1])
+    assert "仓库（第 2/2 页）" in reply
+    assert "11. item-10" in reply
+    assert "12. item-11" in reply

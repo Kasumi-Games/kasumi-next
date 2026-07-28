@@ -36,7 +36,7 @@ def _banner() -> GachaBanner:
             GachaEntry(
                 item_id="standing_art_kasumi_starbeat",
                 character_id="kasumi",
-                name="户山香澄 抬头看，星星在跳动立绘",
+                name="户山香澄 抬头看，星星在跳动",
                 rarity=6,
                 weight=1,
                 featured=True,
@@ -90,7 +90,7 @@ def _ten_results() -> list[GachaResult]:
     results.append(
         _result(
             "standing_art_kasumi_starbeat",
-            "户山香澄 抬头看，星星在跳动立绘",
+            "户山香澄 抬头看，星星在跳动",
             6,
             pity_before=9,
             pity_after=0,
@@ -178,7 +178,7 @@ def test_pull_page_places_tickets_directly_on_the_theme_background():
 
 def test_pull_defaults_to_the_bangdream_kit():
     data = pull_page_data(
-        [_result("standing_art_kasumi_starbeat", "户山香澄 抬头看，星星在跳动立绘", 6, pity_after=0)],
+        [_result("standing_art_kasumi_starbeat", "户山香澄 抬头看，星星在跳动", 6, pity_after=0)],
         _banner(),
     )
     assert render_pull(data).size[0] == 864
@@ -189,7 +189,7 @@ def _featured_with_owned_bundle() -> GachaResult:
 
     return _result(
         "standing_art_kasumi_starbeat",
-        "户山香澄 抬头看，星星在跳动立绘",
+        "户山香澄 抬头看，星星在跳动",
         6,
         pity_after=0,
         message="already_owned_compensated:12; already_owned_compensated:120",
@@ -220,7 +220,7 @@ def test_duplicate_pulled_item_is_not_new():
         [
             _result(
                 "standing_art_kasumi_starbeat",
-                "户山香澄 抬头看，星星在跳动立绘",
+                "户山香澄 抬头看，星星在跳动",
                 6,
                 pity_after=0,
                 message="already_owned_compensated:60",
@@ -242,7 +242,7 @@ def test_duplicate_pulled_item_is_not_new():
 def test_bonus_grants_surface_bundled_items_with_player_names():
     result = _result(
         "standing_art_kasumi_starbeat",
-        "户山香澄 抬头看，星星在跳动立绘",
+        "户山香澄 抬头看，星星在跳动",
         6,
         pity_after=0,
         grants=(
@@ -266,7 +266,7 @@ def test_bonus_grants_surface_bundled_items_with_player_names():
 def test_bonus_grants_fall_back_to_the_item_id_without_a_name():
     result = _result(
         "standing_art_kasumi_starbeat",
-        "户山香澄 抬头看，星星在跳动立绘",
+        "户山香澄 抬头看，星星在跳动",
         6,
         pity_after=0,
         grants=(
@@ -281,7 +281,7 @@ def test_bonus_grants_fall_back_to_the_item_id_without_a_name():
 def test_item_art_attaches_only_to_the_pulled_tile():
     results = [
         _result("standing_art_placeholder_r3_001", "占位角色立绘 3-1", 3),
-        _result("standing_art_kasumi_starbeat", "户山香澄 抬头看，星星在跳动立绘", 6, pity_after=0),
+        _result("standing_art_kasumi_starbeat", "户山香澄 抬头看，星星在跳动", 6, pity_after=0),
     ]
     data = pull_page_data(
         results, _banner(), item_art={"standing_art_kasumi_starbeat": KASUMI_ART}
@@ -306,7 +306,7 @@ def test_bonus_line_renders_above_the_pity_counter():
 
     result = _result(
         "standing_art_kasumi_starbeat",
-        "户山香澄 抬头看，星星在跳动立绘",
+        "户山香澄 抬头看，星星在跳动",
         6,
         pity_after=0,
         grants=(

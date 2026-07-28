@@ -34,7 +34,7 @@ def _mixed_pulls() -> list[PullRevealItem]:
 
     return [
         PullRevealItem(
-            name="户山香澄 抬头看，星星在跳动立绘" if rarity == 6 else f"占位卡面 {index + 1}",
+            name="户山香澄 抬头看，星星在跳动" if rarity == 6 else f"占位卡面 {index + 1}",
             rarity=rarity,
             is_new=rarity == 6,
             featured=rarity == 6,

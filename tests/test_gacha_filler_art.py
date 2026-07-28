@@ -76,7 +76,7 @@ def test_every_normal_pool_item_is_a_named_character_with_cached_art_source() ->
     for item_id in NORMAL_POOL_ITEM_IDS:
         entry = catalog[item_id]
         assert "占位" not in entry["name"], item_id
-        assert entry["name"].endswith("立绘"), item_id
+        assert not entry["name"].endswith("立绘"), item_id
         metadata = entry.get("metadata", {})
         assert metadata["bestdori_card_id"] > 0
         assert metadata["bestdori_variant"] == "after_training"
@@ -208,7 +208,7 @@ def _banner() -> GachaBanner:
             GachaEntry(
                 item_id="standing_art_kasumi_starbeat",
                 character_id="kasumi",
-                name="户山香澄 抬头看，星星在跳动立绘",
+                name="户山香澄 抬头看，星星在跳动",
                 rarity=6,
                 weight=1,
                 featured=True,

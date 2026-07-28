@@ -68,7 +68,7 @@ class StandingArtCard:
 
     @property
     def name(self) -> str:
-        return f"{self.title} 立绘"
+        return self.title
 
 
 class StandingArtCache:

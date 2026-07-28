@@ -626,7 +626,7 @@ class StarbeatPullTest(unittest.TestCase):
                             {
                                 "item_id": "standing_art_kasumi_starbeat",
                                 "character_id": "kasumi",
-                                "name": "户山香澄 抬头看，星星在跳动立绘",
+                                "name": "户山香澄 抬头看，星星在跳动",
                                 "rarity": 6,
                                 "weight": 1,
                                 "featured": True,

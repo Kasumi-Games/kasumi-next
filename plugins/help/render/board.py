@@ -40,7 +40,6 @@ from utils.cards import BODY_SIZE
 from utils.cards import LABEL_SIZE
 from utils.cards import CONTENT_WIDTH
 from utils.cards import SUBTITLE_SIZE
-from utils.cards import stat_row
 from utils.cards import card_page
 from utils.cards import empty_state
 from utils.cards import panel_section
@@ -291,17 +290,16 @@ def _text_width(text: str, font_size: int) -> float:
 def _meta_panel(kit: BaseKit) -> Component:
     return panel_section(
         kit,
-        VStack(
-            [
-                kit.text(
-                    "输入 /help 功能名，查看用法和示例",
-                    font_size=BODY_SIZE,
-                    wrap=False,
-                    max_lines=1,
-                ),
-                stat_row(kit, "需要帮助", f"QQ 群 {SUPPORT_GROUP}"),
-            ],
-            gap=14,
-            align="stretch",
+        Frame(
+            kit.text(
+                f"需要帮助？QQ 群 {SUPPORT_GROUP}",
+                font_size=BODY_SIZE,
+                align="right",
+                wrap=False,
+                max_lines=1,
+            ),
+            width=Fill(),
+            align_x="end",
+            align_y="center",
         ),
     )
