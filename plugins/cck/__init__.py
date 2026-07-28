@@ -350,6 +350,13 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             continue
 
         gamers_store.remove(event.channel.id)
+        # Give the winner immediate confirmation before the avatar lookup and
+        # result-card render, both of which can take noticeably longer than a
+        # plain text reply.
+        await start_cck.send(
+            "回答正确！本局猜卡面结束，正在生成结果图片……" + gens[msg_id].element,
+            referrer=gens[msg_id].event.referrer,
+        )
         characters = get_today_birthday()
         base_amount = random.randint(
             *cut_name_to_amount[image_cut_setting["cut_name"]]
