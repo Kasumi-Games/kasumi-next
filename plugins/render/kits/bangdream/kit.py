@@ -385,6 +385,8 @@ class BanGDreamKit(BaseKit):
             initial=identity.nickname[:1] or "?",
             size=avatar_size,
             ring_color=self.primary,
+            ring_width=0 if identity.avatar_frame is not None else 3,
+            ring_gap=0 if identity.avatar_frame is not None else 2,
             initial_color=self.text_color,
             initial_font=CHINESE_FONT,
         )
@@ -474,8 +476,8 @@ class BanGDreamKit(BaseKit):
                 initial=nickname[:1] or "?",
                 size=128,
                 ring_color=self.primary,
-                ring_width=4,
-                ring_gap=3,
+                ring_width=0 if frame_image is not None else 4,
+                ring_gap=0 if frame_image is not None else 3,
                 initial_color=self.text_color,
                 initial_font=CHINESE_FONT,
             )

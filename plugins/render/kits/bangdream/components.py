@@ -498,9 +498,10 @@ class BanGDreamRingedAvatar:
     """Circular avatar in a BanG Dream! primary ring, with an initial fallback.
 
     When ``source`` is ``None`` the inner disc is filled with a soft brand tint
-    and carries the player's initial instead of leaving a hole. The ring is the
-    theme signal, so it is drawn in both states. Rendering is supersampled so
-    the circle edge stays clean after the page-level downscale.
+    and carries the player's initial instead of leaving a hole. ``ring_width=0``
+    disables the theme ring when an equipped cosmetic frame replaces it.
+    Rendering is supersampled so the circle edge stays clean after the
+    page-level downscale.
 
     Attributes:
         source: Optional avatar image.
@@ -536,8 +537,12 @@ class BanGDreamRingedAvatar:
         layer = Image.new("RGBA", (big, big), (0, 0, 0, 0))
         draw = ImageDraw.Draw(layer)
 
-        ring_width = max(1, ctx.scale_px(self.ring_width)) * supersample
-        ring_gap = max(0, ctx.scale_px(self.ring_gap)) * supersample
+        ring_width = max(0, ctx.scale_px(self.ring_width)) * supersample
+        ring_gap = (
+            max(0, ctx.scale_px(self.ring_gap)) * supersample
+            if ring_width > 0
+            else 0
+        )
         inner = max(1, big - 2 * (ring_width + ring_gap))
         inner_xy = (big - inner) // 2
 
@@ -564,12 +569,18 @@ class BanGDreamRingedAvatar:
                 fill=normalize_color(self.initial_color),
             )
 
-        half_stroke = ring_width // 2
-        draw.ellipse(
-            (half_stroke, half_stroke, big - half_stroke - 1, big - half_stroke - 1),
-            outline=normalize_color(self.ring_color),
-            width=ring_width,
-        )
+        if ring_width > 0:
+            half_stroke = ring_width // 2
+            draw.ellipse(
+                (
+                    half_stroke,
+                    half_stroke,
+                    big - half_stroke - 1,
+                    big - half_stroke - 1,
+                ),
+                outline=normalize_color(self.ring_color),
+                width=ring_width,
+            )
         resized = layer.resize((side, side), Image.Resampling.LANCZOS)
         alpha_composite_paste(
             canvas,

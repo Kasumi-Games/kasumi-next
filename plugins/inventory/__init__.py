@@ -1026,7 +1026,7 @@ async def handle_profile(
         )
 
     await matcher.finish(
-        "用法：/个人资料 或 /个人资料 简介 <100字以内文本>"
+        "用法：/个人资料 或 /个人资料 简介 <180字以内文本>"
         + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )

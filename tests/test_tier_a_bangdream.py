@@ -15,8 +15,13 @@ from plugins.render import PullRevealItem
 from plugins.render.core import Constraints
 from plugins.render.core import RenderContext
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.bangdream.components import BanGDreamRingedAvatar
 
 RARITIES = [3, 3, 4, 3, 5, 3, 4, 6, 3, 4]
+FRAME_ART = (
+    Path(__file__).resolve().parents[1]
+    / "plugins/inventory/resources/items/avatar_frames/frame_starbeat_top10.png"
+)
 
 
 def _identity(**overrides) -> PlayerIdentity:
@@ -42,6 +47,22 @@ def _render(kit: BanGDreamKit, component) -> Image.Image:
     return AutoPage(
         component, background=kit.background(), padding=Insets.all(40)
     ).render()
+
+
+def _components(root, component_type) -> list:
+    found = []
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, component_type):
+            found.append(node)
+        for attr in ("children", "child"):
+            value = getattr(node, attr, None)
+            if isinstance(value, (list, tuple)):
+                stack.extend(value)
+            elif value is not None:
+                stack.append(value)
+    return found
 
 
 class DispatchTest(unittest.TestCase):
@@ -111,6 +132,18 @@ class GameIdentityTest(unittest.TestCase):
         )
         self.assertGreater(image.width, 0)
 
+    def test_equipped_frame_replaces_the_theme_ring(self) -> None:
+        plain = cards.game_identity(self.kit, _identity(), width=720)
+        equipped = cards.game_identity(
+            self.kit,
+            _identity(avatar_frame=FRAME_ART),
+            width=720,
+        )
+        self.assertGreater(_components(plain, BanGDreamRingedAvatar)[0].ring_width, 0)
+        self.assertEqual(
+            _components(equipped, BanGDreamRingedAvatar)[0].ring_width, 0
+        )
+
 
 class PlayerCardTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -145,6 +178,19 @@ class PlayerCardTest(unittest.TestCase):
             ),
         )
         self.assertGreater(image.width, 0)
+
+    def test_equipped_frame_replaces_the_theme_ring(self) -> None:
+        plain = cards.player_card(self.kit, _identity(), current_pt=0)
+        equipped = cards.player_card(
+            self.kit,
+            _identity(),
+            current_pt=0,
+            frame_image=FRAME_ART,
+        )
+        self.assertGreater(_components(plain, BanGDreamRingedAvatar)[0].ring_width, 0)
+        self.assertEqual(
+            _components(equipped, BanGDreamRingedAvatar)[0].ring_width, 0
+        )
 
 
 class PullRevealTest(unittest.TestCase):

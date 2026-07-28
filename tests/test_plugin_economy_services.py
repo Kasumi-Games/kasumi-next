@@ -305,7 +305,9 @@ def test_inventory_profile_equipment_and_season_status(sqlite_session, monkeypat
         service.set_profile_description("u1", "hello").profile_description == "hello"
     )
     with pytest.raises(ValueError):
-        service.validate_profile_description("x" * 101)
+        service.validate_profile_description(
+            "x" * (service.PROFILE_DESCRIPTION_MAX_LENGTH + 1)
+        )
 
     season_config = {
         "seasons": [

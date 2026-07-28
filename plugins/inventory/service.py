@@ -29,7 +29,7 @@ from .season_service import get_point_scope
 from .season_service import get_season_starting_points
 from .season_service import get_offseason_starting_points
 
-PROFILE_DESCRIPTION_MAX_LENGTH = 100
+PROFILE_DESCRIPTION_MAX_LENGTH = 180
 PROFILE_DESCRIPTION_PATTERN = re.compile(
     r"^[A-Za-z0-9\u3400-\u4dbf\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff"
     r" .,!?~\-_/：:;'\"()\[\]，。！？、；\n]*$"
@@ -409,7 +409,9 @@ def validate_profile_description(description: str) -> str:
     normalized = "\n".join(line.strip() for line in normalized.split("\n"))
     normalized = "\n".join(line for line in normalized.split("\n") if line)
     if len(normalized) > PROFILE_DESCRIPTION_MAX_LENGTH:
-        raise ValueError("个人简介最多 100 个字符")
+        raise ValueError(
+            f"个人简介最多 {PROFILE_DESCRIPTION_MAX_LENGTH} 个字符"
+        )
     if not PROFILE_DESCRIPTION_PATTERN.fullmatch(normalized):
         raise ValueError("个人简介只能使用常见中日英文字、数字、空格和基础标点")
     return normalized

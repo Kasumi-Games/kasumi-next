@@ -236,13 +236,13 @@ class KasumiFrameTest(unittest.TestCase):
         self.assertEqual(overlay.getpixel((center, center))[3], 0)
 
     def test_asset_preserves_the_face_safe_zone(self) -> None:
-        # The revised hand-drawn fringe may enter the top of the old square,
-        # but the central 96×128 face window must stay fully clear.
+        # The final hand-drawn fringe may enter the forehead band, but the
+        # central 96×112 face window beneath it must stay fully clear.
         from PIL import Image
 
         asset = Image.open(AVATAR_FRAME).convert("RGBA")
         alpha = asset.getchannel("A")
-        face_safe_zone = alpha.crop((208, 224, 304, 352))
+        face_safe_zone = alpha.crop((208, 240, 304, 352))
         self.assertEqual(
             face_safe_zone.getextrema(),
             (0, 0),
