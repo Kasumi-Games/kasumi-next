@@ -20,7 +20,8 @@ class Messages:
     ACTION_INVALID = (
         '请从"补牌"(h)，"停牌"(s){double_part}或者"投降"(q)中选择一项操作哦'
     )
-    ACTION_HIT_PROMPT = '请从"补牌"(h)，"停牌"(s)或"投降"(q)中选择一项操作哦'
+    ACTION_HIT_PROMPT = '请从"补牌"(h)或"停牌"(s)中选择一项操作哦'
+    ACTION_INVALID_AFTER_HIT = '补牌后只能选择"补牌"(h)或"停牌"(s)哦'
 
     DOUBLE_AFTER_SPLIT = "分牌之后不能双倍下注哦~请重新选择"
     DOUBLE_NOT_FIRST = "不能在非第一轮使用双倍下注哦~请重新选择"
@@ -35,9 +36,13 @@ class Messages:
     RESULT_PUSH = "{player} = {dealer}，平局！下注金额返还"
 
     SURRENDER_LOSE = "你投降啦，Kasumi 获胜！损失了 {amount} 个Pt"
+    SURRENDER_NOT_FIRST = "只有拿到最初两张牌时才能投降哦~请重新选择"
 
     BLACKJACK_PUSH = "平局！虽然是 BlackKasumi，但是没有奖励哦~\n"
     BLACKJACK_WIN = "BlackKasumi！你赢得了 1.5 × {bet} = {amount} 个Pt！\n"
+    DEALER_BLACKJACK_LOSE = (
+        "Kasumi 是 BlackKasumi！你输掉了 {amount} 个Pt\n"
+    )
 
     SPLIT_PROMPT = "你有一对相同点数的牌，是否要分牌？\n"
     SPLIT_CHOICE = "请从“是”或“否”中选择一项哦"

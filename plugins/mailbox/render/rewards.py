@@ -141,10 +141,42 @@ def summarize(
     return separator.join(parts)
 
 
+def dedupe_attachments(attachments: Sequence) -> list:
+    """Collapse duplicate attachment rows, keeping the first per item+scope.
+
+    Legacy mails in production carry two identical rows for one reward
+    (creation used to append the star shortcut on top of an attachment list
+    that already contained it). The grant idempotency key is per item + scope,
+    so only the FIRST row was ever paid out — displaying both rows, or their
+    sum, would show the player something the claim never granted.
+
+    Args:
+        attachments: Objects carrying ``item_id``, ``quantity`` and optionally
+            ``scope_type``/``scope_id``.
+
+    Returns:
+        Attachments in original order, first occurrence per item+scope.
+    """
+
+    seen: set[tuple[str, str, str]] = set()
+    unique = []
+    for attachment in attachments:
+        key = (
+            attachment.item_id,
+            getattr(attachment, "scope_type", "") or "",
+            getattr(attachment, "scope_id", "") or "",
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(attachment)
+    return unique
+
+
 def attachment_summary(
     attachments: Sequence, *, limit: int | None = None, separator: str = " · "
 ) -> str:
-    """Join mail attachments into one line.
+    """Join mail attachments into one line, one entry per item.
 
     Args:
         attachments: Objects carrying ``item_id`` and ``quantity``.
@@ -156,7 +188,10 @@ def attachment_summary(
     """
 
     return summarize(
-        [(item.item_id, item.quantity) for item in attachments],
+        [
+            (item.item_id, item.quantity)
+            for item in dedupe_attachments(attachments)
+        ],
         limit=limit,
         separator=separator,
     )
@@ -186,6 +221,8 @@ def reward_tile(
     name, unit, stackable = item_facts(item_id)
     inner = TILE_WIDTH - TILE_PADDING * 2
 
+    # The unit belongs to the amount (「+60 张」), never to the label — the
+    # label names the thing (「星星贴纸」), matching the gain_rows convention.
     if not claimed:
         head: Component = kit.text(
             owned_label,
@@ -197,14 +234,8 @@ def reward_tile(
         )
         caption = name
     elif stackable or quantity > 1:
-        head = kit.text(
-            str(quantity),
-            font_size=NUMERAL_SIZE,
-            align="center",
-            wrap=False,
-            max_lines=1,
-        )
-        caption = f"{name} {unit}".strip()
+        head = _amount_head(kit, quantity, unit)
+        caption = name
     else:
         head = kit.text(
             "获得",
@@ -242,6 +273,37 @@ def reward_tile(
         height=Fixed(TILE_HEIGHT),
         padding=TILE_PADDING,
         fill=tile_fill(kit),
+    )
+
+
+def _amount_head(kit: BaseKit, quantity: int, unit: str) -> Component:
+    """The tile's display amount: big numeral, unit beside it at body size.
+
+    ``+60`` at :data:`NUMERAL_SIZE` with 「张」 sitting on its baseline end —
+    the unit is part of the amount, so it stays full text color (it is
+    must-read), just smaller than the numeral.
+    """
+
+    numeral = kit.text(
+        f"+{quantity}",
+        font_size=NUMERAL_SIZE,
+        align="center",
+        wrap=False,
+        max_lines=1,
+    )
+    if not unit:
+        return numeral
+    return Frame(
+        HStack(
+            [
+                numeral,
+                kit.text(unit, font_size=BODY_SIZE, wrap=False, max_lines=1),
+            ],
+            gap=6,
+            align="end",
+        ),
+        align_x="center",
+        align_y="center",
     )
 
 
@@ -327,24 +389,35 @@ def tiles_for_attachments(
     attachments: Sequence,
     results: Sequence,
 ) -> list[Component]:
-    """Build one tile per attachment, pairing it with its grant result.
+    """Build one tile per distinct attachment, paired with its grant result.
 
     ``grant_many`` returns results positionally, so attachment ``i`` owns
-    result ``i``. An empty ``results`` means the mail had already been claimed
-    on an earlier read, which is a third state and gets its own word.
+    result ``i`` — the pairing happens BEFORE deduplication so a duplicate
+    row is dropped together with its (skipped) result. An empty ``results``
+    means the mail had already been claimed on an earlier read, which is a
+    third state and gets its own word.
 
     Args:
         kit: Active kit.
-        attachments: Mail attachments.
+        attachments: Mail attachments, possibly with legacy duplicate rows.
         results: ``GrantResult`` values from ``grant_many``, possibly empty.
 
     Returns:
-        Tiles in attachment order.
+        Tiles in attachment order, one per item+scope.
     """
 
     ordered = list(results)
+    seen: set[tuple[str, str, str]] = set()
     tiles: list[Component] = []
     for index, attachment in enumerate(attachments):
+        key = (
+            attachment.item_id,
+            getattr(attachment, "scope_type", "") or "",
+            getattr(attachment, "scope_id", "") or "",
+        )
+        if key in seen:
+            continue
+        seen.add(key)
         result = ordered[index] if index < len(ordered) else None
         if result is None:
             tiles.append(

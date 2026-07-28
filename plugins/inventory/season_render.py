@@ -27,7 +27,6 @@ behind a ``text_color`` edge.
 
 from __future__ import annotations
 
-import datetime
 from io import BytesIO
 from typing import Sequence
 from dataclasses import dataclass
@@ -86,11 +85,28 @@ _LINE_STYLES: tuple[str | tuple[int, tuple[int, ...]], ...] = (
     (0, (10, 3, 2, 3, 2, 3)),
 )
 
-#: Legend entries per row. Three CJK entries with their line-style handles are
-#: the most that fit the figure width; a fourth column clips off the right
-#: edge. Kept in one place because the top margin reservation in
-#: :func:`_chart_image` must agree with it.
+#: Legend entries per row, upper bound. Three CJK entries with their
+#: line-style handles usually fit the figure width, but the rank numbers are
+#: config-driven (「第 5000 名」 is wider than 「第 1 名」), so
+#: :func:`_chart_image` measures the rendered legend and drops to fewer
+#: columns whenever the measured width would overrun the axes.
 _LEGEND_COLUMNS = 3
+
+#: Upper bound on horizontal time ticks. The real count is measured: as many
+#: evenly spread ticks as fit the axes width at the rendered label width, and
+#: any tick whose label would still crowd a neighbor (snapshots cluster, so
+#: even spacing in time is not even spacing in pixels) is thinned out.
+_MAX_X_TICKS = 4
+
+#: Clear raster pixels kept between neighboring time labels.
+_X_TICK_GAP = 48
+
+#: Raster pixels of breathing room between any chart ink and the figure edge.
+#: The regression tests assert a 4 px clean band, so this must stay above it.
+_EDGE_PAD = 8
+
+#: Raster gap between the axes top and the legend block.
+_LEGEND_GAP = 24
 
 
 @dataclass(frozen=True)
@@ -255,6 +271,16 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
     The figure is fully transparent so the kit's panel fill shows through;
     everything drawn on it uses palette colors, and all chart text is at least
     ``LABEL_SIZE`` logical pixels once the page downsamples.
+
+    Layout is measured, not guessed: the figure margins come from the rendered
+    extents of the tick labels and the legend (a draw pass on the Agg canvas,
+    then :meth:`~matplotlib.text.Text.get_window_extent`), so six-digit Pt
+    values widen the left margin instead of clipping, a config-driven
+    「第 5000 名」 legend refits to fewer columns instead of running off the
+    right edge, and time ticks are spread by value and thinned by rendered
+    label width so clustered snapshots cannot overlap their labels. Every
+    measurement draw is a deterministic function of ``data`` and the kit
+    palette, so renders stay byte-identical.
     """
 
     text = _mpl_color(kit.text_color)
@@ -262,31 +288,19 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
     accent = _mpl_color(getattr(kit, "primary", None) or kit.text_color)
     tick_font = _font_properties(_pt(LABEL_SIZE))
 
+    figure_width = INNER_WIDTH * _CHART_SCALE
+    figure_height = _CHART_HEIGHT * _CHART_SCALE
     fig = Figure(
-        figsize=(
-            INNER_WIDTH * _CHART_SCALE / _CHART_DPI,
-            _CHART_HEIGHT * _CHART_SCALE / _CHART_DPI,
-        ),
+        figsize=(figure_width / _CHART_DPI, figure_height / _CHART_DPI),
         dpi=_CHART_DPI,
     )
-    FigureCanvasAgg(fig)
+    canvas = FigureCanvasAgg(fig)
     fig.patch.set_alpha(0.0)
 
     ax = fig.add_subplot()
-    has_legend = len(data.series) > 1
-    # The legend sits above the axes, so the top margin must reserve one slot
-    # per legend *row* — ``snapshot_ranks`` is config-driven, and five ranks
-    # wrap the four-column legend onto a second row that would otherwise clip
-    # at the figure edge.
-    legend_rows = (
-        -(-len(data.series) // _LEGEND_COLUMNS) if has_legend else 0
-    )
-    fig.subplots_adjust(
-        left=0.11,
-        right=0.98,
-        bottom=0.15,
-        top=max(0.95 - 0.11 * legend_rows, 0.55),
-    )
+    # Provisional margins for the measurement pass; the real ones are computed
+    # from rendered extents below.
+    fig.subplots_adjust(left=0.11, right=0.98, bottom=0.15, top=0.85)
     ax.set_facecolor((0.0, 0.0, 0.0, 0.0))
 
     for index, series in enumerate(data.series):
@@ -303,7 +317,9 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
         )
         # Endpoint marker: the "now" of each line. Primary is only a fill
         # accent — the text-color edge keeps it visible in kits whose primary
-        # sits close to the panel fill.
+        # sits close to the panel fill. The axes margins below keep the
+        # marker's full radius inside the axes box, so the default clipping
+        # never cuts it.
         ax.plot(
             [xs[-1]],
             [ys[-1]],
@@ -325,51 +341,121 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
         ax.spines[side].set_linewidth(0.9)
     ax.tick_params(color=muted, width=0.9)
 
-    # At most three horizontal time ticks (first/middle/last), edge-aligned
-    # outward-in: the first label extends right from its tick and the last
-    # extends left, so no label can clip at the figure edge — and with half
-    # the span between ticks, none can collide either.
-    times = sorted({ts for series in data.series for ts, _ in series.points})
-    if len(times) <= 3:
-        tick_indices = list(range(len(times)))
-    else:
-        tick_indices = sorted({0, len(times) // 2, len(times) - 1})
-    ticks = [times[index] for index in tick_indices]
-    ax.set_xticks(ticks)
-    labels = ax.set_xticklabels(
-        [_format_time(ts) for ts in ticks],
-        fontproperties=tick_font,
-        color=text,
-    )
-    if len(labels) >= 2:
-        labels[0].set_ha("left")
-        labels[-1].set_ha("right")
-        for label in labels[1:-1]:
-            label.set_ha("center")
-
     ax.yaxis.set_major_locator(MaxNLocator(nbins=5, integer=True))
     ylim = ax.get_ylim()
     yticks = [tick for tick in ax.get_yticks() if ylim[0] <= tick <= ylim[1]]
     ax.set_yticks(yticks)
-    ax.set_yticklabels(
+    y_labels = ax.set_yticklabels(
         [str(int(tick)) for tick in yticks],
         fontproperties=tick_font,
         color=text,
     )
     ax.set_ylim(ylim)
 
-    if has_legend:
-        legend = ax.legend(
-            loc="lower left",
-            bbox_to_anchor=(0.0, 1.02, 1.0, 0.12),
-            ncols=min(len(data.series), _LEGEND_COLUMNS),
-            frameon=False,
-            borderaxespad=0.0,
-            handlelength=2.8,
-            prop=tick_font,
+    # Candidate time ticks at the upper bound; the final set is cut down to
+    # what the measured label width says fits.
+    times = sorted({ts for series in data.series for ts, _ in series.points})
+    candidates = [
+        times[index]
+        for index in _spread_tick_indices(times, _MAX_X_TICKS)
+    ]
+    x_labels = _set_time_ticks(ax, candidates, tick_font, text)
+
+    legend = None
+    if len(data.series) > 1:
+        legend = _build_legend(
+            ax, min(len(data.series), _LEGEND_COLUMNS), tick_font, text
         )
-        for label in legend.get_texts():
-            label.set_color(text)
+
+    # Measurement pass: rendered extents of everything that lives in the
+    # figure margins. Overhangs are measured *positionally* against the axes
+    # box — label offset from the spine is tick length plus pad plus font
+    # metrics, and measuring the rendered geometry beats re-deriving that
+    # stack of rcParam defaults. An overhang is margin-invariant, so extents
+    # taken at the provisional margins stay exact after the final adjust.
+    canvas.draw()
+    renderer = canvas.get_renderer()
+    axes_box = ax.get_window_extent(renderer)
+    left_overhang = max(
+        (
+            axes_box.x0 - label.get_window_extent(renderer).x0
+            for label in y_labels
+        ),
+        default=0.0,
+    )
+    y_label_height = max(
+        (label.get_window_extent(renderer).height for label in y_labels),
+        default=0.0,
+    )
+    x_label_width = max(
+        (label.get_window_extent(renderer).width for label in x_labels),
+        default=0.0,
+    )
+    bottom_overhang = max(
+        (
+            axes_box.y0 - label.get_window_extent(renderer).y0
+            for label in x_labels
+        ),
+        default=0.0,
+    )
+
+    left = min((left_overhang + _EDGE_PAD) / figure_width, 0.35)
+    right = 1.0 - (2 * _EDGE_PAD) / figure_width
+    bottom = min((bottom_overhang + _EDGE_PAD) / figure_height, 0.30)
+
+    if legend is not None:
+        # Refit the legend to the measured axes width: fewer columns instead
+        # of clipping when the config-driven rank numbers run wide.
+        available = (right - left) * figure_width
+        columns = min(len(data.series), _LEGEND_COLUMNS)
+        while (
+            columns > 1
+            and legend.get_window_extent(renderer).width > available
+        ):
+            columns -= 1
+            legend = _build_legend(ax, columns, tick_font, text)
+            canvas.draw()
+        legend_height = legend.get_window_extent(renderer).height
+        top_reserve = legend_height + _LEGEND_GAP + _EDGE_PAD
+    else:
+        # No legend: only the topmost y label can poke above the axes box,
+        # by at most half its height.
+        top_reserve = y_label_height / 2.0 + _EDGE_PAD
+    top = max(1.0 - top_reserve / figure_height, 0.50)
+
+    fig.subplots_adjust(left=left, right=right, bottom=bottom, top=top)
+    if legend is not None:
+        # Anchor the legend a fixed gap above the (now final) axes top.
+        axes_height = (top - bottom) * figure_height
+        legend.set_bbox_to_anchor(
+            (0.0, 1.0 + _LEGEND_GAP / axes_height, 1.0, 0.0)
+        )
+
+    # Final time ticks at the final geometry: the largest evenly spread set
+    # whose rendered labels all clear each other, backing off one tick at a
+    # time. Even spacing in time is not even spacing in pixels — clustered
+    # snapshots put two ticks in almost the same pixel column — so each count
+    # is checked against the measured label spans, and two ticks (first and
+    # last, edge-aligned) always fit at this figure width.
+    axes_left = left * figure_width
+    axes_width = (right - left) * figure_width
+    xlim = ax.get_xlim()
+    time_span = xlim[1] - xlim[0]
+    ticks = [times[0]]
+    for count in range(min(_MAX_X_TICKS, len(times)), 1, -1):
+        candidate = [
+            times[index] for index in _spread_tick_indices(times, count)
+        ]
+        positions = [
+            axes_left + (tick - xlim[0]) / time_span * axes_width
+            for tick in candidate
+        ]
+        spans = _label_spans(positions, x_label_width)
+        kept = _thin_label_spans(spans, _X_TICK_GAP)
+        ticks = [candidate[index] for index in kept]
+        if len(kept) == len(candidate):
+            break
+    _set_time_ticks(ax, ticks, tick_font, text)
 
     buffer = BytesIO()
     fig.savefig(buffer, format="png", transparent=True)
@@ -377,6 +463,119 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
     chart = Image.open(buffer)
     chart.load()
     return chart
+
+
+def _build_legend(ax, columns: int, tick_font, text_color):
+    """(Re)create the above-the-axes legend at ``columns`` columns."""
+
+    legend = ax.legend(
+        loc="lower left",
+        bbox_to_anchor=(0.0, 1.0, 1.0, 0.0),
+        ncols=columns,
+        frameon=False,
+        borderaxespad=0.0,
+        handlelength=2.8,
+        prop=tick_font,
+    )
+    for label in legend.get_texts():
+        label.set_color(text_color)
+    return legend
+
+
+def _set_time_ticks(ax, ticks: Sequence[int], tick_font, text_color):
+    """Apply time ticks with edge-aligned first/last labels.
+
+    The first label extends right from its tick and the last extends left, so
+    neither can clip at the figure edge regardless of the margin math.
+    """
+
+    ax.set_xticks(list(ticks))
+    labels = ax.set_xticklabels(
+        [_format_time(tick) for tick in ticks],
+        fontproperties=tick_font,
+        color=text_color,
+    )
+    if len(labels) >= 2:
+        labels[0].set_ha("left")
+        labels[-1].set_ha("right")
+        for label in labels[1:-1]:
+            label.set_ha("center")
+    return labels
+
+
+def _spread_tick_indices(values: Sequence[int], limit: int) -> list[int]:
+    """Indices of up to ``limit`` values evenly spread across the value range.
+
+    Spread by *value*, not by index: snapshots cluster in time, and the old
+    index-based middle pick landed a tick (and its label) in the same pixel
+    column as the first one whenever the capture cadence was uneven.
+
+    Args:
+        values: Sorted, deduplicated values.
+        limit: Maximum number of indices to return; at least 1.
+
+    Returns:
+        Sorted unique indices; always includes the first and last value.
+    """
+
+    count = len(values)
+    if count <= limit:
+        return list(range(count))
+    lo, hi = values[0], values[-1]
+    span = hi - lo
+    if span <= 0 or limit == 1:
+        return [0]
+    picked = {
+        min(range(count), key=lambda index: abs(values[index] - target))
+        for target in (lo + span * step / (limit - 1) for step in range(limit))
+    }
+    picked.update((0, count - 1))
+    return sorted(picked)
+
+
+def _label_spans(
+    positions: Sequence[float], width: float
+) -> list[tuple[float, float]]:
+    """Horizontal extents of tick labels under the edge-alignment rule.
+
+    The first label is left-aligned at its tick, the last right-aligned, and
+    everything between is centered — mirroring :func:`_set_time_ticks`.
+    """
+
+    last = len(positions) - 1
+    spans: list[tuple[float, float]] = []
+    for index, position in enumerate(positions):
+        if index == 0 and last > 0:
+            spans.append((position, position + width))
+        elif index == last and last > 0:
+            spans.append((position - width, position))
+        else:
+            spans.append((position - width / 2.0, position + width / 2.0))
+    return spans
+
+
+def _thin_label_spans(
+    spans: Sequence[tuple[float, float]], gap: float
+) -> list[int]:
+    """Indices of labels that fit without crowding, first and last pinned.
+
+    Greedy left-to-right: a middle label survives only when it clears the
+    previously kept label *and* the pinned last label by ``gap``.
+    """
+
+    count = len(spans)
+    if count <= 2:
+        return list(range(count))
+    kept = [0]
+    for index in range(1, count - 1):
+        previous = spans[kept[-1]]
+        if (
+            spans[index][0] >= previous[1] + gap
+            and spans[index][1] + gap <= spans[count - 1][0]
+        ):
+            kept.append(index)
+    kept.append(count - 1)
+    return kept
 
 
 def _pt(logical_px: int) -> float:

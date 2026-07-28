@@ -7,11 +7,10 @@ collapses to a single line, and past :data:`MAX_ROWS` the tail becomes one
 summary line. ``AutoPage`` grows to fit, so there is never a page two and no
 pagination command has to exist.
 
-Read and unread are told apart by shape, not by hue: an unread mail gets a
-filled chip built from :func:`utils.cards.badge`, a read one gets a bare
-numeral, and its meta line collapses to the single word 「已领取」. That is the
-``leaderboard.py`` two-signal idiom, and it is why this card is legible in
-``manga`` and after a client downscale.
+The sequence number is navigation, not state, so every row uses the same
+number chip. State is written explicitly in the meta line: 「待领取」,
+「已领取」, 「未读通知」, or 「已读通知」. This avoids making players infer a
+second meaning from filled versus bare numerals.
 
 Item names are resolved through the inventory catalog, which reads the
 process-global session. Build the page on the event loop thread and only
@@ -229,7 +228,13 @@ def _dense_row(kit: BaseKit, index: int, mail: ServiceMail) -> Component:
                     align_y="center",
                 ),
                 Frame(
-                    _expiry_text_component(kit, mail),
+                    _expiry_cell(
+                        kit,
+                        mail,
+                        badge_width=112,
+                        badge_height=32,
+                        font_size=20,
+                    ),
                     width=Fixed(DENSE_EXPIRY_COLUMN),
                     align_x="stretch",
                     align_y="center",
@@ -269,23 +274,8 @@ def _index_cell(
     size: int,
     font_size: int,
 ) -> Component:
-    """Filled chip for an unread mail, bare numeral for a read one."""
+    """Stable navigation chip; mail state is written in the meta column."""
 
-    if mail.is_read:
-        return Frame(
-            kit.text(
-                str(index),
-                font_size=font_size,
-                color=kit.muted_text_color,
-                align="center",
-                wrap=False,
-                max_lines=1,
-            ),
-            width=Fixed(size),
-            height=Fixed(size),
-            align_x="center",
-            align_y="center",
-        )
     return badge(kit, str(index), width=size, height=size, font_size=font_size)
 
 
@@ -294,12 +284,15 @@ def _meta_text(
 ) -> Component:
     """The attachment line, or the word that replaces it."""
 
-    if mail.is_read:
+    if mail.is_read and mail.attachments:
         text, muted = "已领取", True
+    elif mail.is_read:
+        text, muted = "已读通知", True
     elif not mail.attachments:
-        text, muted = "通知", True
+        text, muted = "未读通知", True
     else:
-        text, muted = attachment_summary(mail.attachments, limit=limit), False
+        text = "待领取 · " + attachment_summary(mail.attachments, limit=limit)
+        muted = False
     return kit.text(
         text,
         font_size=LABEL_SIZE,
@@ -309,7 +302,14 @@ def _meta_text(
     )
 
 
-def _expiry_cell(kit: BaseKit, mail: ServiceMail) -> Component:
+def _expiry_cell(
+    kit: BaseKit,
+    mail: ServiceMail,
+    *,
+    badge_width: int = EXPIRY_BADGE_WIDTH,
+    badge_height: int = EXPIRY_BADGE_HEIGHT,
+    font_size: int = LABEL_SIZE,
+) -> Component:
     """A filled badge when the deadline is close, plain muted text otherwise."""
 
     text, urgent = expiry_state(mail.expire_time)
@@ -317,9 +317,9 @@ def _expiry_cell(kit: BaseKit, mail: ServiceMail) -> Component:
         return badge(
             kit,
             text,
-            width=EXPIRY_BADGE_WIDTH,
-            height=EXPIRY_BADGE_HEIGHT,
-            font_size=LABEL_SIZE,
+            width=badge_width,
+            height=badge_height,
+            font_size=font_size,
         )
     return kit.text(
         text,
@@ -329,19 +329,6 @@ def _expiry_cell(kit: BaseKit, mail: ServiceMail) -> Component:
         wrap=False,
         max_lines=1,
     )
-
-
-def _expiry_text_component(kit: BaseKit, mail: ServiceMail) -> Component:
-    text, urgent = expiry_state(mail.expire_time)
-    return kit.text(
-        text,
-        font_size=LABEL_SIZE,
-        color=None if urgent else kit.muted_text_color,
-        align="right",
-        wrap=False,
-        max_lines=1,
-    )
-
 
 def expiry_state(expire_time: datetime.datetime) -> tuple[str, bool]:
     """Describe how long a mail has left.

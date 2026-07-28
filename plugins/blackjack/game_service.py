@@ -53,7 +53,11 @@ class BlackjackGameService:
 
     @staticmethod
     def get_user_games(
-        user_id: str, limit: Optional[int] = None
+        user_id: str,
+        limit: Optional[int] = None,
+        *,
+        start_time: int | None = None,
+        end_time: int | None = None,
     ) -> List[BlackjackGame]:
         """
         Get all games for a user, ordered by timestamp (newest first)
@@ -61,6 +65,8 @@ class BlackjackGameService:
         Args:
             user_id: Player's user ID
             limit: Optional limit on number of results
+            start_time: Inclusive Unix timestamp lower bound.
+            end_time: Exclusive Unix timestamp upper bound.
 
         Returns:
             List of BlackjackGame records
@@ -72,6 +78,10 @@ class BlackjackGameService:
             .filter(BlackjackGame.user_id == user_id)
             .order_by(BlackjackGame.timestamp.desc())
         )
+        if start_time is not None:
+            query = query.filter(BlackjackGame.timestamp >= start_time)
+        if end_time is not None:
+            query = query.filter(BlackjackGame.timestamp < end_time)
 
         if limit:
             query = query.limit(limit)
@@ -79,7 +89,9 @@ class BlackjackGameService:
         return query.all()
 
     @staticmethod
-    def get_user_stats(user_id: str) -> dict:
+    def get_user_stats(
+        user_id: str, *, start_time: int | None = None, end_time: int | None = None
+    ) -> dict:
         """
         Get comprehensive statistics for a user
 
@@ -91,9 +103,12 @@ class BlackjackGameService:
         """
         session = get_session()
 
-        games = (
-            session.query(BlackjackGame).filter(BlackjackGame.user_id == user_id).all()
-        )
+        query = session.query(BlackjackGame).filter(BlackjackGame.user_id == user_id)
+        if start_time is not None:
+            query = query.filter(BlackjackGame.timestamp >= start_time)
+        if end_time is not None:
+            query = query.filter(BlackjackGame.timestamp < end_time)
+        games = query.all()
 
         if not games:
             return {

@@ -5,12 +5,12 @@
 """
 
 import time
-import datetime
 from typing import List
 from typing import Optional
 
 from sqlalchemy import and_
 from nonebot.log import logger
+from sqlalchemy.exc import IntegrityError
 
 from utils.clock import to_bot_time
 
@@ -40,6 +40,7 @@ class MailService:
         attachments: Optional[list[ItemAmount]] = None,
         expire_days: int = 7,
         sender_id: str = "system",
+        external_key: str | None = None,
     ) -> int:
         """
         发送邮件给指定用户
@@ -59,6 +60,9 @@ class MailService:
         session = get_session()
 
         try:
+            if mail_id := _mail_id_by_external_key(session, external_key):
+                return mail_id
+
             # 创建邮件内容
             mail = Mail(
                 title=title,
@@ -68,6 +72,7 @@ class MailService:
                 expire_days=expire_days,
                 sender_id=sender_id,
                 is_broadcast=False,
+                external_key=external_key or None,
             )
             session.add(mail)
             session.flush()  # 获取 mail.id
@@ -97,6 +102,11 @@ class MailService:
             logger.info(f"邮件已发送给用户 {recipient_id}，邮件ID: {mail_id}")
             return mail_id
 
+        except IntegrityError:
+            session.rollback()
+            if mail_id := _mail_id_by_external_key(session, external_key):
+                return mail_id
+            raise
         except Exception as e:
             session.rollback()
             logger.error("发送邮件时发生错误: {}", e)
@@ -113,6 +123,7 @@ class MailService:
         attachments: Optional[list[ItemAmount]] = None,
         expire_days: int = 7,
         sender_id: str = "system",
+        external_key: str | None = None,
     ) -> int:
         """
         发送广播邮件给所有用户
@@ -132,6 +143,9 @@ class MailService:
         session = get_session()
 
         try:
+            if mail_id := _mail_id_by_external_key(session, external_key):
+                return mail_id
+
             # 创建广播邮件内容
             mail = Mail(
                 title=title,
@@ -141,6 +155,7 @@ class MailService:
                 expire_days=expire_days,
                 sender_id=sender_id,
                 is_broadcast=True,  # 标记为广播邮件
+                external_key=external_key or None,
             )
             session.add(mail)
             session.flush()
@@ -164,6 +179,11 @@ class MailService:
             logger.info(f"广播邮件已创建，邮件ID: {mail_id}")
             return mail_id
 
+        except IntegrityError:
+            session.rollback()
+            if mail_id := _mail_id_by_external_key(session, external_key):
+                return mail_id
+            raise
         except Exception as e:
             session.rollback()
             logger.error("创建广播邮件时发生错误: {}", e)
@@ -372,7 +392,7 @@ def claim_all_mails(mail_service: "MailService", user_id: str) -> ClaimOutcome:
     owned_totals: dict[str, int] = {}
     remaining_notices = 0
 
-    for mail in mails:
+    for position, mail in enumerate(mails, 1):
         if mail.is_read:
             continue
         if not mail.attachments:
@@ -396,7 +416,9 @@ def claim_all_mails(mail_service: "MailService", user_id: str) -> ClaimOutcome:
             idempotency_key=f"mail:{mail.id}",
         )
         mail_service.read_mail(user_id, mail.id)
-        claimed.append(ClaimedMail(mail=mail, results=tuple(results)))
+        claimed.append(
+            ClaimedMail(mail=mail, results=tuple(results), ordinal=position)
+        )
 
         for result in results:
             if result.granted > 0:
@@ -427,31 +449,88 @@ def claim_all_mails(mail_service: "MailService", user_id: str) -> ClaimOutcome:
     )
 
 
+def _attachment_key(
+    item_id: str, scope_type: Optional[str], scope_id: Optional[str]
+) -> tuple[str, str, str]:
+    return item_id, scope_type or "", scope_id or ""
+
+
+def _mail_id_by_external_key(session, external_key: str | None) -> int:
+    if not external_key:
+        return 0
+    row = session.query(Mail.id).filter(Mail.external_key == external_key).first()
+    return int(row[0]) if row is not None else 0
+
+
 def _normalize_attachments(
     star_kakeras: int = 0,
     star_stickers: int = 0,
     attachments: Optional[list[ItemAmount]] = None,
 ) -> list[ItemAmount]:
-    normalized = list(attachments or [])
+    """Fold the star shortcuts into the attachment list, one entry per item.
+
+    The star fields and the explicit attachment list are two spellings of the
+    same thing, so duplicates by ``(item_id, scope)`` are merged by summing
+    quantities. Without the merge a caller that passes stickers both ways
+    creates two identical ``MailAttachment`` rows, and the grant idempotency
+    key (per item + scope, not per row) silently skips the second — the mail
+    then displays more than it pays out.
+    """
+
+    combined = list(attachments or [])
     if star_kakeras > 0:
-        normalized.append(ItemAmount("season_point", star_kakeras))
+        combined.append(ItemAmount("season_point", star_kakeras))
     if star_stickers > 0:
-        normalized.append(ItemAmount("star_sticker", star_stickers))
-    return normalized
+        combined.append(ItemAmount("star_sticker", star_stickers))
+
+    merged: dict[tuple[str, str, str], ItemAmount] = {}
+    for attachment in combined:
+        key = _attachment_key(
+            attachment.item_id, attachment.scope_type, attachment.scope_id
+        )
+        existing = merged.get(key)
+        if existing is None:
+            merged[key] = ItemAmount(
+                attachment.item_id,
+                attachment.quantity,
+                attachment.scope_type,
+                attachment.scope_id,
+            )
+        else:
+            merged[key] = ItemAmount(
+                existing.item_id,
+                existing.quantity + attachment.quantity,
+                existing.scope_type,
+                existing.scope_id,
+            )
+    return list(merged.values())
 
 
 def _to_service_mail(
     mail: Mail, recipient: MailRecipient, expire_time: int
 ) -> ServiceMail:
-    attachments = [
-        ServiceMailAttachment(
-            item_id=attachment.item_id,
-            quantity=attachment.quantity,
-            scope_type=attachment.scope_type,
-            scope_id=attachment.scope_id,
+    # Collapse duplicate rows per (item, scope), keeping the FIRST row. Mails
+    # created before _normalize_attachments merged duplicates carry two
+    # identical rows, and the grant idempotency key (per item + scope) means
+    # only the first row was ever paid out — so the first row is the truth,
+    # not the sum.
+    seen: set[tuple[str, str, str]] = set()
+    attachments = []
+    for attachment in mail.attachments:
+        key = _attachment_key(
+            attachment.item_id, attachment.scope_type, attachment.scope_id
         )
-        for attachment in mail.attachments
-    ]
+        if key in seen:
+            continue
+        seen.add(key)
+        attachments.append(
+            ServiceMailAttachment(
+                item_id=attachment.item_id,
+                quantity=attachment.quantity,
+                scope_type=attachment.scope_type,
+                scope_id=attachment.scope_id,
+            )
+        )
     if not attachments:
         attachments = [
             ServiceMailAttachment(

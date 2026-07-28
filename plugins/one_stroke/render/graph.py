@@ -1,4 +1,4 @@
-import random
+from zlib import crc32
 from typing import Literal
 from pathlib import Path
 from functools import lru_cache
@@ -25,6 +25,7 @@ from plugins.render.primitives import draw_rounded_rectangle
 from plugins.render.kits.bangdream import BG_DIR
 from plugins.render.kits.bangdream import CHINESE_FONT
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.kasumi import KasumiKit
 
 from ..session import GameSession
 from ..difficulty import apply_time_decay
@@ -340,13 +341,29 @@ def _render_board_cells(
         canvas.paste(Image.alpha_composite(canvas, layer), (0, 0))
 
 
-def _background(kit: BaseKit) -> Image.Image:
+def _background_index(session: GameSession, count: int) -> int:
+    """Deterministic background pick for one game.
+
+    Keyed on the session's stable identity (player, channel, creation stamp):
+    a new game may land on a different background, but every move of the same
+    game re-renders over the same one. ``started_at`` is deliberately not part
+    of the key — ``restart_timer()`` resets it after the first board send,
+    which would shift the background between move 0 and move 1.
+    """
+
+    key = f"{session.user_id}:{session.channel_id}:{session.created_at}"
+    return crc32(key.encode("utf-8")) % count
+
+
+def _background(kit: BaseKit, session: GameSession) -> Image.Image:
     if isinstance(kit, BanGDreamKit):
-        return kit.background(
-            source=random.choice(
-                list(Path(BG_DIR).glob("bg[0-9][0-9][0-9][0-9][0-9].png"))
+        # Sorted, because glob order is filesystem-dependent and the index
+        # below must always land on the same file.
+        choices = sorted(Path(BG_DIR).glob("bg[0-9][0-9][0-9][0-9][0-9].png"))
+        if choices:
+            return kit.background(
+                source=choices[_background_index(session, len(choices))]
             )
-        )
     return kit.background()
 
 
@@ -358,6 +375,8 @@ def _title_bar(
     width: int,
     height: int,
 ):
+    if isinstance(kit, KasumiKit):
+        return kit.game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):
         return kit.title_pill(
             title,
@@ -433,7 +452,7 @@ def render(
 
     page = AutoPage(
         min_width=896,
-        background=_background(kit),
+        background=_background(kit, session),
         padding=56,
         child=VStack(sections, gap=24),
     )

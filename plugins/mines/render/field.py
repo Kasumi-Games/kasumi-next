@@ -13,6 +13,7 @@ from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BG_DIR
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.kasumi import KasumiKit
 
 from ..models import Field
 from ..models import BlockType
@@ -71,6 +72,8 @@ def _title_bar(
     width: int,
     height: int,
 ):
+    if isinstance(kit, KasumiKit):
+        return kit.game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):
         return kit.title_pill(
             title,

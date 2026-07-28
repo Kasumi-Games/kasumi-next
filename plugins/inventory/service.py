@@ -13,7 +13,6 @@ from .models import PERMANENT_SCOPE_ID
 from .models import OFFSEASON_SCOPE_TYPE
 from .models import PERMANENT_SCOPE_TYPE
 from .models import SEASON_POINT_ITEM_ID
-from .models import STAR_STICKER_ITEM_ID
 from .models import Item
 from .models import UserItem
 from .models import ItemScope
@@ -25,6 +24,7 @@ from .models import EquippedItem
 from .models import ItemTransaction
 from .database import get_session
 from .season_service import get_point_scope
+from .season_service import get_season_starting_points
 from .season_service import get_offseason_starting_points
 
 PROFILE_DESCRIPTION_MAX_LENGTH = 100
@@ -428,8 +428,6 @@ def _normalize_slot(slot: str) -> str:
         "头框": "avatar_frame",
         "frame": "avatar_frame",
         "avatar_frame": "avatar_frame",
-        "称号": "title",
-        "title": "title",
         "主题": "theme",
         "theme": "theme",
         "立绘": "standing_art",
@@ -532,20 +530,34 @@ def _mark_season_participation_if_needed(
 def _ensure_point_wallet(user_id: str, scope_type: str, scope_id: str) -> UserItem:
     session = get_session()
     row = _ensure_user_item(user_id, SEASON_POINT_ITEM_ID, scope_type, scope_id)
-    if scope_type != OFFSEASON_SCOPE_TYPE:
+    legacy_balance = None
+    if scope_type == SEASON_SCOPE_TYPE:
+        amount = get_season_starting_points(scope_id)
+        seed_key = f"season_start:{scope_id}"
+    elif scope_type == OFFSEASON_SCOPE_TYPE:
+        from .migration import LEGACY_BRIDGE_KEY
+        from .migration import get_legacy_balance_for_bridge
+
+        legacy_balance = get_legacy_balance_for_bridge(user_id, scope_id)
+        if legacy_balance is not None:
+            amount = legacy_balance
+            seed_key = LEGACY_BRIDGE_KEY
+        else:
+            amount = get_offseason_starting_points()
+            seed_key = f"offseason_start:{scope_id}"
+    else:
         session.commit()
         return row
 
     tx_key = _tx_key(
-        f"offseason_start:{scope_id}",
+        seed_key,
         user_id,
         SEASON_POINT_ITEM_ID,
         scope_type,
         scope_id,
     )
     if tx_key and not _has_transaction(tx_key):
-        amount = get_offseason_starting_points()
-        if amount > 0:
+        if amount > 0 or legacy_balance is not None:
             row.quantity += amount
             row.updated_at = int(time.time())
             _log_transaction(
@@ -555,7 +567,15 @@ def _ensure_point_wallet(user_id: str, scope_type: str, scope_id: str) -> UserIt
                 scope_id,
                 amount,
                 row.quantity,
-                "offseason_starting_points",
+                (
+                    "season_starting_points"
+                    if scope_type == SEASON_SCOPE_TYPE
+                    else (
+                        LEGACY_BRIDGE_KEY
+                        if legacy_balance is not None
+                        else "offseason_starting_points"
+                    )
+                ),
                 source_type="season",
                 source_id=scope_id,
                 idempotency_key=tx_key,

@@ -130,7 +130,8 @@ def test_checkin_card_without_level_change_has_no_level_up_row():
     page = checkin_page(_checkin(), MinimalKit())
     joined = " ".join(_collect_text(page.child))
     assert "等级提升" not in joined
-    assert "升级奖励" not in joined
+    # No sticker gain fired, so no sticker gain row (amounts carry the 张 unit).
+    assert "张" not in joined
 
 
 def test_checkin_card_level_up_row_appears_only_on_change():
@@ -138,8 +139,10 @@ def test_checkin_card_level_up_row_appears_only_on_change():
     page = checkin_page(data, MinimalKit())
     joined = " ".join(_collect_text(page.child))
     assert "等级提升！Lv.23 → Lv.24" in joined
-    assert "+120 星星贴纸" in joined
-    assert "升级奖励" in joined
+    # Gain-row convention: the label names the thing, the amount carries the
+    # unit — the level-up row above is what explains the source.
+    assert "星星贴纸" in joined
+    assert "+120 张" in joined
     assert page.render().size[0] == 864
 
 
@@ -147,10 +150,25 @@ def test_checkin_card_day7_bonus_row():
     data = _checkin(streak=28, streak_bonus=120)
     page = checkin_page(data, MinimalKit())
     joined = " ".join(_collect_text(page.child))
-    assert "+120 星星贴纸" in joined
-    assert "连续签到 28 天奖励" in joined
+    assert "+120 张" in joined
     # The window is complete, so the meter states the payout, not a countdown.
     assert "7/7" in joined
+    assert "本轮 120 星星贴纸已到账" in joined
+
+
+def test_checkin_card_merges_sticker_gains_into_one_row():
+    data = _checkin(
+        streak=28,
+        streak_bonus=120,
+        old_level=23,
+        new_level=24,
+        level_stickers=120,
+    )
+    joined = " ".join(_collect_text(checkin_page(data, MinimalKit()).child))
+    # One 星星贴纸 row totals both sources; the streak meter and level-up row
+    # keep the per-source stories.
+    assert "+240 张" in joined
+    assert "等级提升！Lv.23 → Lv.24" in joined
     assert "本轮 120 星星贴纸已到账" in joined
 
 

@@ -1,9 +1,11 @@
 """EnvelopeCard —— 红包的两张卡片：创建公告与抢完结算。
 
 Cost discipline IS the design (consistency review #14/#15): a live envelope
-renders exactly twice — once on 发红包 and once on the claim that empties it.
-Every individual 抢红包 reply stays text, so a ten-share envelope costs two
-images, not eleven near-identical ones.
+broadcasts exactly twice — once on 发红包 and once on the claim that empties
+it. Every individual 抢红包 reply stays text, so a ten-share envelope costs two
+images, not eleven near-identical ones. (The on-demand ``/红包列表`` card lives
+in :mod:`.listing` and sits outside this budget: it renders only when a player
+explicitly asks.)
 
 Both cards render in the CREATOR's kit and carry the ``owner_name`` form of
 the theme signature: the envelope is the most social surface in the bot, and
@@ -11,12 +13,9 @@ handing people currency inside your own theme is what makes themes visible.
 The create card additionally embeds the Tier A ``game_identity`` strip so
 bespoke kits get their own treatment of the creator.
 
-手气王 exists only on the completion card and is marked by SHAPE — a filled
-:func:`utils.cards.badge` carrying the word — never by hue, so it survives the
-monochrome kit. The ledger is ordered by claim time, not ranked by amount,
-which is why this is a ``gain_rows``-like composition rather than
-``ladder_rows``: the top-three filled badges of a ranked ladder would lie
-about a race that is ordered by speed.
+The completion summary names both 手气王 and 霉运王 once. The service retains
+the full claim-time ledger; the settlement card ranks it by amount descending
+and shows only the top three, without repeating those labels in a member row.
 
 No database access in here. The handler resolves the kit, the creator
 identity, and every nickname on the event loop thread and passes plain data
@@ -54,11 +53,8 @@ from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BanGDreamKit
 
 #: 结算榜逐行展示的领取数上限；超出折叠成一行小结（红包最多 10000 份）。
-#: 手气王另有 stat 行兜底，所以被折叠也不会丢信息。
-MAX_LADDER_ROWS = 10
-
-#: 手气王徽章所在的固定尾列宽——每行都保留这一列，金额右缘才对得齐。
-_TAG_CELL_WIDTH = 116
+#: 两个金额极值另有 stat 行兜底，所以被折叠也不会丢信息。
+MAX_LADDER_ROWS = 3
 
 #: 红包标题在 hero 面板里的字号（页标题 40 之下、正文 24 之上）。
 _ENVELOPE_TITLE_SIZE = 34
@@ -182,23 +178,36 @@ def create_page(data: EnvelopeCreateData, kit: BaseKit | None = None) -> AutoPag
                 align_x="start",
                 align_y="center",
             ),
-            HStack(
-                [
-                    kit.text(
-                        f"{data.total_amount} Pt",
-                        font_size=_HERO_AMOUNT_SIZE,
-                        wrap=False,
-                        max_lines=1,
-                    ),
-                    kit.text(
-                        f"共 {data.total_count} 份",
-                        font_size=BODY_SIZE,
-                        wrap=False,
-                        max_lines=1,
-                    ),
-                ],
-                gap=18,
-                align="end",
+            # 金额居左、份数靠右贴边（stat_row 的骨架放大版）：两个数字各占
+            # 一端，比原来挤在一起的「N Pt 共 M 份」松得多，又不多占一行。
+            Frame(
+                HStack(
+                    [
+                        Frame(
+                            kit.text(
+                                f"{data.total_amount} Pt",
+                                font_size=_HERO_AMOUNT_SIZE,
+                                wrap=False,
+                                max_lines=1,
+                            ),
+                            width=Fill(),
+                            align_x="start",
+                            align_y="end",
+                        ),
+                        kit.text(
+                            f"共 {data.total_count} 份",
+                            font_size=BODY_SIZE,
+                            align="right",
+                            wrap=False,
+                            max_lines=1,
+                        ),
+                    ],
+                    gap=16,
+                    align="end",
+                ),
+                width=Fixed(INNER_WIDTH),
+                align_x="stretch",
+                align_y="center",
             ),
             stat_row(kit, "有效期", data.validity_text, width=INNER_WIDTH),
         ],
@@ -267,30 +276,43 @@ def completion_page(
     title = _clean(data.title, "红包")
     creator_name = _clean(data.creator_name, "玩家")
     lucky_king_name = _clean(data.lucky_king_name, "玩家")
+    unluckiest = _unluckiest(data.claims)
 
-    # 手气王在 stat 行里始终可见——榜单折叠也不丢；榜单行里再用徽章按形状标记。
-    summary = VStack(
+    # 两个极值在 stat 行里始终可见——榜单折叠也不丢；可见账本行再用徽章
+    # 按形状标记。相同最低金额按领取顺序取最早者。
+    summary_rows: list[Component] = [
+        stat_row(kit, "来自", creator_name, width=INNER_WIDTH),
+        stat_row(
+            kit,
+            "总金额",
+            f"{data.total_amount} Pt · {data.total_count} 份",
+            width=INNER_WIDTH,
+        ),
+        stat_row(kit, "用时", data.duration_text, width=INNER_WIDTH),
+        stat_row(
+            kit,
+            "手气王",
+            f"{lucky_king_name} · {data.lucky_king_amount} Pt",
+            width=INNER_WIDTH,
+        ),
+    ]
+    if unluckiest is not None:
+        _, claim = unluckiest
+        summary_rows.append(
+            stat_row(
+                kit,
+                "霉运王",
+                f"{_clean(claim.name, '玩家')} · {claim.amount} Pt",
+                width=INNER_WIDTH,
+            )
+        )
+    summary_rows.extend(
         [
-            stat_row(kit, "来自", creator_name, width=INNER_WIDTH),
-            stat_row(
-                kit,
-                "总金额",
-                f"{data.total_amount} Pt · {data.total_count} 份",
-                width=INNER_WIDTH,
-            ),
-            stat_row(kit, "用时", data.duration_text, width=INNER_WIDTH),
-            stat_row(
-                kit,
-                "手气王",
-                f"{lucky_king_name} · {data.lucky_king_amount} Pt",
-                width=INNER_WIDTH,
-            ),
             kit.separator(length=Fill()),
             _claim_ladder(kit, data.claims),
-        ],
-        gap=16,
-        align="stretch",
+        ]
     )
+    summary = VStack(summary_rows, gap=16, align="stretch")
 
     return card_page(
         kit,
@@ -308,11 +330,15 @@ def completion_page(
 def _claim_ladder(
     kit: BaseKit, claims: Sequence[ClaimRow], *, width: int = INNER_WIDTH
 ) -> Component:
-    """The full ledger in claim order, capped at :data:`MAX_LADDER_ROWS`."""
+    """Amount-descending Top 3, with claim order as the tie-breaker."""
 
+    ranked = sorted(
+        enumerate(claims, start=1),
+        key=lambda item: (-item[1].amount, item[0]),
+    )
     rows: list[Component] = [
-        _claim_row(kit, order, claim, width)
-        for order, claim in enumerate(claims[:MAX_LADDER_ROWS], start=1)
+        _claim_row(kit, rank, claim, width)
+        for rank, (_, claim) in enumerate(ranked[:MAX_LADDER_ROWS], start=1)
     ]
     hidden = len(claims) - MAX_LADDER_ROWS
     if hidden > 0:
@@ -335,17 +361,17 @@ def _claim_ladder(
     return VStack(rows, gap=12, align="stretch")
 
 
-def _claim_row(kit: BaseKit, order: int, claim: ClaimRow, width: int) -> Component:
-    """One ledger row: claim order, name, amount, and the 手气王 badge.
+def _claim_row(
+    kit: BaseKit,
+    order: int,
+    claim: ClaimRow,
+    width: int,
+) -> Component:
+    """One compact member row: rank, name, and amount.
 
-    The order numeral and the amount are both content the player reads, so
-    they stay in full text color. The trailing tag cell is reserved on every
-    row so amounts stay right-aligned whether or not the badge is present.
+    The two extrema already live in the completion summary, so duplicating a
+    crown in a row makes the short list noisier without adding information.
     """
-
-    tag: Component | None = None
-    if claim.is_lucky_king:
-        tag = badge(kit, "手气王", width=_TAG_CELL_WIDTH, height=40)
 
     cells: list[Component] = [
         Frame(
@@ -379,12 +405,6 @@ def _claim_row(kit: BaseKit, order: int, claim: ClaimRow, width: int) -> Compone
             wrap=False,
             max_lines=1,
         ),
-        Frame(
-            tag,
-            width=Fixed(_TAG_CELL_WIDTH),
-            align_x="end",
-            align_y="center",
-        ),
     ]
     return Frame(
         HStack(cells, gap=16, align="center"),
@@ -393,6 +413,17 @@ def _claim_row(kit: BaseKit, order: int, claim: ClaimRow, width: int) -> Compone
         align_x="stretch",
         align_y="center",
     )
+
+
+def _unluckiest(
+    claims: Sequence[ClaimRow],
+) -> tuple[int, ClaimRow] | None:
+    """Return the earliest lowest claim as a one-based ledger position."""
+
+    if len(claims) < 2:
+        return None
+    index, claim = min(enumerate(claims), key=lambda item: item[1].amount)
+    return index + 1, claim
 
 
 #: The only glyphs the bundled font (``old.ttf``) carries in the

@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import TYPE_CHECKING
 from typing import Any
@@ -96,6 +97,20 @@ class BlackjackRenderer:
 
         # Load all resources
         self._load_resources()
+
+    def for_kit(self, kit: BaseKit) -> "BlackjackRenderer":
+        """Make a lightweight per-game renderer with the selected ``kit``.
+
+        Card art and fonts were loaded at startup and are safe to share.  The
+        face cache is deliberately fresh because it is written while a table
+        is rendered; this prevents concurrent games from sharing mutable
+        per-game state while avoiding another expensive resource load.
+        """
+
+        themed = copy.copy(self)
+        themed.kit = kit
+        themed.image_face_cache = {}
+        return themed
 
     def _load_resources(self):
         """加载所有图片资源到内存"""

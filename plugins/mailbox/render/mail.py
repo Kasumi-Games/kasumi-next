@@ -58,6 +58,8 @@ def render_mail(
     mail: ServiceMail,
     results: Sequence = (),
     kit: BaseKit | None = None,
+    *,
+    ordinal: int | None = None,
 ) -> Image.Image:
     """Render one mail and the outcome of claiming it.
 
@@ -66,25 +68,34 @@ def render_mail(
         results: ``GrantResult`` values from ``grant_many``, positionally
             matching ``mail.attachments``. Empty when the mail was already read.
         kit: Active kit. Defaults to the BanG Dream! kit.
+        ordinal: The mailbox ordinal the player typed (``/邮件 <编号>``).
 
     Returns:
         Rendered card.
     """
 
-    return mail_page(mail, results, kit).render()
+    return mail_page(mail, results, kit, ordinal=ordinal).render()
 
 
 def mail_page(
     mail: ServiceMail,
     results: Sequence = (),
     kit: BaseKit | None = None,
+    *,
+    ordinal: int | None = None,
 ) -> AutoPage:
     """Build the mail detail page without rendering it.
+
+    The subtitle speaks the player's own numbering: ``第 {ordinal} 封`` is the
+    number they just typed. The database id (the old ``#M{id}`` code) never
+    renders — live testing showed it reads as a second, contradictory
+    numbering that can even run opposite to the mailbox order.
 
     Args:
         mail: The mail being read.
         results: ``GrantResult`` values from ``grant_many``.
         kit: Active kit. Defaults to the BanG Dream! kit.
+        ordinal: The mailbox ordinal the player typed, when known.
 
     Returns:
         Page ready for ``await render_async()``.
@@ -98,10 +109,11 @@ def mail_page(
         sections.append(_reward_panel(kit, mail, results))
 
     expiry, _ = expiry_state(mail.expire_time)
+    subtitle = f"第 {ordinal} 封 · {expiry}" if ordinal else expiry
     return card_page(
         kit,
         title="邮件",
-        subtitle=f"#M{mail.id} · {expiry}",
+        subtitle=subtitle,
         body=VStack(sections, gap=32, align="stretch"),
         footer=_footer(kit),
     )
@@ -159,7 +171,9 @@ def _reward_panel(
                 section_band(
                     kit,
                     _band_caption(mail, results),
-                    f"{len(mail.attachments)} 项",
+                    # Count the tiles, not the raw rows: legacy mails carry
+                    # duplicate attachment rows that collapse to one tile.
+                    f"{len(tiles)} 项",
                 ),
                 reward_grid(kit, tiles),
             ],
@@ -178,14 +192,11 @@ def _band_caption(mail: ServiceMail, results: Sequence) -> str:
 
 
 def _meta_line(mail: ServiceMail) -> str:
-    sender = _sender_name(mail.sender_id)
+    # Deliberately no sender segment: real sender ids are opaque platform
+    # hashes, and rendering one leaks it onto a shareable image.
     created = mail.created_at.strftime("%Y-%m-%d %H:%M")
     expires = mail.expire_time.strftime("%Y-%m-%d %H:%M")
-    return f"{sender} · {created} 送达 · {expires} 过期"
-
-
-def _sender_name(sender_id: str) -> str:
-    return "系统" if sender_id in ("", "system") else sender_id
+    return f"{created} 送达 · {expires} 过期"
 
 
 def _footer(kit: BaseKit) -> Component:

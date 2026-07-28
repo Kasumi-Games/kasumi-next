@@ -1,5 +1,4 @@
 import time
-import datetime
 from typing import List
 
 from utils.clock import bot_date
@@ -58,7 +57,13 @@ def is_using_offseason_points() -> bool:
     return scope_type == OFFSEASON_SCOPE_TYPE
 
 
-def add_balance(user_id: str, amount: int, description: str):
+def add_balance(
+    user_id: str,
+    amount: int,
+    description: str,
+    *,
+    idempotency_key: str | None = None,
+):
     """Add balance to user account"""
     transaction_manager = get_transaction_manager()
 
@@ -66,7 +71,15 @@ def add_balance(user_id: str, amount: int, description: str):
     if amount < 0:
         return cost_balance(user_id, abs(amount), description)
     if amount > 0:
-        _inventory().grant_item(user_id, "season_point", amount, description)
+        result = _inventory().grant_item(
+            user_id,
+            "season_point",
+            amount,
+            description,
+            idempotency_key=idempotency_key,
+        )
+        if result.skipped:
+            return
 
     transaction_manager.add(user_id, TransactionCategory.INCOME, amount, description)
 

@@ -27,7 +27,8 @@ def game_identity(self, identity: PlayerIdentity, *,
 
 def player_card(self, *, avatar_image, frame_image, title1_image, title2_image,
                 nickname: str, level: int, current_pt: int, description: str,
-                width: SizeValue | int, height: SizeValue | int) -> Component: ...
+                width: SizeValue | int, height: SizeValue | int,
+                standing_art: ImageSource | None = None) -> Component: ...
 
 def pull_reveal(self, pulls: Sequence[PullRevealItem], *,
                 width: SizeValue | int) -> Component: ...
@@ -45,6 +46,14 @@ def pull_reveal(self, pulls: Sequence[PullRevealItem], *,
    `pull_reveal` 只是结果格本身。
 4. kit 方法内可以在**构建期**量文字宽度（`load_font` + `text_width`）做预算，
    bangdream 的身份条就是这样决定"挤不下就先丢等级 chip、再丢 detail"的。
+5. **`standing_art` 只存在于分发器与定制实现之间**：`BaseKit.player_card` 的签名
+   **没有**这个参数（老签名不动），但 `utils.cards.player_card` 分发时总会以
+   `standing_art=...` 关键字传给定制实现——所以**每个定制 `player_card` 都必须
+   接受 `standing_art: ImageSource | None = None`**。它是玩家装备的立绘
+   （`/装扮 装备 <立绘>` → `/资料`）：`None` 走 kit 自己的默认处理（kasumi 显示
+   内置香澄立绘；bangdream 与通用回退完全不加立绘列），非 `None` 时 contain-fit
+   进右侧立绘列，且**立绘列的有无不得引起左列回流**（左列结构、行高不变，只允许
+   变窄后的单行文本省略号化）。
 
 ## 3. 硬约束（评审会逐条验证）
 
@@ -57,6 +66,7 @@ def pull_reveal(self, pulls: Sequence[PullRevealItem], *,
 - **None 全都要处理**：`identity.avatar`（画首字母替代，别留洞）、`detail=None`（省略）、
   `frame_image` / `title1_image` / `title2_image`（资产还不存在！布局必须预留槽位，
   资产以后到位时**不能引起回流**——bangdream 用固定高度的标题槽 + primary 装饰条占位）、
+  `standing_art=None`（走 kit 自己的默认处理，见 §2 规则 5）、
   `description=""`（muted 占位文案）、`pull.note=""`（保留行高，保证 tile 等高）。
 - **`game_identity` 高度 64-88px**，它在棋盘上方，不是替代棋盘。
 - **`pull_reveal` 1-10 抽都要能画**；同一行 tile 必须等高（用 `Grid` 的

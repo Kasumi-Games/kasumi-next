@@ -66,7 +66,8 @@ def test_every_command_lands_in_exactly_one_category() -> None:
 
 
 def test_lookup_prefers_the_plugin_name_then_falls_back_to_aliases() -> None:
-    assert [entry.name for entry in find_entries(HELP_ENTRIES, "info")] == ["info"]
+    assert [entry.name for entry in find_entries(HELP_ENTRIES, "about")] == ["about"]
+    assert [entry.name for entry in find_entries(HELP_ENTRIES, "info")] == ["常用功能"]
     assert [entry.name for entry in find_entries(HELP_ENTRIES, "cck")] == ["猜卡面"]
     assert [entry.name for entry in find_entries(HELP_ENTRIES, "/签到")] == ["常用功能"]
     assert find_entries(HELP_ENTRIES, "香澄不存在") == ()
@@ -91,7 +92,31 @@ def test_board_renders_in_every_kit(kit_name: str) -> None:
     image = render_board(HELP_ENTRIES, KITS[kit_name]())
     assert image.mode == "RGBA"
     assert image.width == 864
-    assert 800 < image.height < 2200
+    # ~1700 is the density-mitigation budget from the board's design spec
+    # (docs/design/image-responses/15-cluster-utility.md); past the compact
+    # threshold the board must stay under it. Measured 1503-1549 at 31 commands.
+    assert 800 < image.height <= 1700
+
+
+def test_the_census_board_flips_to_compact_tiles() -> None:
+    # 31 documented commands is past COMPACT_THRESHOLD: tiles drop the muted
+    # alias sub-line (the documented density mitigation) while a small board
+    # keeps the two-line tiles.
+    from plugins.render import Fixed
+    from plugins.help.render import board
+
+    assert total_commands(HELP_ENTRIES) > board.COMPACT_THRESHOLD
+    assert board._use_compact_tiles(HELP_ENTRIES)
+
+    few = HELP_ENTRIES[:4]
+    assert total_commands(few) <= board.COMPACT_THRESHOLD
+    assert not board._use_compact_tiles(few)
+
+    kit = KITS["bangdream"]()
+    command = commands_by_category(HELP_ENTRIES)[0][1][0]
+    compact_tile = board._tile(kit, command, True)
+    assert compact_tile.height == Fixed(board.COMPACT_TILE_HEIGHT)
+    assert board.COMPACT_TILE_HEIGHT < board.TILE_HEIGHT
 
 
 @pytest.mark.parametrize("kit_name", ["bangdream", "manga"])
@@ -110,3 +135,16 @@ def test_detail_renders_with_and_without_chips(kit_name: str) -> None:
 def test_renderers_default_to_a_kit_of_their_own() -> None:
     assert render_board(HELP_ENTRIES).width == 864
     assert render_detail(HELP_ENTRIES[0]).width == 864
+
+
+def test_command_tiles_use_a_tighter_corner_than_the_footer() -> None:
+    # 92px 高的指令磁贴吃不下 bangdream 的默认圆角 48（实机看是一墙气泡）；
+    # 磁贴显式收到 20，底部整宽 footer 面板保持套件默认。
+    from plugins.help.render import board
+
+    kit = KITS["bangdream"]()
+    command = commands_by_category(HELP_ENTRIES)[0][1][0]
+    tile = board._tile(kit, command)
+    assert board.TILE_RADIUS == 20
+    assert tile.radius == board.TILE_RADIUS
+    assert board._meta_panel(kit).radius == 48

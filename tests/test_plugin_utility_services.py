@@ -1,9 +1,31 @@
 from __future__ import annotations
 
+from pathlib import Path
 from datetime import datetime
 from datetime import timedelta
 
 import pytest
+
+
+@pytest.mark.asyncio
+async def test_ntsilk_encoding_is_async_and_returns_output(monkeypatch):
+    import utils
+
+    class Process:
+        returncode = 0
+
+        async def communicate(self, input=None):
+            return b"", b""
+
+    def write_encoded(path):
+        Path(path).write_bytes(b"encoded")
+
+    async def create_process(*args, **kwargs):
+        write_encoded(args[3])
+        return Process()
+
+    monkeypatch.setattr(utils.asyncio, "create_subprocess_exec", create_process)
+    assert await utils.encode_with_ntsilk(b"wav") == b"encoded"
 
 
 def test_render_color_spacing_and_text_helpers(tmp_path):

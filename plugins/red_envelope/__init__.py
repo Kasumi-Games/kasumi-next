@@ -1,3 +1,4 @@
+import time
 from typing import Optional
 
 from nonebot import require
@@ -19,14 +20,17 @@ require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import PassiveGenerator  # noqa: E402
+from utils.avatar import get_avatar  # noqa: E402
 from utils.images import image_segment  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
 
 from .. import monetary  # noqa: E402
 from .render import ClaimRow  # noqa: E402
+from .render import EnvelopeListItem  # noqa: E402
 from .render import EnvelopeCreateData  # noqa: E402
 from .render import EnvelopeCompletionData  # noqa: E402
+from .render import list_page  # noqa: E402
 from .render import create_page  # noqa: E402
 from .render import completion_page  # noqa: E402
 from .service import EXPIRE_SECONDS  # noqa: E402
@@ -186,7 +190,8 @@ async def _send_create_card(
         title=title,
         total_amount=amount,
         total_count=count,
-        creator=identity_for(user_id),
+        # 缓存头像（utils/avatar.py）：拿不到时返回 None，身份条退化为首字徽章
+        creator=identity_for(user_id, avatar=await get_avatar(user_id)),
         validity_text=f"{EXPIRE_SECONDS // 3600} 小时",
     )
     try:
@@ -343,6 +348,14 @@ def _display_name(user_id: str) -> str:
     return f"玩家{user_id[-4:]}" if len(user_id) >= 4 else f"玩家{user_id}"
 
 
+def _validity_state(remaining_seconds: int) -> tuple[str, bool]:
+    """列表行的剩余有效期文本与紧迫标记（不足 1 小时算紧迫）。"""
+
+    if remaining_seconds < 3600:
+        return f"剩 {max(1, remaining_seconds // 60)} 分钟", True
+    return f"剩 {remaining_seconds // 3600} 小时", False
+
+
 @list_cmd.handle()
 async def handle_list(event: MessageEvent):
     channel_id = _get_channel_id(event)
@@ -351,15 +364,39 @@ async def handle_list(event: MessageEvent):
 
     passive_generator = PassiveGenerator(event)
     envelopes = get_active_envelopes(channel_id)
-    if not envelopes:
-        await list_cmd.finish(
-            Messages.LIST_EMPTY + passive_generator.element,
-            referrer=passive_generator.event.referrer,
-        )
 
+    # 列表卡用请求者的主题渲染：这是玩家自己的查询面，不是创建者的广播面。
+    # 主题解析必须留在事件循环线程（库存 Session 非线程安全），
+    # render_async 只把光栅化交给工作线程。
+    kit = kit_for_user(event.get_user_id())
+    now = int(time.time())
     items = []
     for envelope in envelopes:
+        validity_text, urgent = _validity_state(envelope.expires_at - now)
         items.append(
+            EnvelopeListItem(
+                channel_index=envelope.channel_index,
+                title=envelope.title,
+                remaining_amount=envelope.remaining_amount,
+                total_amount=envelope.total_amount,
+                remaining_count=envelope.remaining_count,
+                total_count=envelope.total_count,
+                validity_text=validity_text,
+                urgent=urgent,
+            )
+        )
+
+    try:
+        image = await list_page(items, kit).render_async()
+    except Exception as e:
+        # 渲染失败退化为原文本列表；空列表退化为原文本提示。
+        log_error(generate_error_code(), e, context="red_envelope_list_card")
+        if not envelopes:
+            await list_cmd.finish(
+                Messages.LIST_EMPTY + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
+        lines = [
             Messages.LIST_ITEM.format(
                 id=envelope.channel_index,
                 title=envelope.title,
@@ -368,12 +405,17 @@ async def handle_list(event: MessageEvent):
                 remaining_count=envelope.remaining_count,
                 total_count=envelope.total_count,
             )
+            for envelope in envelopes
+        ]
+        await list_cmd.finish(
+            Messages.LIST_HEADER.format(count=len(lines))
+            + "\n"
+            + "\n".join(lines)
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
         )
 
     await list_cmd.finish(
-        Messages.LIST_HEADER.format(count=len(items))
-        + "\n"
-        + "\n".join(items)
-        + passive_generator.element,
+        image_segment(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )

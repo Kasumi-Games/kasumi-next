@@ -41,6 +41,7 @@ from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render import PullRevealItem
 from plugins.render.color import ColorLike
+from plugins.render.types import ImageSource
 
 #: Outer content column. Every card uses this so grids line up across plugins.
 CONTENT_WIDTH = 784
@@ -292,15 +293,17 @@ def gain_rows(
     *,
     width: int = INNER_WIDTH,
 ) -> Component:
-    """Reward strip: a leading amount column with its label.
+    """Reward strip: label on the left, amount on the right.
 
-    The amount leads and carries the information (``+120 Pt`` in full text
-    color); the label is scaffolding. This is the one shared shape for "what
-    this interaction earned you" — check-ins, game results, and reveals all use
-    it so gains read identically everywhere.
+    The same skeleton as :func:`stat_row` — muted label left, full-color value
+    right — so a result card's gains line up with every other label/value row
+    in the system. (The first version led with the amount in a fixed column;
+    in practice the label ended up floating mid-row, which read as misaligned
+    everywhere it shipped.)
 
-    Deliberately NOT the self-marker left-rule: that shape is reserved for
-    "this row is you / is now" (ladder highlight, today's task).
+    Callers still pass ``(amount, label)`` pairs; only the rendering order is
+    label-first. Labels should name the thing, not the source: 「星星贴纸」,
+    not 「星星贴纸 · 每日任务」.
 
     Args:
         kit: Active kit.
@@ -315,12 +318,6 @@ def gain_rows(
         HStack(
             [
                 Frame(
-                    kit.text(amount, font_size=26, wrap=False, max_lines=1),
-                    width=Fixed(180),
-                    align_x="start",
-                    align_y="center",
-                ),
-                Frame(
                     kit.text(
                         label,
                         font_size=LABEL_SIZE,
@@ -331,6 +328,13 @@ def gain_rows(
                     width=Fill(),
                     align_x="start",
                     align_y="center",
+                ),
+                kit.text(
+                    amount,
+                    font_size=26,
+                    align="right",
+                    wrap=False,
+                    max_lines=1,
                 ),
             ],
             gap=16,
@@ -551,6 +555,8 @@ def signature_for(kit: BaseKit, owner_name: str | None = None) -> Component | No
 
     A theme marked ``starter`` in the catalog renders no signature, so the
     presence of the line is itself the signal that a theme is worth having.
+    A kit may also explicitly set ``theme_signature_enabled = False`` when its
+    authored visual identity already carries the theme without a credit line.
 
     Args:
         kit: Active kit.
@@ -559,6 +565,9 @@ def signature_for(kit: BaseKit, owner_name: str | None = None) -> Component | No
     Returns:
         Signature component, or ``None``.
     """
+
+    if not kit.theme_signature_enabled:
+        return None
 
     try:
         from utils.theming import display_name
@@ -670,10 +679,20 @@ def panel_section(
     *,
     width: int = CONTENT_WIDTH,
     padding: int = PANEL_PADDING,
+    fill: ColorLike | None = None,
 ) -> Component:
-    """Wrap content in the kit's panel at the standard width and padding."""
+    """Wrap content in a standard-width kit panel.
 
-    return kit.panel(child, width=Fixed(width), padding=Insets.all(padding))
+    ``fill`` is optional so a high-visibility surface can override a kit's
+    default panel opacity without reimplementing its layout.
+    """
+
+    return kit.panel(
+        child,
+        width=Fixed(width),
+        padding=Insets.all(padding),
+        fill=fill,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -722,6 +741,7 @@ def player_card(
     frame_image: object | None = None,
     title1_image: object | None = None,
     title2_image: object | None = None,
+    standing_art: ImageSource | None = None,
 ) -> Component:
     """Player identity card, bespoke when the kit authored one.
 
@@ -735,6 +755,12 @@ def player_card(
         frame_image: Equipped avatar-frame asset, when one exists.
         title1_image: First equipped title asset, when one exists.
         title2_image: Second equipped title asset, when one exists.
+        standing_art: Equipped standing-art (立绘) asset, when one exists.
+            Threaded to bespoke kits as the ``standing_art`` keyword —
+            ``BaseKit.player_card`` keeps its original signature, so every
+            bespoke ``player_card`` must accept this keyword with a ``None``
+            default (see ``docs/design/tier-a-authoring.md``). ``None`` keeps
+            the kit's own default treatment.
 
     Returns:
         Card component.
@@ -746,6 +772,7 @@ def player_card(
             frame_image=frame_image,
             title1_image=title1_image,
             title2_image=title2_image,
+            standing_art=standing_art,
             nickname=identity.nickname,
             level=identity.level or 0,
             current_pt=current_pt,
@@ -760,6 +787,7 @@ def player_card(
         description=description,
         width=width,
         height=height,
+        standing_art=standing_art,
     )
 
 
@@ -843,6 +871,13 @@ def _generic_game_identity(
     )
 
 
+#: Generic player-card standing-art column: width and contain-fit slot height.
+#: The column exists only when a standing art is equipped, so an art-less card
+#: keeps its exact former layout.
+_GENERIC_ART_COLUMN_WIDTH = 180
+_GENERIC_ART_SLOT_HEIGHT = 240
+
+
 def _generic_player_card(
     kit: BaseKit,
     identity: PlayerIdentity,
@@ -851,6 +886,7 @@ def _generic_player_card(
     description: str,
     width: int,
     height: int,
+    standing_art: ImageSource | None = None,
 ) -> Component:
     stats: list[Component] = [
         kit.text(identity.nickname, font_size=32, wrap=False, max_lines=1)
@@ -880,10 +916,35 @@ def _generic_player_card(
             kit.text(description, font_size=LABEL_SIZE, max_lines=2, overflow="ellipsis")
         )
 
+    column: Component = VStack(body, gap=16, align="stretch")
+    if standing_art is not None:
+        # Conditional right-side art column: the left column keeps its exact
+        # composition and only narrows; the art letterboxes into a fixed slot
+        # so the card height stays deterministic.
+        column = HStack(
+            [
+                Frame(column, width=Fill(), align_x="stretch", align_y="center"),
+                Frame(
+                    kit.image(
+                        standing_art,
+                        width=Fill(),
+                        height=Fixed(_GENERIC_ART_SLOT_HEIGHT),
+                        fit="contain",
+                    ),
+                    width=Fixed(_GENERIC_ART_COLUMN_WIDTH),
+                    height=Fixed(_GENERIC_ART_SLOT_HEIGHT),
+                    align_x="center",
+                    align_y="end",
+                ),
+            ],
+            gap=20,
+            align="center",
+        )
+
     # The generic card fits its content; ``height`` only constrains bespoke
     # implementations, which design against a fixed canvas.
     return kit.panel(
-        VStack(body, gap=16, align="stretch"),
+        column,
         width=Fixed(width),
         padding=Insets.all(PANEL_PADDING),
     )
@@ -906,7 +967,13 @@ def _generic_pull_reveal(
     *,
     width: int,
 ) -> Component:
-    columns = 5 if len(pulls) > 5 else max(1, len(pulls))
+    columns = (
+        10
+        if len(pulls) > 5 and width >= 1200
+        else 5
+        if len(pulls) > 5
+        else max(1, len(pulls))
+    )
     gap = 12
     tile_width = (width - gap * (columns - 1)) // columns
 

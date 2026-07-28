@@ -73,6 +73,9 @@ class BaseKit(ABC):
         text_color: Default body text color.
         muted_text_color: De-emphasized text color for secondary content.
         panel_fill: Default panel surface color.
+        theme_signature_enabled: Whether standard cards append the small theme
+            credit line. Character themes may disable it when their visual
+            identity is already unmistakable and the line only adds clutter.
 
     **Tier A surfaces.** ``game_identity``, ``player_card`` and ``pull_reveal``
     are the three high-visibility surfaces that get a bespoke, hand-authored
@@ -87,6 +90,7 @@ class BaseKit(ABC):
     text_color: ColorLike = (80, 80, 80, 255)
     muted_text_color: ColorLike = (130, 130, 145, 255)
     panel_fill: ColorLike = (255, 255, 255, 208)
+    theme_signature_enabled: bool = True
 
     @abstractmethod
     def background(self, *, fill: ColorLike | None = None) -> Background:

@@ -7,7 +7,7 @@ require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store  # noqa: E402
 
 from .models import Base  # noqa: E402
-from .migration import migrate_drop_pending_amounts  # noqa: E402
+from .migration import migrate_red_envelope_schema  # noqa: E402
 
 database_path = store.get_data_file("red_envelope", "data.db")
 
@@ -19,7 +19,7 @@ def init_database():
     global session
 
     # Run migration before table creation
-    migrate_drop_pending_amounts()
+    migrate_red_envelope_schema()
 
     engine = create_engine(f"sqlite:///{database_path.resolve()}")
     Base.metadata.create_all(engine)

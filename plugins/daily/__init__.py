@@ -1,6 +1,5 @@
 import time
 import random
-from datetime import datetime
 
 from nonebot import require
 from nonebot import get_driver
@@ -19,6 +18,7 @@ from utils import PassiveGenerator
 from utils import has_no_argument  # noqa: E402
 from utils.clock import bot_date
 from utils.clock import bot_today  # noqa: E402
+from utils.avatar import get_avatar  # noqa: E402
 from utils.images import image_segment  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
@@ -39,12 +39,12 @@ from ..monetary import get_user  # noqa: E402
 from ..monetary import transfer  # noqa: E402
 from ..monetary import get_top_users  # noqa: E402
 from ..monetary import get_user_rank  # noqa: E402
-from ..monetary import xp_to_next_level  # noqa: E402
 from ..monetary import add_star_stickers  # noqa: E402
-from ..monetary import get_star_stickers  # noqa: E402
-from ..monetary import total_xp_for_level  # noqa: E402
 from ..monetary import is_using_offseason_points  # noqa: E402
 from ..nickname import nickname  # noqa: E402
+from ..inventory import ProfileData  # noqa: E402
+from ..inventory import profile_page  # noqa: E402
+from ..inventory import assemble_profile  # noqa: E402
 from ..daily_task import get_today_task  # noqa: E402
 from ..daily_task import daily_task_service  # noqa: E402
 from ..monetary.database import get_session as get_monetary_session  # noqa: E402
@@ -59,32 +59,52 @@ STREAK_BONUS_STICKERS = 120
 
 @on_command(
     "info",
-    aliases={"balance", "余额", "信息", "个人信息", "我的信息"},
+    aliases={"balance", "余额", "信息", "个人信息", "我的信息", "资料"},
     priority=10,
     block=True,
     rule=has_no_argument,
 ).handle()
 async def info(matcher: Matcher, event: MessageEvent):
     user_id = event.get_user_id()
-    user = get_user(user_id)
     passive_generator = PassiveGenerator(event)
 
-    xp_needed, next_level_total = xp_to_next_level(user.xp)
-    current_level_base = total_xp_for_level(user.level)
-    progress_xp = user.xp - current_level_base
-    level_xp_range = next_level_total - current_level_base
-
-    point_label = "休赛期临时 Pt" if is_using_offseason_points() else "赛季 Pt"
-    warning = "\n休赛期临时 Pt 不会计入下一赛季。" if is_using_offseason_points() else ""
-
-    await matcher.send(
-        f"Lv.{user.level} | XP: {progress_xp}/{level_xp_range} (还需 {xp_needed})\n"
-        f"{point_label}: {get(user_id)} Pt\n"
-        f"星星贴纸: {get_star_stickers(user_id)}"
-        + warning
-        + passive_generator.element,
+    # The same card as /资料: assembly (DB) stays on the event loop thread —
+    # the inventory/monetary sessions are process-global and not thread safe —
+    # and only the raster is offloaded. Render failures degrade to text.
+    kit = kit_for_user(user_id)
+    data = assemble_profile(user_id, avatar=await get_avatar(user_id))
+    try:
+        image = await profile_page(data, kit).render_async()
+    except Exception:
+        logger.opt(exception=True).warning("info card render failed")
+        await matcher.finish(
+            _info_text(data) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+    await matcher.finish(
+        image_segment(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
+
+
+def _info_text(data: ProfileData) -> str:
+    """Text fallback with the same information as the profile card."""
+
+    lines: list[str] = []
+    if data.xp_level_span > 0:
+        needed = data.xp_level_span - data.xp_in_level
+        lines.append(
+            f"Lv.{data.identity.level} | "
+            f"XP: {data.xp_in_level}/{data.xp_level_span} (还需 {needed})"
+        )
+    elif data.identity.level is not None:
+        lines.append(f"Lv.{data.identity.level}")
+    point_label = "休赛期临时 Pt" if data.offseason else "赛季 Pt"
+    lines.append(f"{point_label}: {data.current_pt} Pt")
+    lines.append(f"星星贴纸: {data.star_stickers}")
+    if data.offseason:
+        lines.append("休赛期临时 Pt 不会计入下一赛季。")
+    return "\n".join(lines)
 
 
 @on_command(
@@ -144,7 +164,7 @@ async def handle_daily(matcher: Matcher, event: MessageEvent):
     )
 
     data = CheckinData(
-        nickname=identity_for(user_id).nickname,
+        nickname=identity_for(user_id, avatar=await get_avatar(user_id)).nickname,
         reward_pt=amount,
         balance=get(user_id),
         offseason=is_using_offseason_points(),
@@ -276,9 +296,12 @@ async def handle_transfer(
     )
 
 
+# 排行/排行榜 belong to the season Pt ladder (plugins/inventory seasonrank)
+# now that seasons are live; this command answers to 等级排行 only. The two
+# trigger sets must stay disjoint or nonebot logs duplicated-prefix warnings.
 @on_command(
     "levelrank",
-    aliases={"等级排行", "等级排行榜", "rank", "排行榜", "排行"},
+    aliases={"等级排行", "等级排行榜"},
     priority=10,
     block=True,
 ).handle()

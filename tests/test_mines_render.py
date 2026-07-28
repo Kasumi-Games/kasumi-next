@@ -240,6 +240,14 @@ def test_stats_form_strip_caps_at_thirty_slots():
     assert strip_width <= cards.INNER_WIDTH
 
 
+def test_stats_form_uses_fixed_semantic_green_and_red_in_every_theme():
+    from plugins.mines.render import stats as stats_module
+
+    assert stats_module.WIN_COLOR == (54, 179, 111, 255)
+    assert stats_module.LOSS_COLOR == (229, 75, 83, 255)
+    assert stats_module.WIN_COLOR != stats_module.LOSS_COLOR
+
+
 def test_render_modules_never_touch_the_database():
     for module in ("result", "stats"):
         source = (ROOT / "plugins" / "mines" / "render" / f"{module}.py").read_text(

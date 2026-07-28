@@ -56,19 +56,9 @@
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
         "rarity": 3
-      }
-    },
-    {
-      "item_id": "title_first_season",
-      "category": "cosmetic",
-      "name": "初始之星",
-      "description": "仓库系统上线纪念称号。",
-      "stackable": false,
-      "visible": true,
-      "sort_order": 110,
-      "cosmetic": {
-        "cosmetic_type": "title",
-        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_default.png"
       }
     },
     {
@@ -116,144 +106,290 @@
     {
       "item_id": "standing_art_placeholder_r5_001",
       "category": "cosmetic",
-      "name": "占位角色立绘 5-1",
-      "description": "抽卡占位角色立绘。",
+      "name": "市谷有咲 向着大海展翅的天马立绘",
+      "description": "卡池常驻立绘：来自卡面「向着大海展翅的天马」。",
       "stackable": false,
       "visible": true,
       "sort_order": 190,
       "cosmetic": {
         "cosmetic_type": "standing_art",
         "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2242,
+        "bestdori_variant": "after_training"
       }
     },
     {
       "item_id": "standing_art_placeholder_r5_002",
       "category": "cosmetic",
-      "name": "占位角色立绘 5-2",
-      "description": "抽卡占位角色立绘。",
+      "name": "花园多惠 你终将跑过的天空立绘",
+      "description": "卡池常驻立绘：来自卡面「你终将跑过的天空」。",
       "stackable": false,
       "visible": true,
       "sort_order": 191,
       "cosmetic": {
         "cosmetic_type": "standing_art",
-        "rarity": 5
+        "rarity": 4
+      },
+      "metadata": {
+        "bestdori_card_id": 2300,
+        "bestdori_variant": "after_training"
       }
     },
     {
       "item_id": "standing_art_placeholder_r4_001",
       "category": "cosmetic",
-      "name": "占位角色立绘 4-1",
-      "description": "抽卡占位角色立绘。",
+      "name": "牛込里美 守望着的应援立绘",
+      "description": "卡池常驻立绘：来自卡面「守望着的应援」。",
       "stackable": false,
       "visible": true,
       "sort_order": 192,
       "cosmetic": {
         "cosmetic_type": "standing_art",
-        "rarity": 4
+        "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 2168,
+        "bestdori_variant": "after_training"
       }
     },
     {
       "item_id": "standing_art_placeholder_r4_002",
       "category": "cosmetic",
-      "name": "占位角色立绘 4-2",
-      "description": "抽卡占位角色立绘。",
+      "name": "山吹沙绫 无私的陪伴者立绘",
+      "description": "卡池常驻立绘：来自卡面「无私的陪伴者」。",
       "stackable": false,
       "visible": true,
       "sort_order": 193,
       "cosmetic": {
         "cosmetic_type": "standing_art",
-        "rarity": 4
+        "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 1861,
+        "bestdori_variant": "after_training"
       }
     },
     {
       "item_id": "standing_art_placeholder_r3_001",
       "category": "cosmetic",
-      "name": "占位角色立绘 3-1",
-      "description": "抽卡占位角色立绘。",
+      "name": "美竹兰 脚尖的方向立绘",
+      "description": "卡池常驻立绘：来自卡面「脚尖的方向」。",
       "stackable": false,
       "visible": true,
       "sort_order": 194,
       "cosmetic": {
         "cosmetic_type": "standing_art",
-        "rarity": 3
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 1984,
+        "bestdori_variant": "after_training"
       }
     },
     {
       "item_id": "standing_art_placeholder_r3_002",
       "category": "cosmetic",
-      "name": "占位角色立绘 3-2",
-      "description": "抽卡占位角色立绘。",
+      "name": "凑友希那 专注于指尖立绘",
+      "description": "卡池常驻立绘：来自卡面「专注于指尖」。",
       "stackable": false,
       "visible": true,
       "sort_order": 195,
       "cosmetic": {
         "cosmetic_type": "standing_art",
-        "rarity": 3
+        "rarity": 4
+      },
+      "metadata": {
+        "bestdori_card_id": 2148,
+        "bestdori_variant": "after_training"
       }
     },
     {
-      "item_id": "title_starbeat_champion",
+      "item_id": "standing_art_standard_aya_self_search",
       "category": "cosmetic",
-      "name": "鼓动之星",
-      "description": "第一赛季冠军限定称号。",
+      "name": "丸山彩 心跳加速的自我搜索立绘",
+      "description": "卡池常驻立绘：来自卡面「心跳加速的自我搜索」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 196,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2103,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_kokoro_prayer",
+      "category": "cosmetic",
+      "name": "弦卷心 愿祈祷传向天空立绘",
+      "description": "卡池常驻立绘：来自卡面「愿祈祷传向天空」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 197,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "bestdori_card_id": 2143,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_mashiro_sea_story",
+      "category": "cosmetic",
+      "name": "仓田真白 海上的梦幻故事立绘",
+      "description": "卡池常驻立绘：来自卡面「海上的梦幻故事」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 198,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "bestdori_card_id": 2029,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_rokka_home_run",
+      "category": "cosmetic",
+      "name": "朝日六花 是全垒打！立绘",
+      "description": "卡池常驻立绘：来自卡面「是全垒打！」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 199,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "bestdori_card_id": 1933,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_moca_warm_moment",
+      "category": "cosmetic",
+      "name": "青叶摩卡 温暖的时刻立绘",
+      "description": "卡池常驻立绘：来自卡面「温暖的时刻」。",
       "stackable": false,
       "visible": true,
       "sort_order": 200,
       "cosmetic": {
-        "cosmetic_type": "title",
-        "rarity": 6
+        "cosmetic_type": "standing_art",
+        "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 1956,
+        "bestdori_variant": "after_training"
       }
     },
     {
-      "item_id": "title_starbeat_podium",
+      "item_id": "standing_art_standard_misaki_aquarium",
       "category": "cosmetic",
-      "name": "鼓动领奖台",
-      "description": "第一赛季前三限定称号。",
+      "name": "奥泽美咲 水族馆的后台立绘",
+      "description": "卡池常驻立绘：来自卡面「水族馆的后台」。",
       "stackable": false,
       "visible": true,
       "sort_order": 201,
       "cosmetic": {
-        "cosmetic_type": "title",
-        "rarity": 5
+        "cosmetic_type": "standing_art",
+        "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 2087,
+        "bestdori_variant": "after_training"
       }
     },
     {
-      "item_id": "title_starbeat_top10",
+      "item_id": "standing_art_standard_hina_on_my_mind",
       "category": "cosmetic",
-      "name": "鼓动十强",
-      "description": "第一赛季前十限定称号。",
+      "name": "冰川日菜 在意的事情是立绘",
+      "description": "卡池常驻立绘：来自卡面「在意的事情是」。",
       "stackable": false,
       "visible": true,
       "sort_order": 202,
       "cosmetic": {
-        "cosmetic_type": "title",
-        "rarity": 5
+        "cosmetic_type": "standing_art",
+        "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 1913,
+        "bestdori_variant": "after_training"
       }
     },
     {
-      "item_id": "title_starbeat_top50",
+      "item_id": "standing_art_standard_lisa_dont_worry",
       "category": "cosmetic",
-      "name": "鼓动同频",
-      "description": "第一赛季前五十限定称号。",
+      "name": "今井莉莎 别担心之类的话立绘",
+      "description": "卡池常驻立绘：来自卡面「别担心之类的话」。",
       "stackable": false,
       "visible": true,
       "sort_order": 203,
       "cosmetic": {
-        "cosmetic_type": "title",
-        "rarity": 4
+        "cosmetic_type": "standing_art",
+        "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 2194,
+        "bestdori_variant": "after_training"
       }
     },
     {
-      "item_id": "title_starbeat_participant",
+      "item_id": "standing_art_standard_tomori_little_animal",
       "category": "cosmetic",
-      "name": "鼓动启程",
-      "description": "第一赛季参与称号。",
+      "name": "高松灯 不可思议的小动物立绘",
+      "description": "卡池常驻立绘：来自卡面「不可思议的小动物」。",
       "stackable": false,
       "visible": true,
       "sort_order": 204,
       "cosmetic": {
-        "cosmetic_type": "title",
+        "cosmetic_type": "standing_art",
         "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 1818,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_anon_getting_along",
+      "category": "cosmetic",
+      "name": "千早爱音 要搞好关系的是……立绘",
+      "description": "卡池常驻立绘：来自卡面「要搞好关系的是……」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 205,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 1819,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_soyo_calm_mediator",
+      "category": "cosmetic",
+      "name": "长崎爽世 冷静的调停者立绘",
+      "description": "卡池常驻立绘：来自卡面「冷静的调停者」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 206,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 3
+      },
+      "metadata": {
+        "bestdori_card_id": 1821,
+        "bestdori_variant": "after_training"
       }
     },
     {
@@ -267,6 +403,9 @@
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
         "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_starbeat_champion.png"
       }
     },
     {
@@ -280,6 +419,9 @@
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
         "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_starbeat_podium.png"
       }
     },
     {
@@ -293,6 +435,9 @@
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
         "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_starbeat_top10.png"
       }
     },
     {
@@ -306,12 +451,15 @@
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
         "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_kasumi_starbeat.png"
       }
     },
     {
       "item_id": "standing_art_kasumi_starbeat",
       "category": "cosmetic",
-      "name": "户山香澄 星之鼓动立绘",
+      "name": "户山香澄 抬头看，星星在跳动立绘",
       "description": "第一赛季六星角色立绘。",
       "stackable": false,
       "visible": true,

@@ -139,12 +139,12 @@ def _rewards(kit: BaseKit, data: CheckinData) -> Component:
     """Reward strip, optional level-up row, and the resulting balance."""
 
     gains: list[tuple[str, str]] = [(f"+{data.reward_pt} Pt", "签到奖励")]
-    if data.streak_bonus > 0:
-        gains.append(
-            (f"+{data.streak_bonus} 星星贴纸", f"连续签到 {data.streak} 天奖励")
-        )
-    if data.level_stickers > 0:
-        gains.append((f"+{data.level_stickers} 星星贴纸", "升级奖励"))
+    stickers = data.streak_bonus + data.level_stickers
+    if stickers > 0:
+        # One row per thing gained: the label names the thing (星星贴纸),
+        # never the source — the streak meter and the level-up row below
+        # already explain where the stickers came from.
+        gains.append((f"+{stickers} 张", "星星贴纸"))
 
     rows: list[Component] = [gain_rows(kit, gains)]
     if data.new_level > data.old_level:

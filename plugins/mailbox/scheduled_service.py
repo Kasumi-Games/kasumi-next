@@ -14,6 +14,7 @@ from utils.clock import format_ts
 from .models import ScheduledMail
 from .models import ScheduledMailAttachment
 from .service import MailService
+from .service import _normalize_attachments
 from .database import get_session
 from ..inventory.models import ItemAmount
 
@@ -178,7 +179,8 @@ class ScheduledMailService:
             logger.warning(f"定时邮件 '{name}' 已发送，无法修改")
             return False
 
-        # 更新字段
+        # 更新字段。星星奖励要同时改列和附件行：发送走的是附件行
+        # （_scheduled_attachments），只改列的话编辑会被静默忽略。
         if title is not None:
             scheduled_mail.title = title
         if content is not None:
@@ -187,8 +189,14 @@ class ScheduledMailService:
             scheduled_mail.scheduled_time = scheduled_time
         if star_kakeras is not None:
             scheduled_mail.star_kakeras = star_kakeras
+            _sync_star_attachment(
+                session, scheduled_mail, "season_point", star_kakeras
+            )
         if star_stickers is not None:
             scheduled_mail.star_stickers = star_stickers
+            _sync_star_attachment(
+                session, scheduled_mail, "star_sticker", star_stickers
+            )
         if expire_days is not None:
             scheduled_mail.expire_days = expire_days
         if recipients is not None:
@@ -266,47 +274,78 @@ class ScheduledMailService:
             .all()
         )
 
+        # 发送前先把所有字段快照成普通值：send_mail/send_broadcast_mail
+        # 会 commit 并 close 同一个共享 session，这些 ORM 实例随之过期又
+        # 脱管（expired + detached），之后再碰属性就抛 DetachedInstanceError。
+        # 具体症状：多个指定接收者的定时邮件，第一位每个调度周期收到一封
+        # 新邮件，第二位永远收不到，is_sent 也永远置不上。
+        snapshots = [
+            (
+                scheduled_mail.id,
+                scheduled_mail.name,
+                scheduled_mail.recipients,
+                scheduled_mail.title,
+                scheduled_mail.content,
+                scheduled_mail.expire_days,
+                scheduled_mail.created_by,
+                # 奖励只通过 attachments 传递一次：这里已经包含 -k/-s 的
+                # 星星奖励，再传 star_kakeras/star_stickers 会被 send_* 的
+                # normalize 再次追加，这正是线上「星星贴纸 x2」重复附件
+                # 的来源。
+                _scheduled_attachments(scheduled_mail),
+            )
+            for scheduled_mail in due_mails
+        ]
+
         processed_count = 0
 
-        for scheduled_mail in due_mails:
-            name = scheduled_mail.name
+        for (
+            mail_id,
+            name,
+            recipients,
+            title,
+            content,
+            expire_days,
+            sender_id,
+            attachments,
+        ) in snapshots:
             try:
-                # 解析接收者
-                if scheduled_mail.recipients.lower() == "all":
+                if recipients.lower() == "all":
                     # 群发邮件
                     self.mail_service.send_broadcast_mail(
-                        title=scheduled_mail.title,
-                        content=scheduled_mail.content,
-                        star_kakeras=scheduled_mail.star_kakeras,
-                        star_stickers=scheduled_mail.star_stickers,
-                        attachments=_scheduled_attachments(scheduled_mail),
-                        expire_days=scheduled_mail.expire_days,
-                        sender_id=scheduled_mail.created_by,
+                        title=title,
+                        content=content,
+                        attachments=attachments,
+                        expire_days=expire_days,
+                        sender_id=sender_id,
+                        external_key=f"scheduled:{mail_id}:broadcast",
                     )
                 else:
                     # 发送给指定用户
-                    recipient_ids = [
-                        uid.strip() for uid in scheduled_mail.recipients.split(",")
-                    ]
+                    recipient_ids = [uid.strip() for uid in recipients.split(",")]
                     for recipient_id in recipient_ids:
                         if recipient_id:  # 确保不是空字符串
                             self.mail_service.send_mail(
                                 recipient_id=recipient_id,
-                                title=scheduled_mail.title,
-                                content=scheduled_mail.content,
-                                star_kakeras=scheduled_mail.star_kakeras,
-                                star_stickers=scheduled_mail.star_stickers,
-                                attachments=_scheduled_attachments(scheduled_mail),
-                                expire_days=scheduled_mail.expire_days,
-                                sender_id=scheduled_mail.created_by,
+                                title=title,
+                                content=content,
+                                attachments=attachments,
+                                expire_days=expire_days,
+                                sender_id=sender_id,
+                                external_key=(
+                                    f"scheduled:{mail_id}:recipient:{recipient_id}"
+                                ),
                             )
 
-                # 标记为已发送
-                scheduled_mail.is_sent = True
-                scheduled_mail.sent_at = int(time.time())
-
-                session.merge(scheduled_mail)
-                session.commit()
+                # 标记为已发送。按主键重新取行，而不是 merge 快照前的
+                # 实例：发送关闭过 session，旧实例已脱管；若邮件在发送
+                # 期间被删除，merge 还会把它重新插回去。
+                session = get_session()
+                row = session.get(ScheduledMail, mail_id)
+                if row is not None:
+                    row.is_sent = True
+                    row.sent_at = int(time.time())
+                    session.commit()
 
                 processed_count += 1
                 logger.info(f"已发送定时邮件: {name}")
@@ -335,20 +374,54 @@ class ScheduledMailService:
         )
 
 
-def _normalize_attachments(
-    star_kakeras: int = 0,
-    star_stickers: int = 0,
-    attachments: Optional[list[ItemAmount]] = None,
-) -> list[ItemAmount]:
-    normalized = list(attachments or [])
-    if star_kakeras > 0:
-        normalized.append(ItemAmount("season_point", star_kakeras))
-    if star_stickers > 0:
-        normalized.append(ItemAmount("star_sticker", star_stickers))
-    return normalized
+def _sync_star_attachment(
+    session, scheduled_mail: ScheduledMail, item_id: str, quantity: int
+) -> None:
+    """Make the unscoped attachment row for ``item_id`` say ``quantity``.
+
+    Creation folds ``-k``/``-s`` into attachment rows, so an edit of those
+    fields must rewrite the matching row (create it when missing, delete it at
+    zero) — the row is what actually gets sent.
+    """
+
+    row = next(
+        (
+            attachment
+            for attachment in scheduled_mail.attachments
+            if attachment.item_id == item_id
+            and not attachment.scope_type
+            and not attachment.scope_id
+        ),
+        None,
+    )
+    if quantity > 0:
+        if row is None:
+            session.add(
+                ScheduledMailAttachment(
+                    scheduled_mail_id=scheduled_mail.id,
+                    item_id=item_id,
+                    quantity=quantity,
+                    scope_type="",
+                    scope_id="",
+                )
+            )
+        else:
+            row.quantity = quantity
+    elif row is not None:
+        session.delete(row)
 
 
 def _scheduled_attachments(scheduled_mail: ScheduledMail) -> list[ItemAmount]:
+    """The full reward list of a scheduled mail, each item exactly once.
+
+    The attachment rows are the source of truth — creation normalizes the
+    ``-k``/``-s`` shortcuts into rows, merged per item. The star columns are
+    only the fallback for legacy rows created before attachments existed.
+    ``process_due_mails`` must send THIS list alone and never re-pass the star
+    columns, which is exactly the double-append that shipped duplicate
+    ``MailAttachment`` rows to production.
+    """
+
     if scheduled_mail.attachments:
         return [
             ItemAmount(

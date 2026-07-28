@@ -262,7 +262,9 @@ def _rewards_panel(kit: BaseKit, data: GuessChartRevealData) -> Component:
 
     gains: list[tuple[str, str]] = [(f"+{data.final_amount} Pt", "答对奖励")]
     if data.task is not None:
-        gains.append((f"+{data.task.reward} 贴纸", f"每日任务【{data.task.name}】完成"))
+        # The task's name lives in the task_progress row below; the gain label
+        # stays a short reward name like its siblings (house convention).
+        gains.append((f"+{data.task.reward} 贴纸", "每日任务奖励"))
     if data.level is not None:
         gains.append((f"+{data.level.stickers} 贴纸", "升级奖励"))
 

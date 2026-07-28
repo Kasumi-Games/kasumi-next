@@ -38,6 +38,9 @@ class Mail(Base):
     )
     sender_id: Mapped[str] = mapped_column(String, nullable=False)
     is_broadcast: Mapped[bool] = mapped_column(default=False)
+    external_key: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True, unique=True
+    )
 
     recipients: Mapped[list["MailRecipient"]] = relationship(
         back_populates="mail", cascade="all, delete-orphan"
@@ -157,10 +160,14 @@ class ClaimedMail:
     Attributes:
         mail: 邮件本体
         results: ``grant_many`` 的返回值，与 ``mail.attachments`` 一一对应
+        ordinal: 领取时该邮件在邮箱里的序号（``/邮件 <编号>`` 用的编号），
+            0 表示未知。领取只改已读状态、不改排序，所以领取后这个编号
+            仍然可以直接回看这封邮件。
     """
 
     mail: ServiceMail
     results: tuple[GrantResult, ...] = ()
+    ordinal: int = 0
 
 
 @dataclass(frozen=True)

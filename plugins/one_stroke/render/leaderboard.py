@@ -9,8 +9,12 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.kasumi import KasumiKit
 
 LeaderboardRows = list[tuple[str, float]]
+
+_ROW_HEIGHT = 44
+_ROW_GAP = 14
 
 
 def _ranking_rows(kit: BaseKit, rows: LeaderboardRows):
@@ -60,12 +64,12 @@ def _ranking_rows(kit: BaseKit, rows: LeaderboardRows):
                     ],
                     gap=12,
                 ),
-                height=Fill(),
+                height=Fixed(_ROW_HEIGHT),
                 align_x="stretch",
                 align_y="center",
             )
         )
-    return VStack(row_components, gap=18, align="stretch")
+    return VStack(row_components, gap=_ROW_GAP, align="stretch")
 
 
 def render_leaderboard(
@@ -156,6 +160,8 @@ def _title_bar(
     width: int,
     height: int,
 ):
+    if isinstance(kit, KasumiKit):
+        return kit.game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):
         return kit.title_pill(
             title,

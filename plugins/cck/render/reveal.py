@@ -209,8 +209,8 @@ def _subtitle(data: CckRevealData) -> str:
         parts.append("有人猜中了")
     elif data.outcome == "timeout":
         parts.append("没有人猜中")
-    else:
-        parts.append("下次再挑战吧")
+    # bzd: the headline already says 答案揭晓; the subtitle keeps only the
+    # difficulty. (下次再挑战吧 was removed after live feedback.)
     return " · ".join(parts)
 
 
@@ -262,7 +262,9 @@ def _rewards_panel(kit: BaseKit, data: CckRevealData) -> Component:
 
     gains: list[tuple[str, str]] = [(f"+{data.final_amount} Pt", "答对奖励")]
     if data.task is not None:
-        gains.append((f"+{data.task.reward} 贴纸", f"每日任务【{data.task.name}】完成"))
+        # The task's name lives in the task_progress row below; the gain label
+        # stays a short reward name like its siblings (house convention).
+        gains.append((f"+{data.task.reward} 贴纸", "每日任务奖励"))
     if data.level is not None:
         gains.append((f"+{data.level.stickers} 贴纸", "升级奖励"))
 

@@ -11,7 +11,7 @@ star — that contrast is the point.
 
 Usage:
     uv run python scripts/draw_kasumi_frame.py
-    # writes plugins/render/kits/kasumi/resources/frames/avatar_frame.png
+    # writes the frame_kasumi_starbeat inventory-item asset
 """
 
 import sys
@@ -26,7 +26,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-OUTPUT = ROOT / "plugins/render/kits/kasumi/resources/frames/avatar_frame.png"
+OUTPUT = (
+    ROOT
+    / "plugins/inventory/resources/items/avatar_frames/frame_kasumi_starbeat.png"
+)
 
 #: Spec geometry (docs/design/avatar-frame-spec.md).
 CANVAS = 512

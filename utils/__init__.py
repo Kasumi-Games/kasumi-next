@@ -1,5 +1,6 @@
 import io
 import os
+import asyncio
 import tempfile
 import subprocess
 
@@ -10,6 +11,8 @@ from nonebot.adapters.satori import MessageEvent
 
 from .birthday import get_today_birthday as get_today_birthday
 from .passive_generator import PassiveGenerator as PassiveGenerator
+
+NTSILK_TIMEOUT_SECONDS = 30
 
 
 async def has_no_argument(arg: Message = CommandArg()):
@@ -63,30 +66,59 @@ def encode_to_silk(file: bytes, format: str = "wav") -> bytes:
     return encoded_data
 
 
-def encode_with_ntsilk(file: bytes, format: str = "wav", target: str = "silk") -> bytes:
-    """Encode a file into any format using NTSilk."""
+async def encode_with_ntsilk(
+    file: bytes,
+    format: str = "wav",
+    target: str = "silk",
+) -> bytes:
+    """Encode a file with NTSilk without blocking the event loop."""
     with tempfile.NamedTemporaryFile(
         suffix=f".{format}", delete=False
     ) as temp_input_file:
         temp_input_file.write(file)
+        input_path = temp_input_file.name
 
     with tempfile.NamedTemporaryFile(
         suffix=f".{target}", delete=False
     ) as temp_output_file:
-        pass
+        output_path = temp_output_file.name
 
-    subprocess.run(
-        ["./ntsilk", "-i", temp_input_file.name, temp_output_file.name], input=b"y"
-    )
+    try:
+        process = await asyncio.create_subprocess_exec(
+            "./ntsilk",
+            "-i",
+            input_path,
+            output_path,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            async with asyncio.timeout(NTSILK_TIMEOUT_SECONDS):
+                _, stderr = await process.communicate(input=b"y")
+        except TimeoutError as error:
+            process.kill()
+            await process.communicate()
+            raise RuntimeError(
+                f"NTSilk encoding timed out after {NTSILK_TIMEOUT_SECONDS}s"
+            ) from error
+        if process.returncode != 0:
+            detail = stderr.decode(errors="replace").strip()[-500:]
+            raise RuntimeError(
+                f"NTSilk encoding failed with exit code {process.returncode}: {detail}"
+            )
+        return await asyncio.to_thread(_read_bytes, output_path)
+    finally:
+        for path in (input_path, output_path):
+            try:
+                os.unlink(path)
+            except FileNotFoundError:
+                pass
 
-    os.unlink(temp_input_file.name)
 
-    with open(temp_output_file.name, "rb") as encoded_file:
-        encoded_data = encoded_file.read()
-
-    os.unlink(temp_output_file.name)
-
-    return encoded_data
+def _read_bytes(path: str) -> bytes:
+    with open(path, "rb") as file:
+        return file.read()
 
 
 def encode_to_mp3(file: bytes, format: str = "wav") -> bytes:

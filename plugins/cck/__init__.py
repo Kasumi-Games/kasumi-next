@@ -26,6 +26,7 @@ import nonebot_plugin_localstore as localstore  # noqa: E402
 from nonebot_plugin_waiter import waiter  # noqa: E402
 
 from utils import get_today_birthday  # noqa: E402
+from utils.avatar import get_avatar  # noqa: E402
 from utils.images import image_segment  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
@@ -381,7 +382,7 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         # One card replaces the old answer text + full image + task_msg +
         # level_msg sequence. It renders in the WINNER's theme with their
         # name on the signature — winning shows the theme off.
-        winner = identity_for(user_id)
+        winner = identity_for(user_id, avatar=await get_avatar(user_id))
         await _send_reveal_card(
             _reveal_data(
                 "win",

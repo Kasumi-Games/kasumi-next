@@ -188,8 +188,14 @@ async def send_mail_detail(
 
     mail_service.read_mail(user_id, mail.id)
 
+    # 玩家理解的是邮箱里的序号（/邮件 <编号>），不是数据库 id——详情页
+    # 因此展示序号。M<id> 代码仍然被 select_mail 接受，但不再显示。
+    ordinal = next(
+        (index for index, item in enumerate(mails, 1) if item is mail), None
+    )
+
     kit = kit_for_user(user_id)
-    image = await mail_page(mail, results, kit).render_async()
+    image = await mail_page(mail, results, kit, ordinal=ordinal).render_async()
 
     await mailbox_cmd.finish(
         image_segment(image) + passive_generator.element,
@@ -200,8 +206,9 @@ async def send_mail_detail(
 def select_mail(mails: list[ServiceMail], text: str) -> Optional[ServiceMail]:
     """按序号或 M<id> 代码选中一封邮件
 
-    序号是主要写法；代码是备用写法，用于从一键领取的明细里回看某封邮件。
-    M 前缀让两者不会互相误认。
+    序号是唯一展示给玩家的写法（邮箱列表、详情页、领取明细都用它）。
+    M<id> 代码不再显示在任何卡片上，但仍然被接受，让旧消息里的代码
+    不会突然失效。M 前缀让两者不会互相误认。
 
     Args:
         mails: 用户邮件列表
@@ -488,9 +495,12 @@ async def handle_alconna_edit(event: MessageEvent, result: Arparma):
         updates["content"] = new_content
     if new_time := other_args.get("new_time"):
         updates["time"] = new_time
-    if new_kakeras := other_args.get("new_kakeras"):
+    # 星星奖励用 is not None 判断：-k 0 / -s 0 是「清掉这项奖励」的合法
+    # 编辑，真值判断会把 0 静默丢掉，_sync_star_attachment 的删行分支
+    # 就永远走不到。
+    if (new_kakeras := other_args.get("new_kakeras")) is not None:
         updates["kakeras"] = new_kakeras
-    if new_stickers := other_args.get("new_stickers"):
+    if (new_stickers := other_args.get("new_stickers")) is not None:
         updates["stickers"] = new_stickers
     if new_item := other_args.get("new_item"):
         updates["item"] = new_item

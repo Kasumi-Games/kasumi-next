@@ -44,5 +44,6 @@ class ClaimRecord(Base):
     user_id = Column(String, nullable=False)
     amount = Column(Integer, nullable=False)
     claimed_at = Column(Integer, nullable=False)
+    credited_at = Column(Integer, nullable=False, default=0)
 
     envelope = relationship("RedEnvelope", back_populates="claims")

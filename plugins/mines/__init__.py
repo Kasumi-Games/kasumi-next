@@ -11,6 +11,7 @@ from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
 
+from utils.avatar import get_avatar
 from utils.images import image_segment
 from utils.theming import kit_for_user
 from plugins.render import BaseKit
@@ -27,6 +28,7 @@ from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
 from .. import monetary  # noqa: E402
+from ..inventory.season_service import get_current_season_bounds  # noqa: E402
 from .models import BlockType  # noqa: E402
 from .models import GameResult  # noqa: E402
 from .render import MinesResultData  # noqa: E402
@@ -286,9 +288,12 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         )
 
         # Resolved once per game on the event-loop thread, then passed into
-        # every render below; renderers never resolve theme or identity.
+        # every render below; renderers never resolve theme or identity. The
+        # avatar is fetched once here — the cache makes per-dig renders cheap
+        # — and None keeps the initial-badge fallback.
         kit = kit_for_user(event.get_user_id())
-        identity = identity_for(event.get_user_id())
+        avatar = await get_avatar(event.get_user_id())
+        identity = identity_for(event.get_user_id(), avatar=avatar)
         detail = f"押注 {bet_amount} Pt · 剩 {mines} 雷"
 
         await game_start.send(
@@ -465,12 +470,23 @@ async def handle_stats(event: MessageEvent):
     gens[event.message.id] = PG(event)
 
     try:
-        # 获取玩家的mines统计数据
-        stats = get_mines_stats(user_id)
+        season_bounds = get_current_season_bounds()
+        if season_bounds is None:
+            await game_stats.finish(
+                "当前赛季尚未开启，赛季战绩会在开季后开始统计。"
+                + gens[event.message.id].element,
+                referrer=gens[event.message.id].event.referrer,
+            )
+
+        # Only completed games inside the current season count towards this card.
+        stats = get_mines_stats(
+            user_id, start_time=season_bounds[0], end_time=season_bounds[1]
+        )
 
         if stats.total_games == 0:
             await game_stats.finish(
-                Messages.STATS_EMPTY + gens[event.message.id].element,
+                "本赛季还没有探险记录，快来试试吧！"
+                + gens[event.message.id].element,
                 referrer=gens[event.message.id].event.referrer,
             )
 

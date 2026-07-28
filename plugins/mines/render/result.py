@@ -187,17 +187,19 @@ def _rewards_panel(kit: BaseKit, data: MinesResultData) -> Component | None:
     """Task/level rewards, only when something actually fired this round."""
 
     rows: list[Component] = []
-    gains: list[tuple[str, str]] = []
+    stickers = 0
     if data.task_name:
         rows.append(cards.task_progress(kit, f"每日任务 · {data.task_name}", 1, 1))
-        if data.task_reward:
-            gains.append((f"+{data.task_reward} 张", "星星贴纸 · 每日任务"))
+        stickers += data.task_reward or 0
     if data.old_level is not None and data.new_level is not None:
         rows.append(cards.level_up(kit, data.old_level, data.new_level))
-        if data.level_stickers:
-            gains.append((f"+{data.level_stickers} 张", "星星贴纸 · 升级奖励"))
-    if gains:
-        rows.append(cards.gain_rows(kit, gains))
+        stickers += data.level_stickers or 0
+    if stickers:
+        # One strip row for the stickers, labeled by the thing gained. The
+        # earlier thing-plus-source labels broke the gain_rows convention and
+        # read misaligned in the live test; the task and level rows above
+        # already say where the stickers came from.
+        rows.append(cards.gain_rows(kit, [(f"+{stickers} 张", "星星贴纸")]))
     if not rows:
         return None
     return cards.panel_section(kit, VStack(rows, gap=16, align="stretch"))

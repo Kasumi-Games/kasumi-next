@@ -1,4 +1,5 @@
 import json
+import uuid
 from typing import Dict
 from typing import List
 from pathlib import Path
@@ -168,33 +169,44 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
             referrer=passive_generator.event.referrer,
         )
 
-    monetary.cost(event.get_user_id(), required_amount, "vits")
-    speaker_id = [k for k, v in speakers.items() if v == character][0]
+    speaker_id = next((key for key, value in speakers.items() if value == character), None)
+    if speaker_id is None:
+        await vits.finish(
+            "这个角色当前没有可用的语音模型，请换一个角色再试试吧~"
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
+    user_id = event.get_user_id()
+    refund_key = f"vits_refund:{uuid.uuid4().hex}"
+    monetary.cost(user_id, required_amount, "vits")
     try:
         response = await call_synthesize_api(
             text=text,
             speaker_id=speaker_id,
             url=plugin_config.bert_vits_api_url + "/synthesize",
         )
+        encoded = await encode_with_ntsilk(response, "wav", "ntsilk")
+        await vits.send(
+            MessageSegment.audio(raw=encoded, mime="audio/silk")
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
     except Exception as e:
-        monetary.add(event.get_user_id(), required_amount, "vits_error")
-        code = handle_error(e, context="vits_synthesize", user_id=event.get_user_id())
+        monetary.add(
+            user_id,
+            required_amount,
+            "vits_error",
+            idempotency_key=refund_key,
+        )
+        code = handle_error(e, context="vits_delivery", user_id=user_id)
         await vits.finish(
             "请求失败\n错误码：{}".format(code) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
-    await vits.send(
-        MessageSegment.audio(
-            raw=encode_with_ntsilk(response, "wav", "ntsilk"), mime="audio/silk"
-        )
-        + passive_generator.element,
-        referrer=passive_generator.event.referrer,
-    )
-
     await vits.finish(
-        f"本次语音合成消耗了 {required_amount} Pt，你还有 {monetary.get(event.get_user_id())} Pt"
+        f"本次语音合成消耗了 {required_amount} Pt，你还有 {monetary.get(user_id)} Pt"
         + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )

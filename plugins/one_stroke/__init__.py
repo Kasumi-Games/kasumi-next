@@ -8,6 +8,7 @@ from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
 
+from utils.avatar import get_avatar
 from utils.images import image_segment
 from utils.theming import kit_for_user
 from utils.identity import identity_for
@@ -22,6 +23,7 @@ from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
 from .. import monetary  # noqa: E402
+from ..inventory.season_service import get_current_season_bounds  # noqa: E402
 from .models import MoveResult  # noqa: E402
 from .models import OneStrokeGame  # noqa: E402
 from .render import OneStrokeResultData  # noqa: E402
@@ -56,8 +58,15 @@ def _mask_user_id(user_id: str) -> str:
     return f"{user_id[:4]}..."
 
 
-def _build_leaderboard_rows(difficulty: str) -> list[tuple[str, float]]:
-    rows = get_leaderboard(difficulty=difficulty, limit=10)
+def _build_leaderboard_rows(
+    difficulty: str, season_bounds: tuple[int, int]
+) -> list[tuple[str, float]]:
+    rows = get_leaderboard(
+        difficulty=difficulty,
+        limit=10,
+        start_time=season_bounds[0],
+        end_time=season_bounds[1],
+    )
     result: list[tuple[str, float]] = []
     for item in rows:
         nickname = get_nickname(item.user_id)
@@ -89,9 +98,17 @@ leaderboard_cmd = on_command(
 @leaderboard_cmd.handle()
 async def handle_leaderboard(event: MessageEvent):
     passive_generator = PG(event)
-    easy_rows = _build_leaderboard_rows("简单")
-    normal_rows = _build_leaderboard_rows("普通")
-    hard_rows = _build_leaderboard_rows("困难")
+    season_bounds = get_current_season_bounds()
+    if season_bounds is None:
+        await leaderboard_cmd.finish(
+            "当前赛季尚未开启，一笔画赛季排行榜会在开季后开始统计。"
+            + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+        return
+    easy_rows = _build_leaderboard_rows("简单", season_bounds)
+    normal_rows = _build_leaderboard_rows("普通", season_bounds)
+    hard_rows = _build_leaderboard_rows("困难", season_bounds)
     image = render_leaderboard(easy_rows, normal_rows, hard_rows)
     await leaderboard_cmd.finish(
         image_segment(image) + passive_generator.element,
@@ -135,9 +152,12 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
             )
 
         # Resolved once per game on the event-loop thread, then passed into
-        # every render below; renderers never resolve theme or identity.
+        # every render below; renderers never resolve theme or identity. The
+        # avatar is fetched once here — the cache makes per-move renders cheap
+        # — and None keeps the initial-badge fallback.
         kit = kit_for_user(event.get_user_id())
-        identity = identity_for(event.get_user_id())
+        avatar = await get_avatar(event.get_user_id())
+        identity = identity_for(event.get_user_id(), avatar=avatar)
         detail = f"难度 {config.label} · 奖励 {reward} Pt"
 
         await game_start.send(
@@ -218,8 +238,18 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
 
                 # Personal best BEFORE this round is recorded, so the run is
                 # compared against history (read-only; ambition review #8).
+                season_bounds = get_current_season_bounds()
                 previous_best = get_personal_best(
-                    event.get_user_id(), session.difficulty_name
+                    event.get_user_id(),
+                    session.difficulty_name,
+                    **(
+                        {
+                            "start_time": season_bounds[0],
+                            "end_time": season_bounds[1],
+                        }
+                        if season_bounds is not None
+                        else {}
+                    ),
                 )
 
                 db = get_db_session()
@@ -294,11 +324,12 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                     else 0,
                 )
                 # Re-resolve the identity so a level-up this round already
-                # shows on the card's strip.
+                # shows on the card's strip; the avatar fetched at game start
+                # is reused.
                 result_image = await result_page(
                     result_data,
                     kit=kit,
-                    identity=identity_for(event.get_user_id()),
+                    identity=identity_for(event.get_user_id(), avatar=avatar),
                 ).render_async()
                 await game_start.send(
                     image_segment(result_image) + gens[latest_message_id].element,

@@ -1,11 +1,12 @@
-"""The /签到 and /排行榜 matchers: the collapsed single-card reply paths.
+"""The /签到, /等级排行, and /info matchers: the single-card reply paths.
 
 The old check-in flow fanned out over two content sends plus an empty finish
 (the assembled text, then a separate level-up message); the old leaderboard
-was one unaligned text send. These tests drive the real handler coroutines
-with every service call stubbed at the plugin namespace and prove each flow
-now exits through exactly one send — a card with the passive element — while
-the duplicate-check-in prompt stays text.
+was one unaligned text send; the old /info was a bare text summary. These
+tests drive the real handler coroutines with every service call stubbed at
+the plugin namespace and prove each flow now exits through exactly one send —
+a card with the passive element — while the duplicate-check-in prompt and the
+render-failure fallbacks stay text.
 """
 
 from __future__ import annotations
@@ -19,7 +20,13 @@ import pytest
 from nonebot.exception import FinishedException
 
 import plugins.daily as daily
+from plugins.render import PlayerIdentity
 from plugins.render.kits import MinimalKit
+from plugins.inventory.render import ProfileData
+
+
+async def _no_avatar(user_id: str) -> None:
+    return None
 
 
 class RecordingMatcher:
@@ -68,8 +75,11 @@ def _stub_checkin_services(monkeypatch: pytest.MonkeyPatch, user: Any) -> None:
         daily, "mail_service", SimpleNamespace(get_user_mails=lambda user_id: [])
     )
     monkeypatch.setattr(
-        daily, "identity_for", lambda user_id: SimpleNamespace(nickname="香澄")
+        daily,
+        "identity_for",
+        lambda user_id, avatar=None: SimpleNamespace(nickname="香澄"),
     )
+    monkeypatch.setattr(daily, "get_avatar", _no_avatar)
     monkeypatch.setattr(daily, "kit_for_user", lambda user_id: MinimalKit())
 
 
@@ -119,6 +129,79 @@ async def test_duplicate_checkin_stays_text(
     assert user.consecutive_checkins == 5
 
 
+def _profile_data(**overrides: Any) -> ProfileData:
+    defaults: dict[str, Any] = dict(
+        identity=PlayerIdentity(nickname="香澄", level=24),
+        current_pt=1203,
+        description="",
+        star_stickers=56,
+        bonsai=7,
+        season_name="2026 第一赛季",
+        season_rank=3,
+        equipped=(),
+        xp_in_level=100,
+        xp_level_span=2500,
+        offseason=False,
+    )
+    defaults.update(overrides)
+    return ProfileData(**defaults)
+
+
+def _stub_info_services(monkeypatch: pytest.MonkeyPatch, data: ProfileData) -> None:
+    recorded: dict[str, Any] = {}
+
+    def assemble(user_id: str, *, avatar: Any = None) -> ProfileData:
+        recorded["user_id"] = user_id
+        recorded["avatar"] = avatar
+        return data
+
+    monkeypatch.setattr(daily, "assemble_profile", assemble)
+    monkeypatch.setattr(daily, "get_avatar", _no_avatar)
+    monkeypatch.setattr(daily, "kit_for_user", lambda user_id: MinimalKit())
+
+
+async def test_info_is_one_profile_card_send(
+    monkeypatch: pytest.MonkeyPatch, make_satori_event: Callable[..., Any]
+) -> None:
+    _stub_info_services(monkeypatch, _profile_data())
+
+    matcher = RecordingMatcher()
+    event = make_satori_event("/info")
+    with pytest.raises(FinishedException):
+        await daily.info(matcher, event)  # type: ignore[arg-type]
+
+    assert [kind for kind, _, _ in matcher.calls] == ["finish"]
+    _, message, kwargs = matcher.calls[0]
+    assert [segment.type for segment in message] == ["img", "qq:passive"]
+    assert kwargs["referrer"] is event.referrer
+
+
+async def test_info_render_failure_degrades_to_text(
+    monkeypatch: pytest.MonkeyPatch, make_satori_event: Callable[..., Any]
+) -> None:
+    _stub_info_services(monkeypatch, _profile_data(offseason=True, season_name=None))
+
+    def broken_page(data: Any, kit: Any) -> Any:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(daily, "profile_page", broken_page)
+
+    matcher = RecordingMatcher()
+    event = make_satori_event("/余额")
+    with pytest.raises(FinishedException):
+        await daily.info(matcher, event)  # type: ignore[arg-type]
+
+    assert [kind for kind, _, _ in matcher.calls] == ["finish"]
+    _, message, kwargs = matcher.calls[0]
+    text = str(message)
+    assert "img" not in [segment.type for segment in message]
+    assert "Lv.24 | XP: 100/2500 (还需 2400)" in text
+    assert "休赛期临时 Pt: 1203 Pt" in text
+    assert "星星贴纸: 56" in text
+    assert "休赛期临时 Pt 不会计入下一赛季。" in text
+    assert kwargs["referrer"] is event.referrer
+
+
 async def test_levelrank_is_one_card_send(
     monkeypatch: pytest.MonkeyPatch, make_satori_event: Callable[..., Any]
 ) -> None:
@@ -141,7 +224,8 @@ async def test_levelrank_is_one_card_send(
     monkeypatch.setattr(daily, "kit_for_user", lambda user_id: MinimalKit())
 
     matcher = RecordingMatcher()
-    event = make_satori_event("/排行榜")
+    # 排行榜 belongs to the season Pt ladder now; the level ladder is 等级排行.
+    event = make_satori_event("/等级排行")
     with pytest.raises(FinishedException):
         await daily.handle_levelrank(matcher, event)  # type: ignore[arg-type]
 

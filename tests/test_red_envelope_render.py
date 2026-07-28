@@ -1,4 +1,4 @@
-"""EnvelopeCard 测试：创建卡、结算卡、成本纪律与账本数据。"""
+"""EnvelopeCard 测试：创建卡、结算卡、列表卡、成本纪律与账本数据。"""
 
 from __future__ import annotations
 
@@ -10,9 +10,12 @@ from plugins.render import PlayerIdentity
 from plugins.render.kits import MangaKit
 from plugins.render.kits import MinimalKit
 from plugins.red_envelope.render import ClaimRow
+from plugins.red_envelope.render import EnvelopeListItem
 from plugins.red_envelope.render import EnvelopeCreateData
 from plugins.red_envelope.render import EnvelopeCompletionData
+from plugins.red_envelope.render import list_page
 from plugins.red_envelope.render import create_page
+from plugins.red_envelope.render import render_list
 from plugins.red_envelope.render import render_create
 from plugins.red_envelope.render import completion_page
 from plugins.red_envelope.render import render_completion
@@ -116,7 +119,7 @@ def test_completion_card_renders(kit_cls):
     assert image.size[1] > 0
 
 
-def test_completion_card_grows_with_more_claims():
+def test_completion_card_height_is_bounded_after_three_ranked_rows():
     kit = MinimalKit()
     small = render_completion(_completion_data(), kit)
     claims = tuple(
@@ -133,43 +136,153 @@ def test_completion_card_grows_with_more_claims():
         ),
         kit,
     )
-    assert big.size[1] > small.size[1]
+    assert big.size[1] == small.size[1]
 
 
 def test_completion_card_marks_lucky_king_by_badge_word():
     texts = _collect_text(completion_page(_completion_data(), MinimalKit()).child)
-    # 恰好两处：stat 行标签 + 榜单行徽章（形状标记，不靠色相）
-    assert texts.count("手气王") == 2
+    # 极值只在摘要出现一次，成员列表不再重复贴手气王标签。
+    assert texts.count("手气王") == 1
     assert "有咲 · 38 Pt" in texts
+    assert texts.count("霉运王") == 1
+    assert "香澄 · 12 Pt" in texts
 
 
-def test_completion_ladder_keeps_claim_order():
-    texts = _collect_text(completion_page(_completion_data(), MinimalKit()).child)
-    names = [t for t in texts if t in {"彩", "沙绫"} or t == "有咲"]
-    assert names == ["有咲", "彩", "沙绫"]
-    # 领取顺序编号逐行排布
-    orders = [t for t in texts if t in {"1", "2", "3", "4"}]
-    assert orders == ["1", "2", "3", "4"]
+def test_completion_ladder_ranks_amount_descending_and_shows_top_three():
+    data = _completion_data(
+        claims=(
+            ClaimRow(name="先领但少", amount=5),
+            ClaimRow(name="欧皇", amount=50, is_lucky_king=True),
+            ClaimRow(name="第二名", amount=30),
+            ClaimRow(name="第三名", amount=20),
+            ClaimRow(name="倒霉蛋", amount=1),
+        ),
+        lucky_king_name="欧皇",
+        lucky_king_amount=50,
+    )
+    texts = _collect_text(completion_page(data, MinimalKit()).child)
+    ranked = [
+        text for text in texts if text in {"欧皇", "第二名", "第三名", "先领但少"}
+    ]
+    assert ranked == ["欧皇", "第二名", "第三名"]
+    assert "……还有 2 人已领取" in texts
 
 
 def test_completion_ladder_caps_rows_and_keeps_lucky_king_visible():
+    from plugins.red_envelope.render.envelope import MAX_LADDER_ROWS
+
+    assert MAX_LADDER_ROWS == 3
     claims = tuple(
-        ClaimRow(name=f"成员{i}", amount=50 if i == 15 else 1, is_lucky_king=i == 15)
+        ClaimRow(
+            name=f"成员{i}",
+            amount=50 if i == 15 else i,
+            is_lucky_king=i == 15,
+        )
         for i in range(1, 16)
     )
     data = _completion_data(
         claims=claims,
-        total_amount=64,
+        total_amount=sum(claim.amount for claim in claims),
         total_count=15,
         lucky_king_name="成员15",
         lucky_king_amount=50,
     )
     texts = _collect_text(completion_page(data, MinimalKit()).child)
-    assert "……还有 5 人已领取" in texts
-    assert "成员10" in texts
-    assert "成员11" not in texts
+    assert "……还有 12 人已领取" in texts
+    assert "成员15" in texts
+    assert "成员1 · 1 Pt" in texts  # summary only: 霉运王
+    assert "成员14" in texts
+    assert "成员13" in texts
+    assert "成员12" not in texts
     # 手气王行被折叠时，stat 行仍然兜底可见
     assert "成员15 · 50 Pt" in texts
+    # 最霉运者也必须留在摘要里，即使其账本行被折叠。
+    assert "成员1 · 1 Pt" in texts
+
+
+def _list_item(index: int = 3, **overrides) -> EnvelopeListItem:
+    base = dict(
+        channel_index=index,
+        title="新年快乐",
+        remaining_amount=90,
+        total_amount=100,
+        remaining_count=9,
+        total_count=10,
+        validity_text="剩 23 小时",
+    )
+    base.update(overrides)
+    return EnvelopeListItem(**base)
+
+
+@pytest.mark.parametrize("kit_cls", [MinimalKit, MangaKit])
+def test_list_card_renders(kit_cls):
+    image = render_list([_list_item(1), _list_item(2, urgent=True)], kit_cls())
+    assert image.size[0] == 864
+    assert image.size[1] > 0
+
+
+def test_list_card_defaults_to_the_bangdream_kit():
+    assert render_list([_list_item()]).size[0] == 864
+
+
+def test_list_card_shows_index_remaining_and_validity():
+    items = [
+        _list_item(3),
+        _list_item(
+            1,
+            title="午后加餐",
+            remaining_amount=5,
+            total_amount=50,
+            remaining_count=1,
+            total_count=5,
+            validity_text="剩 40 分钟",
+            urgent=True,
+        ),
+    ]
+    texts = _collect_text(list_page(items, MinimalKit()).child)
+    assert "进行中 2 个" in texts
+    # 编号徽章是玩家照着输入的领取口令
+    assert "3" in texts and "1" in texts
+    assert "新年快乐" in texts and "午后加餐" in texts
+    assert "剩 90/100 Pt · 9/10 份" in texts
+    assert "剩 5/50 Pt · 1/5 份" in texts
+    # 有效期两种形态：普通 muted 文本与临期徽章，文字都在
+    assert "剩 23 小时" in texts
+    assert "剩 40 分钟" in texts
+    assert "发送「抢红包 编号」领取 · 「发红包 金额 份数」再发一个" in texts
+
+
+def test_list_card_empty_state_is_a_card_not_text():
+    texts = _collect_text(list_page([], MinimalKit()).child)
+    assert "0 个" in texts
+    assert "现在没有可以抢的红包\n发一个就会出现在这里" in texts
+    image = render_list([], MinimalKit())
+    assert image.size[0] == 864
+
+
+def test_list_card_caps_rows_and_folds_the_tail():
+    items = [_list_item(i, title=f"红包{i}") for i in range(1, 16)]
+    texts = _collect_text(list_page(items, MinimalKit()).child)
+    assert "进行中 15 个" in texts
+    assert "红包11" in texts
+    assert "红包12" not in texts
+    assert "……还有 4 个红包" in texts
+
+
+def test_list_card_grows_with_more_rows():
+    kit = MinimalKit()
+    small = render_list([_list_item(1)], kit)
+    big = render_list([_list_item(i) for i in range(1, 7)], kit)
+    assert big.size[1] > small.size[1]
+
+
+def test_list_card_strips_emoji_from_titles():
+    texts = _collect_text(
+        list_page([_list_item(title="🎉新年★快乐🧧")], MinimalKit()).child
+    )
+    assert "新年★快乐" in texts
+    for text in texts:
+        assert all(ord(ch) < 0x1F000 for ch in text), text
 
 
 def test_emoji_is_stripped_but_star_glyphs_survive():
@@ -249,24 +362,35 @@ def test_strip_ranges_match_the_bundled_font_cmap():
 
 def test_render_module_never_touches_a_database():
     # 渲染层无 DB 规则：昵称/身份/主题都由 handler 在事件循环线程解析后传入
-    source = (ROOT / "plugins/red_envelope/render/envelope.py").read_text(
-        encoding="utf-8"
-    )
-    assert "get_session" not in source
-    assert "sqlalchemy" not in source
-    assert "monetary" not in source
-    # 不允许向上引用插件内部（service/数据库/昵称都只能由 handler 传入）
-    assert "from .." not in source
+    for module in ("envelope.py", "listing.py"):
+        source = (ROOT / "plugins/red_envelope/render" / module).read_text(
+            encoding="utf-8"
+        )
+        assert "get_session" not in source
+        assert "sqlalchemy" not in source
+        assert "monetary" not in source
+        # 不允许向上引用插件内部（service/数据库/昵称都只能由 handler 传入）
+        assert "from .." not in source
 
 
-def test_only_create_and_completion_reply_with_images():
-    # 成本纪律（一致性评审 #14）：图片只在创建与抢完两个节点各发一次，
-    # 单次抢红包、列表、报错全部保持文本。
+def test_images_only_at_create_completion_and_list():
+    # 成本纪律（一致性评审 #14）：广播面只在创建与抢完各渲染一次；列表卡是
+    # 玩家主动查询才渲染的按需面。单次抢红包与所有报错保持文本。
     source = (ROOT / "plugins/red_envelope/__init__.py").read_text(encoding="utf-8")
-    assert source.count("image_segment(image)") == 2
+    assert source.count("image_segment(image)") == 3
     assert "Messages.CLAIM_SUCCESS" in source
-    assert "Messages.LIST_ITEM" in source
     assert "Messages.CLAIM_COMPLETE" in source  # 渲染失败的文本兜底
+    # 列表卡渲染失败时退化为原文本列表/空提示
+    assert "Messages.LIST_ITEM" in source
+    assert "Messages.LIST_HEADER" in source
+    assert "Messages.LIST_EMPTY" in source
+
+
+def test_create_card_wires_the_cached_avatar():
+    # 身份条走缓存头像（utils/avatar.py）：拿不到时 None，退化为首字徽章
+    source = (ROOT / "plugins/red_envelope/__init__.py").read_text(encoding="utf-8")
+    assert "from utils.avatar import get_avatar" in source
+    assert "identity_for(user_id, avatar=await get_avatar(user_id))" in source
 
 
 def test_completion_info_carries_the_full_ledger(sqlite_session, monkeypatch):
@@ -275,7 +399,7 @@ def test_completion_info_carries_the_full_ledger(sqlite_session, monkeypatch):
     from plugins.red_envelope.models import Base
 
     sqlite_session(database, Base)
-    monkeypatch.setattr(service.monetary, "add", lambda *args: None)
+    monkeypatch.setattr(service.monetary, "add", lambda *args, **kwargs: None)
     monkeypatch.setattr(service.random, "randint", lambda low, high: high)
 
     service.create_envelope("creator", "channel", "hello", 10, 3)

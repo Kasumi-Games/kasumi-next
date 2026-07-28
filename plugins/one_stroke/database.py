@@ -30,7 +30,13 @@ def get_session():
     return session
 
 
-def get_personal_best(user_id: str, difficulty: str) -> float | None:
+def get_personal_best(
+    user_id: str,
+    difficulty: str,
+    *,
+    start_time: int | None = None,
+    end_time: int | None = None,
+) -> float | None:
     """The player's fastest clear on one difficulty, or ``None``.
 
     Read-only. The result card queries it *before* the finished round is
@@ -39,31 +45,38 @@ def get_personal_best(user_id: str, difficulty: str) -> float | None:
     """
 
     db = get_session()
-    best = (
-        db.query(func.min(OneStrokeGame.elapsed_seconds))
-        .filter(
-            OneStrokeGame.user_id == user_id,
-            OneStrokeGame.difficulty == difficulty,
-        )
-        .scalar()
+    query = db.query(func.min(OneStrokeGame.elapsed_seconds)).filter(
+        OneStrokeGame.user_id == user_id,
+        OneStrokeGame.difficulty == difficulty,
     )
+    if start_time is not None:
+        query = query.filter(OneStrokeGame.timestamp >= start_time)
+    if end_time is not None:
+        query = query.filter(OneStrokeGame.timestamp < end_time)
+    best = query.scalar()
     return float(best) if best is not None else None
 
 
-def get_leaderboard(difficulty: str, limit: int = 10) -> list[OneStrokeGame]:
+def get_leaderboard(
+    difficulty: str,
+    limit: int = 10,
+    *,
+    start_time: int | None = None,
+    end_time: int | None = None,
+) -> list[OneStrokeGame]:
     db = get_session()
 
-    best_time_subquery = (
-        db.query(
-            OneStrokeGame.user_id.label("user_id"),
-            func.min(OneStrokeGame.elapsed_seconds).label("best_elapsed"),
-        )
-        .filter(OneStrokeGame.difficulty == difficulty)
-        .group_by(OneStrokeGame.user_id)
-        .subquery()
-    )
+    best_query = db.query(
+        OneStrokeGame.user_id.label("user_id"),
+        func.min(OneStrokeGame.elapsed_seconds).label("best_elapsed"),
+    ).filter(OneStrokeGame.difficulty == difficulty)
+    if start_time is not None:
+        best_query = best_query.filter(OneStrokeGame.timestamp >= start_time)
+    if end_time is not None:
+        best_query = best_query.filter(OneStrokeGame.timestamp < end_time)
+    best_time_subquery = best_query.group_by(OneStrokeGame.user_id).subquery()
 
-    rows = (
+    rows_query = (
         db.query(OneStrokeGame)
         .join(
             best_time_subquery,
@@ -74,8 +87,12 @@ def get_leaderboard(difficulty: str, limit: int = 10) -> list[OneStrokeGame]:
         )
         .filter(OneStrokeGame.difficulty == difficulty)
         .order_by(OneStrokeGame.elapsed_seconds.asc(), OneStrokeGame.timestamp.asc())
-        .all()
     )
+    if start_time is not None:
+        rows_query = rows_query.filter(OneStrokeGame.timestamp >= start_time)
+    if end_time is not None:
+        rows_query = rows_query.filter(OneStrokeGame.timestamp < end_time)
+    rows = rows_query.all()
 
     # In tie cases, keep only one row per user.
     result: list[OneStrokeGame] = []

@@ -52,6 +52,7 @@ class GachaServiceTest(unittest.TestCase):
         self._add_cosmetic("standing_art_placeholder_r5_001", "standing_art", 5)
         self._add_cosmetic("standing_art_placeholder_r4_001", "standing_art", 4)
         self._add_cosmetic("standing_art_placeholder_r3_001", "standing_art", 3)
+        season_service.activate_due_seasons()
 
     def tearDown(self) -> None:
         season_service.load_seasons_config = self._original_load_seasons_config
@@ -80,6 +81,28 @@ class GachaServiceTest(unittest.TestCase):
         history = get_history("u1", 1)
         self.assertEqual(history.total, 1)
         self.assertEqual(history.rows[0].item_id, "standing_art_placeholder_r3_001")
+
+    def test_ten_pull_failure_only_charges_completed_pulls(self) -> None:
+        grant_item("u1", STAR_STICKER_ITEM_ID, 1200, "test")
+        original_pull_once = gacha_service._pull_once
+        calls = 0
+
+        def fail_on_eighth(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 8:
+                raise RuntimeError("simulated pull failure")
+            return original_pull_once(*args, **kwargs)
+
+        with patch("plugins.gacha.service.random.random", return_value=0.99):
+            with patch(
+                "plugins.gacha.service._pull_once", side_effect=fail_on_eighth
+            ):
+                with self.assertRaisesRegex(RuntimeError, "simulated pull failure"):
+                    pull("u1", 10)
+
+        self.assertEqual(self.gacha_session.query(GachaPull).count(), 7)
+        self.assertEqual(get_quantity("u1", STAR_STICKER_ITEM_ID), 360)
 
     def test_hard_pity_forces_rarity_6_and_resets_pity(self) -> None:
         grant_item("u1", STAR_STICKER_ITEM_ID, 120, "test")
@@ -450,20 +473,20 @@ class StarbeatRealConfigTest(unittest.TestCase):
         )
         self.assertEqual(featured[0].character_id, "kasumi")
         self.assertEqual(featured[0].rarity, 6)
-        # The six shared filler items are reused from season 1, not re-created.
-        fillers = sorted(
+        # Season 1 retains its six existing rewards while additional standard
+        # standing art may be appended to the configured normal pool.
+        fillers = {
             entry.item_id for entry in banner.entries if not entry.featured
-        )
-        self.assertEqual(
-            fillers,
-            [
+        }
+        self.assertTrue(
+            {
                 "standing_art_placeholder_r3_001",
                 "standing_art_placeholder_r3_002",
                 "standing_art_placeholder_r4_001",
                 "standing_art_placeholder_r4_002",
                 "standing_art_placeholder_r5_001",
                 "standing_art_placeholder_r5_002",
-            ],
+            }.issubset(fillers)
         )
 
     def test_starbeat_rank_rewards_also_grant_the_theme(self) -> None:
@@ -525,6 +548,7 @@ class StarbeatPullTest(unittest.TestCase):
         season_service.load_seasons_config = lambda: copy.deepcopy(
             self._season_config()
         )
+        season_service.activate_due_seasons()
 
     def tearDown(self) -> None:
         season_service.load_seasons_config = self._original_load_seasons_config
@@ -602,7 +626,7 @@ class StarbeatPullTest(unittest.TestCase):
                             {
                                 "item_id": "standing_art_kasumi_starbeat",
                                 "character_id": "kasumi",
-                                "name": "户山香澄 星之鼓动立绘",
+                                "name": "户山香澄 抬头看，星星在跳动立绘",
                                 "rarity": 6,
                                 "weight": 1,
                                 "featured": True,
@@ -638,3 +662,42 @@ class StarbeatPullTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EarlySettlementGatingTest(unittest.TestCase):
+    """A settled season is over even inside its configured time window."""
+
+    def setUp(self) -> None:
+        inventory_engine = create_engine("sqlite:///:memory:")
+        InventoryBase.metadata.create_all(inventory_engine)
+        inventory_database.session = sessionmaker(bind=inventory_engine)()
+        self.inventory_session = inventory_database.session
+        sync_catalog()
+        season = season_service.sync_seasons_config()[0]
+        season_service.activate_due_seasons(now=season.start_time + 1)
+
+    def tearDown(self) -> None:
+        self.inventory_session.close()
+        inventory_database.session = None
+
+    def test_settled_season_closes_scope_and_banner_mid_window(self) -> None:
+        from plugins.inventory.models import OFFSEASON_SCOPE_TYPE
+        from plugins.inventory.models import Season
+
+        season = self.inventory_session.query(Season).first()
+        mid_window = season.start_time + 60
+
+        # In-window and unsettled: the season is current, the banner is open.
+        self.assertIsNotNone(season_service.get_current_season(now=mid_window))
+        scope_type, _, _ = season_service.get_point_scope(now=mid_window)
+        self.assertNotEqual(scope_type, OFFSEASON_SCOPE_TYPE)
+
+        # Admin settles early (what /season-admin settle does).
+        season.settled_at = mid_window
+        self.inventory_session.commit()
+
+        # The very same instant: season over, Pt scope offseason, banner gone.
+        self.assertIsNone(season_service.get_current_season(now=mid_window))
+        scope_type, _, _ = season_service.get_point_scope(now=mid_window)
+        self.assertEqual(scope_type, OFFSEASON_SCOPE_TYPE)
+        self.assertIsNone(gacha_service.get_current_banner())

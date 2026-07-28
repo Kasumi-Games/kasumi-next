@@ -357,6 +357,63 @@ def test_guess_chart_decode_jacket_tolerates_bad_bytes():
     assert _decode_jacket(b"not an image") is None
 
 
+def test_guess_chart_chart_renderer_survives_the_reveal_package_import():
+    """Regression (live P0): creating ``plugins/guess_chart/render/`` shadowed
+    the ``bestdori.render.render`` chart renderer. Importing the subpackage
+    binds a MODULE named ``render`` onto the package namespace — which is
+    ``__init__.py``'s globals — so a plain ``from bestdori.render import
+    render`` got overwritten and ``render(chart)`` crashed ``handle_start``
+    with "'module' object is not callable". The handler must reach the chart
+    renderer through an alias the subpackage binding cannot clobber, while the
+    reveal package import coexists."""
+
+    _load_plugin_dependencies("plugins.daily_task")
+    import bestdori.render
+
+    guess_chart = importlib.import_module("plugins.guess_chart")
+    reveal_package = importlib.import_module("plugins.guess_chart.render")
+
+    # The subpackage inevitably owns the bare name; the handler's callable
+    # lives under the alias and stays the bestdori function.
+    assert guess_chart.render is reveal_package
+    assert callable(guess_chart.render_chart)
+    assert guess_chart.render_chart is bestdori.render.render
+    assert callable(reveal_package.reveal_page)
+
+    # And the call site uses the alias — a bare ``render(chart)`` would hit
+    # the module object again.
+    source = (ROOT / "plugins/guess_chart/__init__.py").read_text(encoding="utf-8")
+    assert "render_chart(chart)" in source
+    assert " render(chart)" not in source
+
+
+def test_cck_bzd_subtitle_dropped_the_challenge_again_line():
+    """Live feedback: the bzd reveal read 「下次再挑战吧」 under 答案揭晓,
+    which scolded the asker. The subtitle keeps only the difficulty."""
+
+    from plugins.cck.render import reveal_page
+
+    page = reveal_page(_cck_loss_data("bzd"), MinimalKit())
+    joined = " ".join(_collect_text(page.child))
+    assert "下次再挑战吧" not in joined
+    assert "expert++" in joined
+
+    source = (ROOT / "plugins/cck/render/reveal.py").read_text(encoding="utf-8")
+    assert '"下次再挑战吧"' not in source
+
+
+def test_winner_identity_strips_fetch_the_cached_avatar():
+    """Both winner strips pass the cached avatar into ``identity_for`` so the
+    reveal shows the real QQ avatar instead of the initial badge."""
+
+    for module_path in ("plugins/cck/__init__.py", "plugins/guess_chart/__init__.py"):
+        source = (ROOT / module_path).read_text(encoding="utf-8")
+        assert "from utils.avatar import get_avatar" in source
+        assert "identity_for(user_id, avatar=await get_avatar(user_id))" in source
+        # The bare call must not survive anywhere in the handler.
+        assert "identity_for(user_id)" not in source
+
+
 def test_handlers_collapse_round_exits_to_single_sends():
     """The old exit shapes (answer text + raw image + task/level messages)
     must not survive in the handlers; every exit goes through the card

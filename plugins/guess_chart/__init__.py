@@ -16,7 +16,12 @@ from nonebot.log import logger
 from nonebot.params import Depends
 from nonebot.params import CommandArg
 from bestdori.charts import Chart
-from bestdori.render import render
+
+# The alias is load-bearing: importing the local ``.render`` package below
+# binds a MODULE named ``render`` onto this package's namespace (this file's
+# globals), which would silently overwrite a plain ``render`` function and
+# crash the handler with "'module' object is not callable".
+from bestdori.render import render as render_chart
 from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
@@ -31,6 +36,7 @@ from nonebot_plugin_waiter import waiter  # noqa: E402
 from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import get_today_birthday  # noqa: E402
+from utils.avatar import get_avatar  # noqa: E402
 from utils.images import image_segment  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
@@ -275,7 +281,7 @@ async def handle_start(
 
     try:
         if game_difficulty in ["easy", "normal"]:
-            img = render(chart)
+            img = render_chart(chart)
         else:
             img = render_to_slices(chart, game_difficulty)
     except MemoryError:
@@ -446,7 +452,7 @@ async def handle_start(
             # One card replaces the old answer text + task_msg + level_msg +
             # trailing jacket sequence. It renders in the WINNER's theme with
             # their name on the signature — winning shows the theme off.
-            winner = identity_for(user_id)
+            winner = identity_for(user_id, avatar=await get_avatar(user_id))
             await _send_reveal_card(
                 _reveal_data(
                     "win",

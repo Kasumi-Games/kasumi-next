@@ -158,6 +158,7 @@ def _expire_envelope(envelope: RedEnvelope) -> int:
             envelope.creator_id,
             refund_amount,
             f"red_envelope_refund_{envelope.id}",
+            idempotency_key=f"red_envelope_refund:{envelope.id}",
         )
 
     envelope.is_expired = True
@@ -171,11 +172,85 @@ def _expire_envelope(envelope: RedEnvelope) -> int:
     return refund_amount
 
 
+def _build_completion_info(
+    envelope: RedEnvelope, now: int
+) -> Optional[EnvelopeCompletionInfo]:
+    if envelope.remaining_count != 0:
+        return None
+
+    all_claims = (
+        get_session()
+        .query(ClaimRecord)
+        .filter(ClaimRecord.envelope_id == envelope.id)
+        .order_by(ClaimRecord.claimed_at, ClaimRecord.id)
+        .all()
+    )
+    lucky_king = max(all_claims, key=lambda claim: claim.amount)
+    return EnvelopeCompletionInfo(
+        creator_id=envelope.creator_id,
+        duration_seconds=now - envelope.created_at,
+        lucky_king_id=lucky_king.user_id,
+        lucky_king_amount=lucky_king.amount,
+        channel_index=envelope.channel_index,
+        title=envelope.title,
+        total_amount=envelope.total_amount,
+        total_count=envelope.total_count,
+        claims=tuple(
+            EnvelopeClaim(user_id=claim.user_id, amount=claim.amount)
+            for claim in all_claims
+        ),
+    )
+
+
+def _credit_claim(
+    envelope: RedEnvelope, claim: ClaimRecord, now: int
+) -> Optional[EnvelopeCompletionInfo]:
+    monetary.add(
+        claim.user_id,
+        claim.amount,
+        f"red_envelope_claim_{envelope.id}",
+        idempotency_key=f"red_envelope_claim:{envelope.id}:{claim.user_id}",
+    )
+    claim.credited_at = max(1, now)
+    get_session().commit()
+    logger.info(
+        f"红包领取成功: id={envelope.id} user={claim.user_id} amount={claim.amount}"
+    )
+    return _build_completion_info(envelope, now)
+
+
 def claim_envelope(
     user_id: str, channel_id: str, channel_index: Optional[int] = None
 ) -> Tuple[str, Optional[int], Optional[EnvelopeCompletionInfo]]:
     session = get_session()
     now = int(time.time())
+
+    # A claim reservation is committed before crossing into the inventory
+    # database. Retry any reserved-but-uncredited claim first, including after
+    # the envelope became full or expired.
+    pending_query = (
+        session.query(ClaimRecord)
+        .join(RedEnvelope, RedEnvelope.id == ClaimRecord.envelope_id)
+        .filter(
+            ClaimRecord.user_id == user_id,
+            ClaimRecord.credited_at == 0,
+            RedEnvelope.channel_id == channel_id,
+        )
+    )
+    if channel_index is not None:
+        pending_query = pending_query.filter(
+            RedEnvelope.channel_index == channel_index
+        )
+    pending_claim = pending_query.order_by(ClaimRecord.id.desc()).first()
+    if pending_claim is not None:
+        envelope = pending_claim.envelope
+        try:
+            completion = _credit_claim(envelope, pending_claim, now)
+            return ("success", pending_claim.amount, completion)
+        except Exception as e:
+            session.rollback()
+            logger.error("补发红包到账时发生错误: {}", e)
+            return ("error", None, None)
 
     if channel_index is None:
         envelope = (
@@ -228,48 +303,18 @@ def claim_envelope(
     try:
         envelope.remaining_amount -= amount
         envelope.remaining_count -= 1
-        is_last_claim = envelope.remaining_count == 0
 
         claim = ClaimRecord(
             envelope_id=envelope.id,
             user_id=user_id,
             amount=amount,
             claimed_at=now,
+            credited_at=0,
         )
         session.add(claim)
         session.commit()
 
-        monetary.add(user_id, amount, f"red_envelope_claim_{envelope.id}")
-        logger.info(f"红包领取成功: id={envelope.id} user={user_id} amount={amount}")
-
-        # If this was the last claim, build the settlement: the completion
-        # card needs the full ledger in claim order. claimed_at only has
-        # second precision, so the autoincrement id breaks same-second ties.
-        completion_info = None
-        if is_last_claim:
-            all_claims = (
-                session.query(ClaimRecord)
-                .filter(ClaimRecord.envelope_id == envelope.id)
-                .order_by(ClaimRecord.claimed_at, ClaimRecord.id)
-                .all()
-            )
-            lucky_king = max(all_claims, key=lambda c: c.amount)
-            duration = now - envelope.created_at
-            completion_info = EnvelopeCompletionInfo(
-                creator_id=envelope.creator_id,
-                duration_seconds=duration,
-                lucky_king_id=lucky_king.user_id,
-                lucky_king_amount=lucky_king.amount,
-                channel_index=envelope.channel_index,
-                title=envelope.title,
-                total_amount=envelope.total_amount,
-                total_count=envelope.total_count,
-                claims=tuple(
-                    EnvelopeClaim(user_id=claim.user_id, amount=claim.amount)
-                    for claim in all_claims
-                ),
-            )
-
+        completion_info = _credit_claim(envelope, claim, now)
         return ("success", amount, completion_info)
     except Exception as e:
         session.rollback()

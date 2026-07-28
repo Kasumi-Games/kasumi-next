@@ -120,6 +120,28 @@ class RendererMigrationTest(unittest.TestCase):
         self.assertGreater(minimal_image.width, 0)
         self.assertGreater(minimal_image.height, 0)
 
+    def test_one_stroke_leaderboard_rows_have_a_fixed_vertical_budget(self) -> None:
+        leaderboard_module = _load_module(
+            "one_stroke_leaderboard_budget_for_test",
+            ROOT / "plugins" / "one_stroke" / "render" / "leaderboard.py",
+        )
+        from plugins.render.sizing import Fixed
+        from plugins.render.kits import KasumiKit
+
+        rows = leaderboard_module._ranking_rows(
+            KasumiKit(),
+            [(f"player-{index}-with-a-very-long-name", 10.0 + index) for index in range(10)],
+        )
+        self.assertTrue(rows.children)
+        self.assertTrue(
+            all(isinstance(row.height, Fixed) for row in rows.children)
+        )
+        total_height = (
+            sum(row.height.value for row in rows.children)
+            + rows.gap * (len(rows.children) - 1)
+        )
+        self.assertLessEqual(total_height, 620)
+
     def test_one_stroke_leaderboard_uses_bangdream_titled_panels(self) -> None:
         leaderboard_module = _load_module(
             "one_stroke_leaderboard_titled_panel_for_test",

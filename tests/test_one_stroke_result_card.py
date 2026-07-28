@@ -23,6 +23,7 @@ from plugins.render.kits import KITS
 from plugins.one_stroke.models import Base
 from plugins.one_stroke.models import Graph
 from plugins.one_stroke.models import OneStrokeGame
+from plugins.one_stroke.database import get_leaderboard
 from plugins.one_stroke.database import get_personal_best
 from plugins.render.kits.minimal import MinimalKit
 from plugins.one_stroke.difficulty import apply_time_decay
@@ -194,14 +195,16 @@ class PersonalBestTest(unittest.TestCase):
         one_stroke_database.session = None
 
     @staticmethod
-    def _game(user_id: str, difficulty: str, elapsed: float) -> OneStrokeGame:
+    def _game(
+        user_id: str, difficulty: str, elapsed: float, timestamp: int = 1_700_000_000
+    ) -> OneStrokeGame:
         return OneStrokeGame(
             user_id=user_id,
             difficulty=difficulty,
             elapsed_seconds=elapsed,
             reward=10,
             base_reward=10,
-            timestamp=1_700_000_000,
+            timestamp=timestamp,
         )
 
     def test_none_without_history(self) -> None:
@@ -218,6 +221,25 @@ class PersonalBestTest(unittest.TestCase):
         self.assertEqual(get_personal_best("u1", "普通"), 12.3)
         self.assertEqual(get_personal_best("u1", "困难"), 5.0)
         self.assertIsNone(get_personal_best("u2", "困难"))
+
+    def test_personal_best_and_leaderboard_are_limited_to_the_season(self) -> None:
+        db = one_stroke_database.session
+        db.add_all(
+            [
+                self._game("u1", "普通", 2.0, timestamp=99),
+                self._game("u1", "普通", 12.0, timestamp=100),
+                self._game("u1", "普通", 8.0, timestamp=199),
+                self._game("u2", "普通", 7.0, timestamp=150),
+                self._game("u3", "普通", 1.0, timestamp=200),
+            ]
+        )
+        db.commit()
+
+        assert get_personal_best("u1", "普通", start_time=100, end_time=200) == 8.0
+        assert [row.user_id for row in get_leaderboard("普通", start_time=100, end_time=200)] == [
+            "u2",
+            "u1",
+        ]
 
 
 class DecayFactorTest(unittest.TestCase):

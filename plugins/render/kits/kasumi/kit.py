@@ -1,16 +1,16 @@
-"""Kasumi character theme: the starry night she looks up at.
+"""Kasumi character theme: starlight lingering into a warm dawn.
 
 Authored against ``docs/design/tier-a-authoring.md``. Palette rationale:
 
-- The base is deep violet, not black — pure black flattens the sparkles and
-  reads cold. The gradient warms slightly toward the bottom.
-- ``primary`` is Kasumi's coral red, lifted for dark backgrounds (her member
-  color ``#FF5522`` sinks on violet). Used for rings and borders, never as a
+- The base is a pale lilac-to-blush sky. It keeps the glints and nebula drift
+  that identify Starbeat without making the shared grey and colourful game
+  components look pasted onto a black card.
+- ``primary`` is Kasumi's coral red. Used for rings and borders, never as a
   fill under white text.
 - The second voice is champagne gold — star light — used for chips and glints.
-  Gold chips carry dark violet text (measured ≈ 13.8:1).
+  Gold chips carry dark violet text.
 - Distinct from the ``midnight`` kit on purpose: midnight is cool, sober
-  indigo; this sky is warm, nebular, and glinting. キラキラドキドキ.
+  indigo; this sky is bright, warm, nebular, and glinting. キラキラドキドキ.
 """
 
 import zlib
@@ -53,20 +53,22 @@ from .components import SparkleScatter
 from .components import KasumiAvatarDisc
 from .components import KasumiBackground
 from .components import frame_overlay
+from .components import sparkle
 
 KasumiFont = Literal["chinese", "display"]
 
 
 class KasumiKit(BaseKit):
-    """香澄 · 星之鼓动 — warm starlight on deep violet night."""
+    """香澄 · 星之鼓动 — coral starlight in a lilac dawn sky."""
 
-    primary = rgba(255, 118, 98, 255)
-    accent = rgba(255, 209, 128, 255)
-    text_color = rgba(244, 238, 232, 255)
-    muted_text_color = rgba(170, 160, 194, 255)
-    panel_fill = rgba(32, 26, 54, 230)
-    night_top = rgba(10, 9, 20, 255)
-    night_bottom = rgba(30, 22, 48, 255)
+    primary = rgba(239, 91, 108, 255)
+    accent = rgba(246, 194, 92, 255)
+    text_color = rgba(62, 48, 89, 255)
+    muted_text_color = rgba(116, 101, 139, 255)
+    panel_fill = rgba(255, 251, 252, 238)
+    sky_top = rgba(242, 238, 255, 255)
+    sky_bottom = rgba(255, 232, 226, 255)
+    theme_signature_enabled = False
 
     def background(
         self,
@@ -76,7 +78,7 @@ class KasumiKit(BaseKit):
         glint_density: float = 0.00006,
         random_seed: int = 425,
     ) -> Background:
-        """Create the starry-night background.
+        """Create the bright Starbeat sky background.
 
         Args:
             fill: Optional top gradient color override.
@@ -89,8 +91,8 @@ class KasumiKit(BaseKit):
         """
 
         return KasumiBackground(
-            top=fill or self.night_top,
-            bottom=bottom or self.night_bottom,
+            top=fill or self.sky_top,
+            bottom=bottom or self.sky_bottom,
             glint_density=glint_density,
             random_seed=random_seed,
         )
@@ -149,7 +151,7 @@ class KasumiKit(BaseKit):
         radius: int | None = None,
         glow: bool = True,
     ) -> Component:
-        """Create a deep violet panel with a warm hairline.
+        """Create a translucent warm-white panel with a coral hairline.
 
         Args:
             child: Optional child component.
@@ -182,15 +184,167 @@ class KasumiKit(BaseKit):
         thickness: int = 2,
         color: ColorLike | None = None,
     ) -> Component:
-        """Create a dusk-violet divider."""
+        """Create a soft lilac divider."""
 
         return KitSeparator(
-            orientation, length, thickness, color or rgba(96, 84, 128, 255)
+            orientation, length, thickness, color or rgba(207, 192, 220, 255)
         )
 
     # ------------------------------------------------------------------
     # Tier A surfaces
     # ------------------------------------------------------------------
+
+    def game_title(
+        self,
+        title: str,
+        subtitle: str,
+        *,
+        width: int,
+        height: int,
+    ) -> Component:
+        """Large star-medallion heading, open directly onto the sky.
+
+        The generic non-BanG-Dream fallback is a pill with one centred line.
+        Starbeat instead treats the heading like a chapter mark: a compact
+        circular medallion carries the hero glint, the title is deliberately
+        oversized, and a tiny coral star introduces the subtitle. A loose pair
+        of glints closes the composition without an enclosing title panel.
+        """
+
+        lockup_width = max(width, 720)
+        lockup_height = max(height, 104)
+        lead_glint = sparkle(36, self.accent)
+        badge_glint = sparkle(13, self.primary)
+        subtitle_glint = sparkle(11, self.primary)
+        closing_gold = sparkle(18, self.accent)
+        closing_coral = sparkle(11, self.primary)
+        medallion = KasumiPanel(
+            Overlay(
+                [
+                    Frame(
+                        self.image(
+                            lead_glint,
+                            width=Fixed(36),
+                            height=Fixed(36),
+                        ),
+                        align_x="center",
+                        align_y="center",
+                    ),
+                    Frame(
+                        self.image(
+                            badge_glint,
+                            width=Fixed(13),
+                            height=Fixed(13),
+                        ),
+                        padding=Insets.only(left=42, bottom=42),
+                        align_x="center",
+                        align_y="center",
+                    ),
+                ],
+                align_x="stretch",
+                align_y="stretch",
+            ),
+            width=Fixed(64),
+            height=Fixed(64),
+            fill=rgba(255, 251, 252, 205),
+            radius=32,
+            border_color=rgba(239, 91, 108, 105),
+            border_width=2,
+            glow_blur=10,
+        )
+        copy = VStack(
+            [
+                self.text(
+                    title,
+                    font_size=38,
+                    wrap=False,
+                    max_lines=1,
+                ),
+                HStack(
+                    [
+                        self.image(
+                            subtitle_glint,
+                            width=Fixed(11),
+                            height=Fixed(11),
+                        ),
+                        Frame(
+                            self.text(
+                                subtitle,
+                                font_size=22,
+                                wrap=False,
+                                max_lines=1,
+                            ),
+                            width=Fill(),
+                            align_x="start",
+                            align_y="center",
+                        ),
+                    ],
+                    gap=9,
+                    align="center",
+                ),
+            ],
+            gap=4,
+            align="start",
+        )
+        constellation = Overlay(
+            [
+                Frame(
+                    self.image(
+                        closing_gold,
+                        width=Fixed(18),
+                        height=Fixed(18),
+                    ),
+                    padding=Insets.only(right=18, bottom=30),
+                    align_x="center",
+                    align_y="center",
+                ),
+                Frame(
+                    self.image(
+                        closing_coral,
+                        width=Fixed(11),
+                        height=Fixed(11),
+                    ),
+                    padding=Insets.only(left=25, top=30),
+                    align_x="center",
+                    align_y="center",
+                ),
+            ],
+            align_x="stretch",
+            align_y="stretch",
+        )
+        return Frame(
+            HStack(
+                [
+                    Frame(
+                        medallion,
+                        width=Fixed(72),
+                        height=Fill(),
+                        align_x="start",
+                        align_y="center",
+                    ),
+                    Frame(
+                        copy,
+                        width=Fill(),
+                        height=Fill(),
+                        align_x="start",
+                        align_y="center",
+                    ),
+                    Frame(
+                        constellation,
+                        width=Fixed(52),
+                        height=Fill(),
+                        align_x="stretch",
+                        align_y="stretch",
+                    ),
+                ],
+                gap=12,
+                align="center",
+            ),
+            width=Fixed(lockup_width),
+            height=Fixed(lockup_height),
+            align_x="stretch",
+            align_y="center",
+        )
 
     def game_identity(
         self,
@@ -283,12 +437,17 @@ class KasumiKit(BaseKit):
         description: str,
         width: SizeValue | int,
         height: SizeValue | int,
+        standing_art: ImageSource | None = None,
     ) -> Component:
         """The showcase: identity on the left, the starry-sky art on the right.
 
-        The title slot is a fixed-height row so title assets can land later
-        without reflow: a coral accent bar holds the space until then
-        (authoring guide §3, None handling).
+        Equipped title assets occupy a compact fixed-height row; without
+        assets the row simply disappears so it never turns into a decorative
+        rule below the player's identity.
+
+        An equipped standing art (``standing_art``, dispatcher-threaded — see
+        the authoring guide §2) replaces the kit's built-in Kasumi art in the
+        right column; ``None`` keeps the built-in default.
         """
 
         identity = PlayerIdentity(nickname=nickname, level=level, avatar=avatar_image)
@@ -296,18 +455,43 @@ class KasumiKit(BaseKit):
         titles = [
             image for image in (title1_image, title2_image) if image is not None
         ]
+        title_slot: Component | None = None
         if titles:
-            slot_child: Component = HStack(
-                [self.image(image, height=Fixed(36)) for image in titles],
-                gap=12,
-                align="center",
+            title_slot = Frame(
+                HStack(
+                    [self.image(image, height=Fixed(36)) for image in titles],
+                    gap=12,
+                    align="center",
+                ),
+                height=Fixed(40),
+                align_x="start",
+                align_y="center",
             )
-        else:
-            slot_child = self.separator(
-                length=Fixed(96), thickness=5, color=self.primary
-            )
-        title_slot = Frame(
-            slot_child, height=Fixed(40), align_x="start", align_y="center"
+
+        stats = HStack(
+            [
+                Frame(
+                    self._gold_chip(f"Lv.{level}"),
+                    width=Fill(),
+                    align_x="start",
+                    align_y="center",
+                ),
+                Frame(
+                    self.text(
+                        f"{current_pt} Pt",
+                        font_size=24,
+                        wrap=False,
+                        max_lines=1,
+                        font="display",
+                    ),
+                    width=Fill(),
+                    padding=Insets.only(top=16),
+                    align_x="start",
+                    align_y="center",
+                ),
+            ],
+            gap=12,
+            align="center",
         )
 
         left_rows: list[Component] = [
@@ -320,20 +504,7 @@ class KasumiKit(BaseKit):
                                 self.text(
                                     nickname, font_size=32, wrap=False, max_lines=1
                                 ),
-                                HStack(
-                                    [
-                                        self._gold_chip(f"Lv.{level}"),
-                                        self.text(
-                                            f"{current_pt} Pt",
-                                            font_size=24,
-                                            wrap=False,
-                                            max_lines=1,
-                                            font="display",
-                                        ),
-                                    ],
-                                    gap=12,
-                                    align="center",
-                                ),
+                                stats,
                             ],
                             gap=8,
                             align="start",
@@ -344,9 +515,8 @@ class KasumiKit(BaseKit):
                     ),
                 ],
                 gap=18,
-                align="center",
+                align="start",
             ),
-            title_slot,
             self.separator(length=Fill()),
             self.text(
                 description or "抬头看，星星在跳动。",
@@ -356,9 +526,15 @@ class KasumiKit(BaseKit):
                 overflow="ellipsis",
             ),
         ]
+        if title_slot is not None:
+            left_rows.insert(1, title_slot)
 
         art_column = Frame(
-            self.image(STANDING_ART, height=Fill(), fit="contain"),
+            self.image(
+                standing_art if standing_art is not None else STANDING_ART,
+                height=Fill(),
+                fit="contain",
+            ),
             width=Fixed(288),
             align_x="end",
             align_y="end",
@@ -370,7 +546,7 @@ class KasumiKit(BaseKit):
                     VStack(left_rows, gap=14, align="stretch"),
                     width=Fill(),
                     align_x="stretch",
-                    align_y="center",
+                    align_y="start",
                 ),
                 art_column,
             ],
@@ -379,14 +555,7 @@ class KasumiKit(BaseKit):
         )
 
         return KasumiPanel(
-            Overlay(
-                [
-                    content,
-                    SparkleScatter(seed=573, glint_density=0.00012),
-                ],
-                align_x="stretch",
-                align_y="stretch",
-            ),
+            content,
             width=_as_fixed(width),
             height=_as_fixed(height),
             padding=Insets.only(left=28, top=24, right=20, bottom=20),
@@ -398,26 +567,40 @@ class KasumiKit(BaseKit):
         *,
         width: SizeValue | int,
     ) -> Component:
-        """Reveal grid where a ★6 is a small event: coral border, gold sky."""
+        """Vertical character tickets inspired by modern gacha result screens.
+
+        Results read as a roster rather than a dashboard: character art owns
+        most of each tall ticket, rarity and acquisition state sit on the top
+        rail, and the name/reward information forms a grounded lower caption.
+        """
 
         total_width = _pixels(width)
-        columns = 5 if len(pulls) > 5 else max(1, len(pulls))
+        count = max(1, len(pulls))
+        columns = (
+            10
+            if len(pulls) > 5 and total_width >= 1200
+            else 5
+            if len(pulls) > 5
+            else count
+        )
         gap = 12
-        tile_width = (total_width - gap * (columns - 1)) // columns
-
-        # Batch-driven art slot: when any pull carries art, every tile in the
-        # grid reserves the slot so all tiles stay one uniform height. An
-        # art-less batch keeps the exact 196px tile from before art existed —
-        # the common all-filler ten-pull should not grow 104px of empty sky
-        # just because the capability exists.
+        available = (total_width - gap * (columns - 1)) // columns
+        tile_width = min(300, available)
         art_slot = any(pull.image is not None for pull in pulls)
-        return Grid(
+        grid = Grid(
             columns=columns,
+            column_track=Fixed(tile_width),
             gap=gap,
             children=[
                 self._pull_tile(pull, tile_width, art_slot=art_slot)
                 for pull in pulls
             ],
+        )
+        return Frame(
+            grid,
+            width=Fixed(total_width),
+            align_x="center",
+            align_y="start",
         )
 
     # ------------------------------------------------------------------
@@ -457,13 +640,13 @@ class KasumiKit(BaseKit):
         )
 
     def _gold_chip(self, label: str) -> Component:
-        # Gold fill with dark violet text: measured ≈ 13.8:1, well past AA.
+        # Gold fill with dark violet text.
         return KasumiPanel(
             Frame(
                 self.text(
                     label,
                     font_size=22,
-                    color=self.night_top,
+                    color=self.text_color,
                     align="center",
                     wrap=False,
                     max_lines=1,
@@ -479,151 +662,160 @@ class KasumiKit(BaseKit):
             glow_blur=0,
         )
 
-    #: Height of the reveal-tile art slot. Contain-fit, so the ★6 standing
-    #: art letterboxes into it whatever its aspect ratio.
-    _ART_SLOT_HEIGHT = 96
-
-    #: Reveal tile height without an art slot. Every row below is capped by a
-    #: fixed-height frame, so the budget is exact: 36 (chip) + 24 (stars) +
-    #: 60 (two name lines) + 26 (markers) + 26 (note) + 4 × 8 gaps + 14 + 12
-    #: padding = 230, plus 2px slack. The former 196 fit only one-line names;
-    #: the production filler names wrap to two lines and pushed the note over
-    #: the border.
-    _TILE_HEIGHT = 232
-
     def _pull_tile(
         self, pull: PullRevealItem, width: int, *, art_slot: bool = False
     ) -> Component:
         is_top = pull.rarity >= 6
+        compact = width < 180
+        art_height = 160 if compact else 300
+        name_height = 54 if compact else 70
+        font_size = 18 if compact else 24
+        footer_size = 16 if compact else 20
 
-        star_row = self.text(
-            "★" * pull.rarity + "☆" * (6 - pull.rarity),
-            font_size=18,
-            color=self.accent if is_top else self.muted_text_color,
-            align="center",
-            wrap=False,
-            max_lines=1,
-        )
-        if is_top:
-            head: Component = self._gold_chip(f"★{pull.rarity}")
-        else:
-            head = self.text(
-                f"★{pull.rarity}", font_size=22, align="center", wrap=False
-            )
-
-        # Every row is height-capped so the fixed tile height always fits the
-        # content — an uncapped two-line name used to push the note outside
-        # the panel border.
-        rows: list[Component] = [
-            Frame(head, height=Fixed(36), align_x="center", align_y="center"),
-            Frame(star_row, height=Fixed(24), align_x="center", align_y="center"),
-        ]
-        if art_slot:
-            # The slot is reserved on every tile of an art-carrying batch —
-            # empty on art-less pulls — so the fixed tile height below keeps
-            # the whole grid uniform.
-            rows.append(
-                Frame(
-                    self.image(
-                        pull.image,
-                        width=Fill(),
-                        height=Fixed(self._ART_SLOT_HEIGHT),
-                        fit="contain",
-                    )
-                    if pull.image is not None
-                    else None,
-                    height=Fixed(self._ART_SLOT_HEIGHT),
-                    align_x="center",
-                    align_y="center",
-                )
-            )
-        rows.append(
-            Frame(
-                self.text(
-                    pull.name,
-                    font_size=22,
-                    align="center",
-                    max_lines=2,
-                    overflow="ellipsis",
-                ),
-                width=Fill(),
-                height=Fixed(60),
-                align_x="center",
-                align_y="center",
-            ),
-        )
-
-        markers = []
+        markers: list[str] = []
         if pull.is_new:
             markers.append("NEW")
         if pull.featured:
             markers.append("PICK UP")
-        # A ten-pull tile is too narrow for 「NEW · PICK UP」; rather than an
-        # ellipsis, keep the first marker — NEW is information the tile shows
-        # nowhere else, while featured is already told by the coral border.
-        marker_text = " · ".join(markers)
-        if markers and _text_px(marker_text, CHINESE_FONT, 22) > width - 16:
+        marker_text = " / ".join(markers)
+        if markers and _text_px(marker_text, CHINESE_FONT, footer_size) > width - 58:
             marker_text = markers[0]
-        rows.append(
-            Frame(
+
+        compact_rarity = f"{pull.rarity}★" if compact else ""
+        header = HStack(
+            [
+                self.text(
+                    compact_rarity,
+                    font_size=footer_size,
+                    wrap=False,
+                    max_lines=1,
+                )
+                if compact_rarity
+                else Frame(None, width=Fixed(0)),
+                Frame(None, width=Fill()),
                 self.text(
                     marker_text,
-                    font_size=22,
+                    font_size=footer_size,
                     color=self.primary,
-                    align="center",
+                    align="right",
                     wrap=False,
                     max_lines=1,
-                )
-                if markers
-                else None,
-                height=Fixed(26),
-                align_x="center",
-                align_y="center",
-            )
-        )
-        rows.append(
-            Frame(
-                self.text(
-                    pull.note,
-                    font_size=22,
-                    color=self.muted_text_color,
-                    align="center",
-                    wrap=False,
-                    max_lines=1,
-                )
-                if pull.note
-                else None,
-                height=Fixed(26),
-                align_x="center",
-                align_y="center",
-            )
+                ),
+            ],
+            gap=4,
+            align="center",
         )
 
-        body = VStack(rows, gap=8, align="stretch")
+        visual = Frame(
+            self.image(
+                pull.image,
+                width=Fill(),
+                height=Fixed(art_height),
+                fit="cover" if compact else "contain",
+            )
+            if pull.image is not None
+            else self.text(
+                "★",
+                font_size=54 if compact else 88,
+                color=rgba(126, 105, 156, 72),
+                align="center",
+                wrap=False,
+                max_lines=1,
+            ),
+            width=Fill(),
+            height=Fixed(art_height),
+            align_x="center",
+            align_y="end",
+        )
+        caption = VStack(
+            [
+                Frame(
+                    self.text(
+                        pull.name,
+                        font_size=font_size,
+                        max_lines=2,
+                        overflow="ellipsis",
+                    ),
+                    width=Fill(),
+                    height=Fixed(name_height),
+                    align_x="start",
+                    align_y="center",
+                ),
+                HStack(
+                    [
+                        Frame(
+                            self.text(
+                                "" if compact else "★" * pull.rarity,
+                                font_size=footer_size,
+                                color=self.accent if is_top else self.primary,
+                                wrap=False,
+                                max_lines=1,
+                            ),
+                            width=Fill(),
+                            align_x="start",
+                            align_y="center",
+                        ),
+                        self.text(
+                            pull.note,
+                            font_size=footer_size,
+                            color=self.muted_text_color,
+                            align="right",
+                            wrap=False,
+                            max_lines=1,
+                        ),
+                    ],
+                    gap=6,
+                    align="center",
+                ),
+            ],
+            gap=4,
+            align="stretch",
+        )
+        body: Component = VStack(
+            [
+                Frame(header, height=Fixed(28), align_x="stretch", align_y="center"),
+                visual,
+                self.separator(length=Fill(), thickness=1),
+                caption,
+            ],
+            gap=8,
+            align="stretch",
+        )
         if is_top:
-            # crc32, not hash(): str hashing is salted per process, and the
-            # same pull must sparkle the same way on every render.
             seed = zlib.crc32(pull.name.encode("utf-8"))
             body = Overlay(
-                [body, SparkleScatter(seed=seed, glint_density=0.0006)],
+                [
+                    body,
+                    SparkleScatter(
+                        seed=seed,
+                        glint_density=0.00045,
+                        opacity=0.30,
+                    ),
+                ],
                 align_x="stretch",
                 align_y="stretch",
             )
 
-        # An art batch adds the slot plus one 8px row gap to every tile, so
-        # mixed batches stay uniform.
-        tile_height = self._TILE_HEIGHT + (self._ART_SLOT_HEIGHT + 8 if art_slot else 0)
+        tile_height = (
+            28 + art_height + 1 + name_height + 28 + 3 * 8 + 22
+        )
+        rarity_fills = {
+            6: rgba(255, 244, 218, 245),
+            5: rgba(242, 232, 255, 242),
+            4: rgba(229, 239, 255, 242),
+            3: rgba(247, 247, 252, 242),
+        }
         return KasumiPanel(
             body,
             width=Fixed(width),
             height=Fixed(tile_height),
-            radius=20,
-            padding=Insets.only(left=8, top=14, right=8, bottom=12),
-            fill=rgba(44, 36, 70, 235) if is_top else self.panel_fill,
-            border_color=self.primary if is_top else rgba(255, 205, 160, 56),
+            radius=12,
+            padding=Insets.only(left=10, top=10, right=10, bottom=12),
+            fill=rarity_fills.get(pull.rarity, self.panel_fill),
+            border_color=self.accent if is_top else rgba(126, 105, 156, 72),
             border_width=3 if is_top else 1,
-            glow_blur=12 if is_top else 0,
-            glow_color=rgba(255, 118, 98, 70),
+            glow_blur=14 if is_top else 0,
+            glow_color=rgba(246, 194, 92, 72),
         )
 
 

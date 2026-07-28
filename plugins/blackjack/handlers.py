@@ -21,6 +21,7 @@ from .models import GameResult
 from .session import GameManager
 from .session import GameSession
 from .messages import Messages
+from .rules import can_surrender
 
 require("daily_task")
 
@@ -55,6 +56,7 @@ def _bet_detail(bet_amount: int) -> str:
 def play_dealer_turn(
     dealer_hand: Hand,
     channel_id: str,
+    user_id: str,
     latest_message_id: str,
     game_manager: GameManager,
     identity: Optional[PlayerIdentity] = None,
@@ -71,7 +73,7 @@ def play_dealer_turn(
 
     hand_image = MessageSegment.image(
         raw=image_to_bytes(
-            game_manager.renderer.generate_hand(
+            game_manager.renderer_for(user_id).generate_hand(
                 dealer_hand, False, identity=identity, detail=detail
             )
         ),
@@ -161,12 +163,13 @@ async def handle_surrender(
     identity: Optional[PlayerIdentity] = None,
 ) -> None:
     """处理玩家投降的情况"""
+    renderer = game_manager.renderer_for(user_id)
     loss_amount = (bet_amount / 2).__ceil__()
     game_manager.end_game(user_id, GameResult.SURRENDER, winnings=-loss_amount)
     await matcher.send(
         MessageSegment.image(
             raw=image_to_bytes(
-                game_manager.renderer.generate_table(
+                renderer.generate_table(
                     dealer_hand,
                     player_hand,
                     False,
@@ -206,6 +209,7 @@ async def play_player_turn(
     """
     play_round = 1
     playing = True
+    renderer = game_manager.renderer_for(event.get_user_id())
 
     if show_initial_message:
         if game_manager.get_split_state(event.get_user_id()) > 0:
@@ -216,7 +220,7 @@ async def play_player_turn(
         await matcher.send(
             MessageSegment.image(
                 raw=image_to_bytes(
-                    game_manager.renderer.generate_table(
+                    renderer.generate_table(
                         dealer_hand,
                         player_hand,
                         True,
@@ -249,7 +253,9 @@ async def play_player_turn(
 
                 action = get_action(msg)
                 if action is None:
-                    if game_manager.get_split_state(event.get_user_id()) > 0:
+                    if play_round > 1:
+                        error_msg = Messages.ACTION_INVALID_AFTER_HIT
+                    elif game_manager.get_split_state(event.get_user_id()) > 0:
                         error_msg = Messages.ACTION_INVALID_SPLIT
                     else:
                         double_part = '"双倍"(d)' if play_round == 1 else ""
@@ -274,7 +280,7 @@ async def play_player_turn(
                     await matcher.send(
                         MessageSegment.image(
                             raw=image_to_bytes(
-                                game_manager.renderer.generate_table(
+                                renderer.generate_table(
                                     dealer_hand,
                                     player_hand,
                                     player_hand.value <= 21,
@@ -339,7 +345,7 @@ async def play_player_turn(
                     await matcher.send(
                         MessageSegment.image(
                             raw=image_to_bytes(
-                                game_manager.renderer.generate_table(
+                                renderer.generate_table(
                                     dealer_hand,
                                     player_hand,
                                     player_hand.value <= 21,
@@ -366,6 +372,13 @@ async def play_player_turn(
                     break
 
                 elif action == "q":
+                    if not can_surrender(play_round):
+                        await matcher.send(
+                            Messages.SURRENDER_NOT_FIRST
+                            + gens[latest_message_id].element,
+                            referrer=gens[latest_message_id].event.referrer,
+                        )
+                        continue
                     await handle_surrender(
                         event.get_user_id(),
                         bet_amount,
@@ -439,13 +452,47 @@ async def handle_initial_blackjack(
     game_manager: GameManager,
     identity: Optional[PlayerIdentity] = None,
 ) -> bool:
-    if session.player_hand.value == 21:
-        if session.dealer_hand.value == 21:
+    renderer = game_manager.renderer_for(session.user_id)
+    player_blackjack = (
+        len(session.player_hand.cards) == 2 and session.player_hand.value == 21
+    )
+    dealer_blackjack = (
+        len(session.dealer_hand.cards) == 2 and session.dealer_hand.value == 21
+    )
+
+    if dealer_blackjack and not player_blackjack:
+        game_manager.end_game(
+            session.user_id,
+            GameResult.BUST,
+            winnings=-bet_amount,
+        )
+        await matcher.finish(
+            MessageSegment.image(
+                raw=image_to_bytes(
+                    renderer.generate_table(
+                        session.dealer_hand,
+                        session.player_hand,
+                        False,
+                        identity=identity,
+                        detail=_bet_detail(bet_amount),
+                    )
+                ),
+                mime="image/jpeg",
+            )
+            + Messages.DEALER_BLACKJACK_LOSE.format(amount=bet_amount)
+            + f"你现在有 {monetary.get(session.user_id)} 个Pt"
+            + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
+        return True
+
+    if player_blackjack:
+        if dealer_blackjack:
             game_manager.end_game(session.user_id, GameResult.PUSH, winnings=0)
             await matcher.finish(
                 MessageSegment.image(
                     raw=image_to_bytes(
-                        game_manager.renderer.generate_table(
+                        renderer.generate_table(
                             session.dealer_hand,
                             session.player_hand,
                             False,
@@ -474,7 +521,7 @@ async def handle_initial_blackjack(
             await matcher.send(
                 MessageSegment.image(
                     raw=image_to_bytes(
-                        game_manager.renderer.generate_table(
+                        renderer.generate_table(
                             session.dealer_hand,
                             session.player_hand,
                             False,
@@ -522,6 +569,7 @@ async def handle_split_decision(
     identity: Optional[PlayerIdentity] = None,
 ) -> Tuple[bool, int, str]:
     split_card = False
+    renderer = game_manager.renderer_for(session.user_id)
 
     if (
         session.player_hand.cards[0].get_value()
@@ -531,7 +579,7 @@ async def handle_split_decision(
         await matcher.send(
             MessageSegment.image(
                 raw=image_to_bytes(
-                    game_manager.renderer.generate_table(
+                    renderer.generate_table(
                         session.dealer_hand,
                         session.player_hand,
                         True,
@@ -594,6 +642,7 @@ async def handle_split_game(
     game_manager: GameManager,
     identity: Optional[PlayerIdentity] = None,
 ) -> None:
+    renderer = game_manager.renderer_for(session.user_id)
     second_hand = Hand()
     second_hand.add_card(session.player_hand.cards.pop())
     session.player_hand.add_card(game_manager.get_shoe(event.channel.id).deal())
@@ -607,7 +656,7 @@ async def handle_split_game(
             await matcher.send(
                 MessageSegment.image(
                     raw=image_to_bytes(
-                        game_manager.renderer.generate_table(
+                        renderer.generate_table(
                             session.dealer_hand,
                             hand,
                             True,
@@ -639,6 +688,7 @@ async def handle_split_game(
     dealer_result = play_dealer_turn(
         session.dealer_hand,
         event.channel.id,
+        session.user_id,
         latest_message_id,
         game_manager,
         identity=identity,
@@ -720,6 +770,7 @@ async def handle_normal_game(
     dealer_result = play_dealer_turn(
         session.dealer_hand,
         event.channel.id,
+        session.user_id,
         latest_message_id,
         game_manager,
         identity=identity,

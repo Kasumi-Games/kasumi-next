@@ -48,11 +48,11 @@ async def handle_notice_remove(event: GuildMemberRemovedEvent):
 async def handle_notice_remove_channel(event: GuildRemovedEvent):
     if event.login.platform not in ["qq", "qqguild"]:
         return None
-    manager.remove_channel(event.channel.id)
+    manager.delete_channel(event.channel.id)
 
 
 get_channel_members = manager.get_channel_members
-get_mamber_channels = manager.get_member_channels
+get_member_channels = manager.get_member_channels
 
 
 __all__ = [

@@ -7,7 +7,7 @@ from utils import has_no_argument
 
 
 @on_command(
-    "info", aliases={"关于"}, priority=1, block=True, rule=has_no_argument
+    "about", aliases={"关于"}, priority=1, block=True, rule=has_no_argument
 ).handle()
 async def handle_info(matcher: Matcher, event: MessageEvent):
     passive_generator = PassiveGenerator(event)

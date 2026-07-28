@@ -21,6 +21,15 @@ Three structural decisions are load-bearing:
 * **The command is the only thing in full ink.** Aliases are optional shortcuts
   and stay in ``muted_text_color``; the command a player must be able to read
   and retype never does.
+* **Past ``COMPACT_THRESHOLD`` commands, tiles drop the alias sub-line.** This
+  is the density mitigation from the board's design spec
+  (docs/design/image-responses/15-cluster-utility.md, "Help board height"):
+  past roughly 1700px the board stops reading as one page, so once the command
+  census grows beyond the threshold every tile keeps only the full-ink command
+  line and the row track shrinks from ``TILE_HEIGHT`` to
+  ``COMPACT_TILE_HEIGHT``. Aliases remain on the detail cards
+  (``/help 功能名``). The switch depends only on the entry list, so renders
+  stay deterministic.
 """
 
 from typing import Sequence
@@ -61,6 +70,25 @@ TILE_GAP_X = 32
 TILE_GAP_Y = 18
 TILE_PADDING = Insets.only(left=20, top=12, right=20, bottom=12)
 
+#: Corner radius for the command tiles alone. At 92px tall, the kit-default
+#: radius (48 in bangdream) rounds more than half the tile height and 23 tiles
+#: read as a wall of bubbles — measured on a live server, not taste. 20 keeps a
+#: visibly themed corner without eating the tile. Full-width panels (the footer
+#: below, every ``panel_section``) keep the kit default: at 784px wide the
+#: default radius is proportionate there.
+TILE_RADIUS = 20
+
+#: Density mitigation switch (module docstring, last bullet): boards with more
+#: commands than this drop the tile sub-line. 23 commands — the pre-census
+#: board — measured 1500-1550px in the two-line layout and stays two-line; the
+#: 31-command census board would measure ~1900px two-line, past the ~1700px
+#: budget, so it flips to compact.
+COMPACT_THRESHOLD = 27
+
+#: Compact tile: one BODY_SIZE line, vertically centred.
+COMPACT_TILE_HEIGHT = 60
+COMPACT_TILE_PADDING = Insets.only(left=20, right=20)
+
 HEADER_HEIGHT = 38
 SECTION_GAP = 28
 HEADING_GAP = 14
@@ -90,9 +118,13 @@ def board_page(
 
     kit = kit or BanGDreamKit()
     groups = commands_by_category(entries)
+    compact = _use_compact_tiles(entries)
     if groups:
         body: Component = VStack(
-            [_category_section(kit, name, commands) for name, commands in groups],
+            [
+                _category_section(kit, name, commands, compact)
+                for name, commands in groups
+            ],
             gap=SECTION_GAP,
             align="start",
         )
@@ -124,18 +156,26 @@ def render_board(
     return board_page(entries, kit).render()
 
 
+def _use_compact_tiles(entries: Sequence[HelpEntry]) -> bool:
+    """Whether the density mitigation is on for this entry list."""
+
+    return total_commands(entries) > COMPACT_THRESHOLD
+
+
 def _category_section(
-    kit: BaseKit, category: str, commands: Sequence[HelpCommand]
+    kit: BaseKit, category: str, commands: Sequence[HelpCommand], compact: bool
 ) -> Component:
     return VStack(
         [
             _section_head(kit, category, f"{len(commands)} 项"),
             kit.separator(length=Fixed(CONTENT_WIDTH)),
             Grid(
-                children=[_tile(kit, command) for command in commands],
+                children=[_tile(kit, command, compact) for command in commands],
                 columns=COLUMNS,
                 column_track=Fixed(TILE_WIDTH),
-                row_track=Fixed(TILE_HEIGHT),
+                row_track=Fixed(
+                    COMPACT_TILE_HEIGHT if compact else TILE_HEIGHT
+                ),
                 gap=(TILE_GAP_X, TILE_GAP_Y),
             ),
         ],
@@ -175,7 +215,23 @@ def _section_head(kit: BaseKit, title: str, count: str) -> Component:
     )
 
 
-def _tile(kit: BaseKit, command: HelpCommand) -> Component:
+def _tile(kit: BaseKit, command: HelpCommand, compact: bool = False) -> Component:
+    if compact:
+        return kit.panel(
+            Frame(
+                kit.text(
+                    command.command, font_size=BODY_SIZE, wrap=False, max_lines=1
+                ),
+                width=Fill(),
+                height=Fill(),
+                align_x="start",
+                align_y="center",
+            ),
+            width=Fixed(TILE_WIDTH),
+            height=Fixed(COMPACT_TILE_HEIGHT),
+            padding=COMPACT_TILE_PADDING,
+            radius=TILE_RADIUS,
+        )
     return kit.panel(
         VStack(
             [
@@ -196,6 +252,7 @@ def _tile(kit: BaseKit, command: HelpCommand) -> Component:
         width=Fixed(TILE_WIDTH),
         height=Fixed(TILE_HEIGHT),
         padding=TILE_PADDING,
+        radius=TILE_RADIUS,
     )
 
 

@@ -73,7 +73,9 @@ def _convert_db_games_to_records(
     return game_records
 
 
-def get_mines_stats(user_id: str) -> MinesStats:
+def get_mines_stats(
+    user_id: str, *, start_time: int | None = None, end_time: int | None = None
+) -> MinesStats:
     """
     获取用户的mines游戏统计数据
 
@@ -86,7 +88,12 @@ def get_mines_stats(user_id: str) -> MinesStats:
     db_session = get_session()
 
     try:
-        games = db_session.query(MinesGame).filter(MinesGame.user_id == user_id).all()
+        games_query = db_session.query(MinesGame).filter(MinesGame.user_id == user_id)
+        if start_time is not None:
+            games_query = games_query.filter(MinesGame.timestamp >= start_time)
+        if end_time is not None:
+            games_query = games_query.filter(MinesGame.timestamp < end_time)
+        games = games_query.all()
 
         if not games:
             return MinesStats(
@@ -125,13 +132,12 @@ def get_mines_stats(user_id: str) -> MinesStats:
         avg_loss = sum(loss_amounts) / len(loss_amounts) if loss_amounts else 0.0
 
         # 获取最近30次游戏记录（按时间倒序）
-        recent_db_games = (
-            db_session.query(MinesGame)
-            .filter(MinesGame.user_id == user_id)
-            .order_by(MinesGame.timestamp.desc())
-            .limit(30)
-            .all()
-        )
+        recent_query = db_session.query(MinesGame).filter(MinesGame.user_id == user_id)
+        if start_time is not None:
+            recent_query = recent_query.filter(MinesGame.timestamp >= start_time)
+        if end_time is not None:
+            recent_query = recent_query.filter(MinesGame.timestamp < end_time)
+        recent_db_games = recent_query.order_by(MinesGame.timestamp.desc()).limit(30).all()
         recent_games = _convert_db_games_to_records(recent_db_games)
 
         return MinesStats(

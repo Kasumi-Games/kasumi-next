@@ -37,6 +37,12 @@ _FORM_CELL_WIDTH = 20
 _FORM_CELL_GAP = 4
 _FORM_BAR_HEIGHT = 22
 
+# Semantic result colours intentionally do not follow the active theme.
+# Position still carries the same information for monochrome accessibility,
+# while green-up/red-down makes the strip immediately scannable elsewhere.
+WIN_COLOR = (54, 179, 111, 255)
+LOSS_COLOR = (229, 75, 83, 255)
+
 
 def render_stats(data: "MinesStats", kit: BaseKit | None = None) -> Image.Image:
     """Render the stats card.
@@ -173,9 +179,7 @@ def _recent_form_panel(kit: BaseKit, data: "MinesStats") -> Component | None:
     if not records:
         return None
 
-    fill_color, _ = cards.emphasis(kit)
-
-    def bar() -> Component:
+    def bar(fill_color) -> Component:
         return kit.panel(
             None,
             width=Fixed(_FORM_CELL_WIDTH),
@@ -187,8 +191,12 @@ def _recent_form_panel(kit: BaseKit, data: "MinesStats") -> Component | None:
     def slot() -> Component:
         return Spacer(width=Fixed(_FORM_CELL_WIDTH), height=Fixed(_FORM_BAR_HEIGHT))
 
-    top = [bar() if record.amount > 0 else slot() for record in records]
-    bottom = [bar() if record.amount < 0 else slot() for record in records]
+    top = [
+        bar(WIN_COLOR) if record.amount > 0 else slot() for record in records
+    ]
+    bottom = [
+        bar(LOSS_COLOR) if record.amount < 0 else slot() for record in records
+    ]
 
     strip = VStack(
         [

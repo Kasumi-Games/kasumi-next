@@ -177,7 +177,9 @@ def test_red_envelope_claims_expiry_and_completion(sqlite_session, monkeypatch):
 
     sqlite_session(database, Base)
     added = []
-    monkeypatch.setattr(service.monetary, "add", lambda *args: added.append(args))
+    monkeypatch.setattr(
+        service.monetary, "add", lambda *args, **kwargs: added.append(args)
+    )
     monkeypatch.setattr(service.random, "randint", lambda low, high: low)
 
     envelope = service.create_envelope("creator", "channel", "hello", 10, 2)
@@ -200,6 +202,77 @@ def test_red_envelope_claims_expiry_and_completion(sqlite_session, monkeypatch):
     database.session.commit()
     assert service.expire_overdue_envelopes() == 1
     assert added[-1] == ("creator", 5, f"red_envelope_refund_{expired.id}")
+
+
+def test_red_envelope_retries_an_uncredited_claim(sqlite_session, monkeypatch):
+    from plugins.red_envelope import service
+    from plugins.red_envelope import database
+    from plugins.red_envelope.models import Base
+    from plugins.red_envelope.models import ClaimRecord
+
+    session = sqlite_session(database, Base)
+    attempts = 0
+
+    def flaky_credit(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("inventory unavailable")
+
+    monkeypatch.setattr(service.monetary, "add", flaky_credit)
+    monkeypatch.setattr(service.random, "randint", lambda low, high: low)
+    envelope = service.create_envelope("creator", "channel", "hello", 10, 2)
+
+    assert service.claim_envelope("u1", "channel", 1)[0] == "error"
+    claim = session.query(ClaimRecord).one()
+    assert claim.credited_at == 0
+    assert (envelope.remaining_amount, envelope.remaining_count) == (9, 1)
+
+    status, amount, completion = service.claim_envelope("u1", "channel", 1)
+    assert (status, amount, completion) == ("success", 1, None)
+    session.refresh(claim)
+    assert claim.credited_at > 0
+    assert attempts == 2
+    assert service.claim_envelope("u1", "channel", 1)[0] == "already"
+
+
+def test_red_envelope_migration_marks_historical_claims_as_credited(
+    tmp_path, monkeypatch
+):
+    import sqlite3
+
+    from plugins.red_envelope import migration
+
+    path = tmp_path / "red-envelope.db"
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "CREATE TABLE claim_records ("
+            "id INTEGER PRIMARY KEY, "
+            "envelope_id INTEGER NOT NULL, "
+            "user_id VARCHAR NOT NULL, "
+            "amount INTEGER NOT NULL, "
+            "claimed_at INTEGER NOT NULL"
+            ")"
+        )
+        connection.execute(
+            "INSERT INTO claim_records "
+            "(id, envelope_id, user_id, amount, claimed_at) "
+            "VALUES (1, 2, 'u1', 3, 123)"
+        )
+
+    monkeypatch.setattr(migration.store, "get_data_file", lambda *args: path)
+    migration.migrate_red_envelope_schema()
+
+    with sqlite3.connect(path) as connection:
+        columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(claim_records)").fetchall()
+        }
+        credited_at = connection.execute(
+            "SELECT credited_at FROM claim_records WHERE id = 1"
+        ).fetchone()[0]
+    assert "credited_at" in columns
+    assert credited_at == 123
 
 
 def test_inventory_profile_equipment_and_season_status(sqlite_session, monkeypatch):
@@ -248,6 +321,6 @@ def test_inventory_profile_equipment_and_season_status(sqlite_session, monkeypat
     }
     monkeypatch.setattr(season_service, "load_seasons_config", lambda: copy.deepcopy(season_config))
     synced = season_service.sync_seasons_config()
-    season_service.refresh_season_statuses(now=2_000_000_000)
+    season_service.activate_due_seasons(now=2_000_000_000)
     assert synced[0].season_key == "s1"
     assert season_service.get_current_season(now=2_000_000_000).name == "S1"

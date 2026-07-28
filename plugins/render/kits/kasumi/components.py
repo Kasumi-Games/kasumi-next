@@ -1,9 +1,9 @@
 """Signature visuals for the Kasumi kit.
 
-The art direction, in one line: the night sky Kasumi looks up at —
-near-black violet, drifting nebula color, and four-point glints instead of
-literal yellow stars. キラキラドキドキ comes from warmth on darkness: champagne
-gold and coral against deep violet, never flat white on flat black.
+The art direction, in one line: the starry sky Kasumi looks up at, carried into
+a bright lilac dawn — drifting nebula colour and four-point glints instead of
+literal yellow stars. キラキラドキドキ comes from coral, champagne gold, and
+violet sparkling across a warm, airy sky.
 """
 
 import math
@@ -42,27 +42,35 @@ from ..fonts import CHINESE_FONT
 KIT_DIR = Path(__file__).resolve().parent
 RESOURCES_DIR = KIT_DIR / "resources"
 STANDING_DIR = RESOURCES_DIR / "standing"
-FRAMES_DIR = RESOURCES_DIR / "frames"
+ITEM_FRAMES_DIR = (
+    Path(__file__).resolve().parents[3]
+    / "inventory"
+    / "resources"
+    / "items"
+    / "avatar_frames"
+)
 
 #: The Look Up at the Starry Sky trim art (Bestdori card 425, trained).
 STANDING_ART = STANDING_DIR / "kasumi_starry_after_training.png"
 STANDING_ART_NORMAL = STANDING_DIR / "kasumi_starry_normal.png"
 
-#: Hand-drawn avatar frame drop-in point; see docs/design/avatar-frame-spec.md.
-#: The kit auto-detects this file and falls back to a code-drawn placeholder.
-AVATAR_FRAME = FRAMES_DIR / "avatar_frame.png"
+#: The former kit-owned frame is now the art of an inventory item. Kept as a
+#: public constant for asset-contract checks; the kit no longer equips it by
+#: default.
+AVATAR_FRAME = ITEM_FRAMES_DIR / "frame_kasumi_starbeat.png"
 
 #: Frame asset contract: 512 canvas, avatar circle Ø 416 centered.
 FRAME_CANVAS = 512
 FRAME_AVATAR_DIAMETER = 416
 
-#: Sparkle palette — weighted toward starlight white and champagne gold, with
-#: occasional pink and cyan so the sky reads playful rather than sterile.
+#: Sparkle palette for a pale sky. White glints disappeared on the old light
+#: component surfaces, so the dawn treatment uses coral, gold, violet, and
+#: cyan marks with enough chroma to remain visible after chat downscaling.
 SPARKLE_COLORS: tuple[tuple[Color, int], ...] = (
-    (rgba(242, 240, 255, 255), 5),
-    (rgba(255, 214, 150, 255), 4),
-    (rgba(255, 172, 190, 255), 2),
-    (rgba(168, 220, 255, 255), 1),
+    (rgba(224, 81, 111, 255), 4),
+    (rgba(220, 157, 43, 255), 4),
+    (rgba(112, 91, 170, 255), 3),
+    (rgba(67, 146, 181, 255), 1),
 )
 
 
@@ -90,9 +98,17 @@ def sparkle(size: int, color: Color, *, ratio: float = 0.2) -> Image.Image:
         angle = math.pi / 4 * index - math.pi / 2
         radius = half if index % 2 == 0 else inner
         points.append((half + radius * math.cos(angle), half + radius * math.sin(angle)))
-    image = Image.new("RGBA", (box, box), (0, 0, 0, 0))
-    ImageDraw.Draw(image).polygon(points, fill=color)
-    return image.resize((max(1, size), max(1, size)), Image.Resampling.LANCZOS)
+    # Draw and resize alpha separately, then apply it to a solid-colour image.
+    # Resizing straight RGBA with transparent-black surrounding pixels creates
+    # grey/black fringes around the glint when Pillow interpolates the RGB
+    # channels. A colour-backed alpha mask keeps every feathered pixel luminous.
+    mask = Image.new("L", (box, box), 0)
+    ImageDraw.Draw(mask).polygon(points, fill=color[3])
+    edge = max(1, size)
+    mask = mask.resize((edge, edge), Image.Resampling.LANCZOS)
+    image = Image.new("RGBA", (edge, edge), (*color[:3], 0))
+    image.putalpha(mask)
+    return image
 
 
 def scatter_sparkles(
@@ -142,18 +158,25 @@ def scatter_sparkles(
         y = rng.randrange(-size, height)
         if size >= ctx.scale_px(18):
             # Large glints get a soft halo so they read as light, not markers.
-            halo = glint.resize((size * 2, size * 2), Image.Resampling.BILINEAR)
-            halo = halo.filter(ImageFilter.GaussianBlur(max(1, size // 3)))
+            halo_alpha = glint.getchannel("A").resize(
+                (size * 2, size * 2), Image.Resampling.BILINEAR
+            )
+            halo_alpha = halo_alpha.filter(
+                ImageFilter.GaussianBlur(max(1, size // 3))
+            )
+            halo_alpha = halo_alpha.point(lambda value: round(value * 0.55))
+            halo = Image.new("RGBA", (size * 2, size * 2), (*color[:3], 0))
+            halo.putalpha(halo_alpha)
             alpha_composite_paste(layer, halo, (x - size // 2, y - size // 2))
         alpha_composite_paste(layer, glint, (x, y))
 
 
 @dataclass(frozen=True)
 class KasumiBackground:
-    """The night sky: violet gradient, faint nebula wash, four-point glints."""
+    """A lilac dawn: warm gradient, faint colour drift, four-point glints."""
 
-    top: Color = rgba(10, 9, 20, 255)
-    bottom: Color = rgba(30, 22, 48, 255)
+    top: Color = rgba(242, 238, 255, 255)
+    bottom: Color = rgba(255, 232, 226, 255)
     glint_density: float = 0.00006
     dot_density: float = 0.00010
     random_seed: int = 425  # the card that started this theme
@@ -179,16 +202,16 @@ class KasumiBackground:
         return canvas
 
     def _nebula(self, size: Size) -> Image.Image | None:
-        """Very low alpha color drift, computed small and upscaled."""
+        """Very low alpha colour drift, computed small and upscaled."""
 
         edge = 48
-        # The mix weight below multiplies ``strength`` twice, so the visible
-        # peak alpha is ``255 * strength ** 2`` — keep strengths near 0.3 or
-        # the wash disappears entirely (0.16 peaked at alpha 7, invisible).
+        # The wash is deliberately restrained: the shared components bring
+        # plenty of colour, and the background only needs to keep the sky from
+        # reading as a flat white sheet.
         blooms = (
-            (0.24, 0.20, rgba(120, 90, 200, 255), 0.55, 0.30),
-            (0.78, 0.34, rgba(255, 140, 150, 255), 0.45, 0.27),
-            (0.55, 0.85, rgba(70, 110, 220, 255), 0.60, 0.24),
+            (0.18, 0.18, rgba(168, 142, 232, 255), 0.55, 0.18),
+            (0.82, 0.30, rgba(255, 151, 163, 255), 0.48, 0.16),
+            (0.48, 0.88, rgba(255, 195, 113, 255), 0.58, 0.13),
         )
         base = (0, 0, 0, 0)
         small = Image.new("RGBA", (edge, edge), base)
@@ -211,18 +234,18 @@ class KasumiBackground:
 
 @dataclass(frozen=True)
 class KasumiPanel:
-    """Deep violet surface with a warm hairline and a faint coral glow."""
+    """Translucent warm-white surface with a coral hairline and soft shadow."""
 
     child: Component | None = None
-    fill: ColorLike = rgba(32, 26, 54, 230)
+    fill: ColorLike = rgba(255, 251, 252, 238)
     radius: int = 28
     padding: InsetsLike = 0
     width: SizeValue | int | None = None
     height: SizeValue | int | None = None
-    border_color: ColorLike = rgba(255, 205, 160, 56)
+    border_color: ColorLike = rgba(222, 103, 124, 78)
     border_width: int = 1
-    glow_color: Color = rgba(255, 140, 110, 34)
-    glow_blur: int = 10
+    glow_color: Color = rgba(91, 67, 125, 30)
+    glow_blur: int = 12
 
     def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
         return Frame(
@@ -265,6 +288,7 @@ class SparkleScatter:
     seed: int = 0
     glint_density: float = 0.00018
     dot_density: float = 0.0
+    opacity: float = 1.0
 
     def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
         return Size(constraints.max_width or 0, constraints.max_height or 0)
@@ -281,6 +305,12 @@ class SparkleScatter:
             dot_density=self.dot_density,
             max_glint=18,
         )
+        if self.opacity < 1.0:
+            opacity = max(0.0, self.opacity)
+            alpha = layer.getchannel("A").point(
+                lambda value: round(value * opacity)
+            )
+            layer.putalpha(alpha)
         alpha_composite_paste(canvas, layer, (rect.x, rect.y))
 
 
@@ -303,8 +333,8 @@ class KasumiAvatarDisc:
     source: ImageSource | None
     initial: str
     size: int
-    fill: ColorLike = rgba(58, 48, 92, 255)
-    initial_color: ColorLike = rgba(244, 238, 232, 255)
+    fill: ColorLike = rgba(232, 222, 246, 255)
+    initial_color: ColorLike = rgba(62, 48, 89, 255)
 
     def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
         return constraints.clamp(Size(self.size, self.size))
@@ -350,12 +380,7 @@ class KasumiAvatarDisc:
 
 
 def frame_overlay(avatar_size: int) -> Image.Image:
-    """The avatar frame, scaled for an avatar of ``avatar_size`` pixels.
-
-    Uses the hand-drawn asset at :data:`AVATAR_FRAME` when present; otherwise a
-    code-drawn placeholder (coral ring, thin gold outer ring, two gold glints)
-    that follows the same geometry, so dropping the real file in changes the
-    art and nothing else.
+    """The kit's unequipped avatar decoration at ``avatar_size`` pixels.
 
     Args:
         avatar_size: Rendered avatar diameter in pixels.
@@ -365,13 +390,6 @@ def frame_overlay(avatar_size: int) -> Image.Image:
     """
 
     canvas_size = max(4, round(avatar_size * FRAME_CANVAS / FRAME_AVATAR_DIAMETER))
-    if AVATAR_FRAME.exists():
-        try:
-            asset = Image.open(AVATAR_FRAME).convert("RGBA")
-            return asset.resize((canvas_size, canvas_size), Image.Resampling.LANCZOS)
-        except OSError:
-            pass
-
     scale = 4
     box = canvas_size * scale
     image = Image.new("RGBA", (box, box), (0, 0, 0, 0))

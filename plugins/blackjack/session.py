@@ -21,6 +21,9 @@ class GameSession:
     split_hand: Optional[Hand] = None
     split_bet: int = 0
     current_hand_index: int = 0
+    # The table renderer belongs to one game, not the process.  Its kit is
+    # selected from the player’s equipped theme at game start.
+    renderer: object | None = None
 
     def is_split(self) -> bool:
         return self.split_hand is not None
@@ -62,6 +65,7 @@ class GameManager:
         bet_amount: int,
         player_hand: Hand,
         dealer_hand: Hand,
+        renderer: object | None = None,
     ) -> GameSession:
         session = GameSession(
             user_id=user_id,
@@ -69,12 +73,28 @@ class GameManager:
             bet_amount=bet_amount,
             player_hand=player_hand,
             dealer_hand=dealer_hand,
+            renderer=renderer,
         )
         self._sessions[user_id] = session
         return session
 
     def get_session(self, user_id: str) -> Optional[GameSession]:
         return self._sessions.get(user_id)
+
+    def renderer_for(self, user_id: str):
+        """Return the renderer pinned to a player's game.
+
+        ``self.renderer`` remains the startup renderer and is the fallback for
+        legacy callers or a session constructed without a themed renderer.
+        Never mutate it per request: two blackjack games can wait for input at
+        the same time, and changing a shared kit would make their tables swap
+        themes mid-game.
+        """
+
+        session = self.get_session(user_id)
+        if session is not None and session.renderer is not None:
+            return session.renderer
+        return self.renderer
 
     def remove_session(self, user_id: str) -> None:
         self._sessions.pop(user_id, None)

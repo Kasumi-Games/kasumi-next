@@ -57,7 +57,7 @@ class CosmeticItem(Base):
     __tablename__ = "cosmetic_items"
 
     item_id = Column(String, ForeignKey("items.item_id"), primary_key=True)
-    cosmetic_type = Column(String, nullable=False)  # avatar_frame | title | theme | standing_art
+    cosmetic_type = Column(String, nullable=False)  # avatar_frame | theme | standing_art
     rarity = Column(Integer, default=1, nullable=False)
 
     item = relationship("Item", back_populates="cosmetic")
@@ -131,6 +131,7 @@ class Season(Base):
     status = Column(String, default="planned", nullable=False)
     metadata_json = Column(Text, default="{}", nullable=False)
     config_hash = Column(String, default="", nullable=False)
+    opened_at = Column(Integer, default=0, nullable=False)
     settled_at = Column(Integer, default=0, nullable=False)
 
 

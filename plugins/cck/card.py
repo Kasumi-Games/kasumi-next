@@ -1,10 +1,13 @@
+import asyncio
 import os
 import random
-from typing import Tuple
 from pathlib import Path
+from typing import Tuple
 
 import aiohttp
 from aiohttp import ClientTimeout
+from PIL import Image
+from PIL import UnidentifiedImageError
 from nonebot import logger
 
 from .downloader import AsyncDownloader
@@ -60,8 +63,13 @@ class Card:
             if res_data["trained"]:
                 res.append(f'{v["resourceSetName"]}_card_after_training.png')
 
-        _miss_cards = list(
-            set(res).difference(set(await self._get_file_name(self.base_path)))
+        valid_cards, invalid_cards = await asyncio.to_thread(
+            self._valid_card_names, self.base_path
+        )
+        _miss_cards = list(set(res).difference(valid_cards))
+        logger.info(
+            "Card: 开机资源自检 "
+            f"cached={len(valid_cards)}/{len(res)} invalid={len(invalid_cards)}"
         )
 
         miss_cards = []
@@ -77,11 +85,31 @@ class Card:
         else:
             logger.info("Card: 卡面资源加载成功")
 
-    async def _get_file_name(self, file_dir):
-        names = []
-        for _, _, files in os.walk(file_dir):
-            names += files
-        return names
+    @staticmethod
+    def _valid_card_names(file_dir: Path) -> tuple[set[str], list[Path]]:
+        """Return valid cached card PNG names and any corrupt files.
+
+        The old startup check only compared filenames, so an interrupted
+        download could leave a zero-byte/HTML file that was never repaired.
+        Pillow's lightweight ``verify`` catches those files; the normal
+        missing-resource path then downloads them again on this same boot.
+        """
+
+        names: set[str] = set()
+        invalid: list[Path] = []
+        for root, _, files in os.walk(file_dir):
+            for filename in files:
+                if not filename.lower().endswith(".png"):
+                    continue
+                path = Path(root) / filename
+                try:
+                    with Image.open(path) as image:
+                        image.verify()
+                except (OSError, UnidentifiedImageError):
+                    invalid.append(path)
+                else:
+                    names.add(filename)
+        return names, invalid
 
     async def _get_bad_res(self) -> tuple:
         res_lst = []

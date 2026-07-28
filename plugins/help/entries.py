@@ -49,10 +49,15 @@ CATEGORY_BY_PLUGIN = {
     "常用功能": "养成",
     "每日任务": "养成",
     "昵称": "养成",
+    "抽卡": "养成",
+    "仓库": "养成",
+    "装扮": "养成",
+    "个人资料": "养成",
+    "赛季": "养成",
     "邮箱": "社交",
     "红包": "社交",
     "help": "工具",
-    "info": "工具",
+    "about": "工具",
     "tts": "工具",
 }
 
@@ -178,9 +183,9 @@ def find_entries(
 ) -> tuple[HelpEntry, ...]:
     """Resolve a player-typed token to the entries it names.
 
-    The plugin name wins outright when it matches, which keeps ``/help info``
-    pointing at the ``info`` plugin even though ``常用功能`` also answers to
-    ``info``. Otherwise every command and alias is fair game, so a player can
+    The plugin name wins outright when it matches, which keeps ``/help about``
+    pointing at the bot-introduction entry. Otherwise every command and alias
+    is fair game, so a player can
     type the thing they actually remember — ``cck``, ``mines``, ``/签到``.
 
     Args:

@@ -164,6 +164,7 @@ cython_debug/
 
 # localstore
 .data/
+plugins/gacha/resources/standing/
 .config/
 .cache/
 

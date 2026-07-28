@@ -4,10 +4,14 @@ import json
 from pathlib import Path
 
 from nonebot.log import logger
+import nonebot_plugin_localstore as store
 
 from .models import Item
 from .models import CosmeticItem
 from .models import CurrencyItem
+from .models import EquippedItem
+from .models import ItemTransaction
+from .models import UserItem
 from .database import get_session
 
 CATALOG_PATH = Path(__file__).with_name("items.json")
@@ -33,7 +37,15 @@ def sync_catalog() -> None:
         item.stackable = bool(entry.get("stackable", True))
         item.visible = bool(entry.get("visible", True))
         item.sort_order = int(entry.get("sort_order", 0))
-        item.metadata_json = json.dumps(entry.get("metadata", {}), ensure_ascii=False)
+        metadata = dict(entry.get("metadata", {}))
+        if card_id := metadata.get("bestdori_card_id"):
+            variant = metadata.get("bestdori_variant", "after_training")
+            metadata["art"] = str(
+                store.get_data_dir("gacha")
+                / "standing"
+                / f"{int(card_id)}_{variant}.png"
+            )
+        item.metadata_json = json.dumps(metadata, ensure_ascii=False)
 
         if currency := entry.get("currency"):
             row = (
@@ -61,8 +73,45 @@ def sync_catalog() -> None:
             row.cosmetic_type = cosmetic["cosmetic_type"]
             row.rarity = int(cosmetic.get("rarity", 1))
 
+    _purge_title_cosmetics()
     session.commit()
     _invalidate_theme_cache()
+
+
+def _purge_title_cosmetics() -> None:
+    """Remove the retired title cosmetic type and every development record.
+
+    Titles were removed before launch, so there is no live-data migration to
+    preserve.  Keeping this in catalog sync also cleans pre-existing local
+    SQLite databases when the bot next starts.
+    """
+
+    session = get_session()
+    title_item_ids = [
+        item_id
+        for (item_id,) in session.query(CosmeticItem.item_id)
+        .filter(CosmeticItem.cosmetic_type == "title")
+        .all()
+    ]
+    if not title_item_ids:
+        return
+
+    session.query(EquippedItem).filter(
+        EquippedItem.item_id.in_(title_item_ids)
+    ).delete(synchronize_session=False)
+    session.query(UserItem).filter(UserItem.item_id.in_(title_item_ids)).delete(
+        synchronize_session=False
+    )
+    session.query(ItemTransaction).filter(
+        ItemTransaction.item_id.in_(title_item_ids)
+    ).delete(synchronize_session=False)
+    session.query(CosmeticItem).filter(
+        CosmeticItem.item_id.in_(title_item_ids)
+    ).delete(synchronize_session=False)
+    session.query(Item).filter(Item.item_id.in_(title_item_ids)).delete(
+        synchronize_session=False
+    )
+    session.expire_all()
 
 
 def _invalidate_theme_cache() -> None:

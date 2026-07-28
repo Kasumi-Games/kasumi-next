@@ -168,17 +168,22 @@ def _detail_panel(kit: BaseKit, outcome: ClaimOutcome) -> Component:
 
 
 def _detail_row(kit: BaseKit, claimed: ClaimedMail) -> Component:
+    # The leading number is the mailbox ordinal (/邮件 <编号>) — claiming only
+    # flips read state and never reorders, so the number still works for
+    # rereading. The database id (old M-code) never renders.
     return Frame(
         HStack(
             [
                 Frame(
                     kit.text(
-                        f"M{claimed.mail.id}",
+                        str(claimed.ordinal),
                         font_size=LABEL_SIZE,
                         color=kit.muted_text_color,
                         wrap=False,
                         max_lines=1,
-                    ),
+                    )
+                    if claimed.ordinal > 0
+                    else None,
                     width=Fixed(CODE_COLUMN),
                     align_x="start",
                     align_y="center",

@@ -126,3 +126,29 @@ def test_get_user_stats_counts_blackjacks(sqlite_session):
     empty = BlackjackGameService.get_user_stats("nobody")
     assert empty["blackjacks"] == 0
     assert get_blackjack_stats("nobody").blackjacks == 0
+
+
+def test_get_user_stats_can_be_limited_to_a_season(sqlite_session, monkeypatch):
+    from plugins.blackjack import database
+    from plugins.blackjack.models import Base
+    from plugins.blackjack.models import GameResult
+    from plugins.blackjack.game_service import BlackjackGameService
+    from plugins.blackjack.stats_service import get_blackjack_stats
+
+    sqlite_session(database, Base)
+    timestamps = iter((99, 100, 199, 200))
+    monkeypatch.setattr("plugins.blackjack.game_service.time.time", lambda: next(timestamps))
+    for result, winnings in (
+        (GameResult.WIN, 10),
+        (GameResult.BLACKJACK, 15),
+        (GameResult.BUST, -10),
+        (GameResult.WIN, 10),
+    ):
+        BlackjackGameService.record_game("u1", 10, result, winnings)
+
+    stats = get_blackjack_stats("u1", start_time=100, end_time=200)
+
+    assert stats.total_games == 2
+    assert stats.wins == 1
+    assert stats.blackjacks == 1
+    assert stats.recent_games[0].time == 199

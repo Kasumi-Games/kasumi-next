@@ -30,9 +30,15 @@ class GameSession:
     visited_nodes: Set[Node] = field(default_factory=set)
     move_history: list[str] = field(default_factory=list)
     started_at: float = field(init=False)
+    #: Stable per-game identity stamp, set once at creation and never mutated
+    #: (``started_at`` is reset by :meth:`restart_timer`, so it cannot anchor
+    #: anything that must stay fixed for the whole game — the deterministic
+    #: board background keys off this instead).
+    created_at: float = field(init=False)
 
     def __post_init__(self) -> None:
         self.started_at = time.monotonic()
+        self.created_at = time.time()
         self.current_pos = self.graph.start_node
         self.visited_nodes = {self.graph.start_node}
 

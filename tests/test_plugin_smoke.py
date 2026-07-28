@@ -44,3 +44,9 @@ def test_plugin_imports_without_startup_side_effects(module_name: str) -> None:
         importlib.import_module(dependency)
     module = importlib.import_module(module_name)
     assert module is not None
+
+
+def test_channels_exports_existing_member_lookup() -> None:
+    module = importlib.import_module("plugins.channels")
+    assert module.get_member_channels.__self__ is module.manager
+    assert callable(module.manager.delete_channel)

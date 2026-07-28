@@ -1,18 +1,20 @@
 # 头像框素材规格
 
-> 给手绘头像框用的落地规格。画完把文件放到指定路径即可生效，**零代码改动**。
+> 给手绘头像框物品用的落地规格。原位覆盖对应 PNG 即可生效，**零代码改动**。
 
 ## 文件
 
 | 项 | 值 |
 | --- | --- |
-| 路径 | `plugins/render/kits/kasumi/resources/frames/avatar_frame.png` |
+| 目录 | `plugins/inventory/resources/items/avatar_frames/` |
 | 格式 | PNG，带 alpha 通道（RGBA） |
 | 画布 | **512 × 512** 正方形 |
 
-kit 启动时自动探测该文件：存在则使用，不存在则回退到代码绘制的占位框
-（珊瑚色圆环 + 细金外环 + 两颗金色四芒星）。两者几何完全一致，
-所以你随时替换，版式不会变。
+文件名与 `item_id` 完全一致，例如
+`frame_starbeat_champion.png`。`items.json` 中每个头像框物品的
+`metadata.art` 指向这里；装备后由资料卡的 `frame_image` 槽位渲染。
+
+当前待手绘的物品已经放好透明底白色圆环占位，直接覆盖同名文件即可。
 
 ## 几何约定
 
@@ -21,7 +23,7 @@ kit 启动时自动探测该文件：存在则使用，不存在则回退到代�
 │                                 │
 │      ┌───── Ø416 ─────┐        │
 │      │                 │        │
-│      │   头像露出区    │        │   ← 这个圆内必须完全透明
+│      │   头像露出区    │        │   ← 中心脸部安全区必须透明
 │      │  （圆形，居中） │        │
 │      │                 │        │
 │      └─────────────────┘        │
@@ -32,10 +34,10 @@ kit 启动时自动探测该文件：存在则使用，不存在则回退到代�
 
 - **头像圆：直径 416，画布正中央**。渲染时头像先画（圆形裁剪），框叠在上面，
   框素材按「416 圆 = 头像直径」的比例缩放。
-- **Ø416 圆内必须透明**（头像要从这里露出来）。框体元素可以少量侵入圆内
-  （比如挂在环上的装饰、星星压住头像边缘），但别挡脸的位置 —— 侵入上限 **48px**
-  （顶部/边缘装饰可接受的深度；有测试强制校验，见
-  `tests/test_tier_a_kasumi.py::test_asset_respects_the_intrusion_allowance`）。
+- **头像主体必须清晰可见**。普通圆环尽量留空 Ø416 圆；角色造型框可以让头发、
+  耳朵或挂件从边缘深入，但画布正中央的 **128 × 128** 脸部安全区必须完全透明。
+  这项约束允许香澄框的刘海自然包脸，同时避免框体真正遮住头像五官（有测试强制
+  校验，见 `tests/test_tier_a_kasumi.py::test_asset_preserves_the_face_safe_zone`）。
 - **圆外到画布边缘全部可用**，四个角也可以画（比如伸出去的星星、缎带）。
   超出画布的部分会被裁掉。
 
@@ -61,25 +63,8 @@ kit 启动时自动探测该文件：存在则使用，不存在则回退到代�
 
 ## 交付后验证
 
-放好文件后跑一遍即可肉眼确认三个尺寸：
+放好文件后运行测试即可检查尺寸、透明通道和物品引用：
 
 ```shell
-uv run python - <<'PY'
-from plugins.render import PlayerIdentity
-from plugins.render.kits.kasumi import KasumiKit
-from utils import cards
-kit = KasumiKit()
-identity = PlayerIdentity(nickname="户山香澄", level=42)
-cards.response_card(
-    kit, title="头像框验证",
-    body=cards.game_identity(kit, identity, width=cards.CONTENT_WIDTH, detail="押注 120 Pt"),
-).save(".cache/render-previews/frame-check.png")
-print("saved .cache/render-previews/frame-check.png")
-PY
+uv run pytest -q tests/test_gacha_filler_art.py tests/test_profile_standing_art.py
 ```
-
-## 将来做成装扮道具时
-
-头像框作为 `avatar_frame` 装扮上线时，素材同样按本规格制作，
-经 `items.json` 的 cosmetic 条目挂载（参考 `frame_s1_6star_character` 的占位条目）；
-渲染侧 `player_card` 的 `frame_image` 参数已经预留，装备后自动替换主题默认框。

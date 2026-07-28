@@ -21,7 +21,6 @@ import sys
 import json
 import time
 import base64
-import shutil
 import signal
 import asyncio
 import argparse
@@ -329,7 +328,8 @@ async def scenario_full(box: Sandbox) -> None:
 
 
 async def scenario_extra(box: Sandbox) -> None:
-    """Surfaces the full scenario missed: nickname identity, blackjack, cck."""
+    """Surfaces the full scenario missed: nickname identity, blackjack, cck,
+    guess_chart."""
 
     p, p2, admin = PLAYER, PLAYER2, ADMIN
 
@@ -349,6 +349,13 @@ async def scenario_extra(box: Sandbox) -> None:
 
     await box.say(p, "猜卡面", label="猜卡面出题", timeout=90)
     await box.say(p2, "bzd", label="bzd 揭示卡", timeout=60)
+
+    # 猜谱面 was the gap that let a live P0 through: with no argument the
+    # difficulty defaults to normal, so the start path calls the bestdori
+    # chart renderer (render_chart) — exactly the name the render/ reveal
+    # subpackage shadowed. Needs bestdori network access; generous timeout.
+    await box.say(p, "猜谱面", label="猜谱面出题（bestdori 谱面渲染）", timeout=180)
+    await box.say(p2, "bzd", label="猜谱面 bzd 揭示卡", timeout=60)
 
     await box.say(p, "一笔画排行榜", label="一笔画排行榜")
     await box.say(p, "help 探险", label="帮助详情卡")

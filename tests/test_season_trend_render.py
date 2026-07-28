@@ -5,17 +5,24 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pytest
+from PIL import Image
 
 from utils import PassiveGenerator
 from utils.images import image_segment
 from plugins.render.kits import MangaKit
+from plugins.render.kits import KasumiKit
 from plugins.render.kits import MinimalKit
 from plugins.render.kits import MidnightKit
+from plugins.render.kits import BanGDreamKit
 from plugins.inventory.models import Season
 from plugins.inventory.models import SeasonRankSnapshot
+from plugins.inventory.season_render import _chart_image
+from plugins.inventory.season_render import _label_spans
+from plugins.inventory.season_render import _thin_label_spans
 from plugins.inventory.season_render import season_trend_data
 from plugins.inventory.season_render import season_trend_page
 from plugins.inventory.season_render import render_season_trend
+from plugins.inventory.season_render import _spread_tick_indices
 
 _BASE_TS = 1_752_000_000
 
@@ -125,6 +132,198 @@ def test_the_render_is_deterministic() -> None:
     first = render_season_trend(_data(), kit)
     second = render_season_trend(_data(), kit)
     assert first.tobytes() == second.tobytes()
+
+
+# ---------------------------------------------------------------------------
+# Clipping and collision regressions, from live reports: y labels ran off the
+# left edge with big Pt values, wide config-driven legend entries ran off the
+# right edge, and clustered snapshot times overlapped their x labels.
+#
+# The detector runs on the chart raster (transparent background), where
+# "non-background within N px of an edge" is a plain alpha check; the themed
+# card paints decoration to its edges, so it cannot host this assertion.
+# ---------------------------------------------------------------------------
+
+_EDGE_BAND = 4
+
+
+def _assert_edge_band_clean(chart: Image.Image, band: int = _EDGE_BAND) -> None:
+    rgba = chart.convert("RGBA")
+    width, height = rgba.size
+    edges = {
+        "left": (0, 0, band, height),
+        "right": (width - band, 0, width, height),
+        "top": (0, 0, width, band),
+        "bottom": (0, height - band, width, height),
+    }
+    for side, box in edges.items():
+        alpha_max = rgba.crop(box).getextrema()[3][1]
+        assert alpha_max <= 8, f"chart ink within {band}px of the {side} edge"
+
+
+def _six_digit_snapshots() -> list[SeasonRankSnapshot]:
+    rows: list[SeasonRankSnapshot] = []
+    for index in range(4 * 48):
+        ts = _BASE_TS + index * 1800
+        rows.append(_snapshot(ts, 10, 480_000 + 4_000 * index))
+        rows.append(_snapshot(ts, 100, 120_000 + 900 * index))
+    return rows
+
+
+def _wide_legend_snapshots() -> list[SeasonRankSnapshot]:
+    rows: list[SeasonRankSnapshot] = []
+    for index in range(24):
+        ts = _BASE_TS + index * 7200
+        for rank in (100, 500, 1000, 2000, 5000):
+            rows.append(_snapshot(ts, rank, 90_000 - rank * 10 + index * 260))
+    return rows
+
+
+def _clustered_snapshots() -> list[SeasonRankSnapshot]:
+    times = [_BASE_TS + index * 600 for index in range(13)]
+    times.append(_BASE_TS + 86_400 * 5)
+    rows: list[SeasonRankSnapshot] = []
+    for index, ts in enumerate(times):
+        rows.append(_snapshot(ts, 10, 500 + 40 * index))
+        rows.append(_snapshot(ts, 50, 200 + 15 * index))
+    return rows
+
+
+@pytest.mark.parametrize("kit_cls", [BanGDreamKit, KasumiKit])
+@pytest.mark.parametrize(
+    "snapshots",
+    [_six_digit_snapshots, _wide_legend_snapshots, _clustered_snapshots],
+    ids=["six-digit-values", "wide-legend-ranks", "clustered-times"],
+)
+def test_worst_case_charts_keep_ink_off_every_canvas_edge(
+    kit_cls, snapshots
+) -> None:
+    data = season_trend_data(_season(), snapshots(), owner_name="香澄")
+    chart = _chart_image(data, kit_cls())
+    assert chart.size == (1440, 720)
+    _assert_edge_band_clean(chart)
+    # The full card must also still assemble around the measured chart.
+    assert render_season_trend(data, kit_cls()).size[0] == 864
+
+
+@pytest.mark.parametrize("kit_cls", [BanGDreamKit, KasumiKit])
+def test_a_single_snapshot_chart_keeps_ink_off_every_canvas_edge(
+    kit_cls,
+) -> None:
+    data = season_trend_data(_season(), [_snapshot(_BASE_TS, 10, 12345)])
+    _assert_edge_band_clean(_chart_image(data, kit_cls()))
+
+
+# The edge-band raster check cannot pin two of the live defects on its own:
+# the pre-fix right-edge legend truncation happened to cut in a glyph gap
+# (verified: the old code passes the band check on the wide-legend case), and
+# the clustered-label overlap is mid-canvas where no edge band looks. These
+# spies pin the fix behavior itself: the legend measurably refits to fewer
+# columns, and crowded middle ticks are measurably thinned.
+
+
+def test_wide_legend_case_measurably_refits_to_fewer_columns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from plugins.inventory import season_render
+
+    columns_used: list[int] = []
+    real_build = season_render._build_legend
+
+    def spy(ax, columns, tick_font, text_color):
+        columns_used.append(columns)
+        return real_build(ax, columns, tick_font, text_color)
+
+    monkeypatch.setattr(season_render, "_build_legend", spy)
+    data = season_trend_data(_season(), _wide_legend_snapshots())
+    chart = _chart_image(data, BanGDreamKit())
+
+    assert chart.size == (1440, 720)
+    assert columns_used[0] == season_render._LEGEND_COLUMNS
+    # 「第 5000 名」 entries at three columns measure wider than the axes; the
+    # refit must have engaged, not just been present.
+    assert columns_used[-1] < season_render._LEGEND_COLUMNS
+
+
+@pytest.mark.parametrize(
+    ("snapshots", "expected"),
+    [(_clustered_snapshots, 2), (_six_digit_snapshots, 3)],
+    ids=["clustered-thins-to-endpoints", "even-cadence-keeps-a-middle"],
+)
+def test_final_time_ticks_are_thinned_but_not_overthinned(
+    monkeypatch: pytest.MonkeyPatch, snapshots, expected
+) -> None:
+    from plugins.inventory import season_render
+
+    tick_sets: list[list[int]] = []
+    real_ticks = season_render._set_time_ticks
+
+    def spy(ax, ticks, tick_font, text_color):
+        tick_sets.append(list(ticks))
+        return real_ticks(ax, ticks, tick_font, text_color)
+
+    monkeypatch.setattr(season_render, "_set_time_ticks", spy)
+    data = season_trend_data(_season(), snapshots())
+    _chart_image(data, BanGDreamKit())
+
+    times = sorted({ts for series in data.series for ts, _ in series.points})
+    final = tick_sets[-1]
+    assert len(final) == expected
+    assert final[0] == times[0]
+    assert final[-1] == times[-1]
+
+
+def test_worst_case_render_is_deterministic() -> None:
+    kit = KasumiKit()
+    data = season_trend_data(_season(), _wide_legend_snapshots())
+    first = render_season_trend(data, kit)
+    second = render_season_trend(data, kit)
+    assert first.tobytes() == second.tobytes()
+
+
+def test_spread_tick_indices_spread_by_value_not_by_index() -> None:
+    # 13 clustered values then one far away: the index-based middle pick used
+    # to land the middle tick in the same pixel column as the first one.
+    values = [index * 600 for index in range(13)] + [86_400 * 5]
+
+    indices = _spread_tick_indices(values, 3)
+
+    assert indices[0] == 0
+    assert indices[-1] == len(values) - 1
+    assert len(indices) <= 3
+    # The middle pick is the value nearest the range midpoint, not index 7.
+    midpoint = values[-1] / 2
+    for index in indices[1:-1]:
+        assert abs(values[index] - midpoint) == min(
+            abs(value - midpoint) for value in values
+        )
+
+
+def test_spread_tick_indices_keep_small_sets_verbatim() -> None:
+    assert _spread_tick_indices([5], 4) == [0]
+    assert _spread_tick_indices([5, 9, 12], 4) == [0, 1, 2]
+
+
+def test_label_spans_follow_the_edge_alignment_rule() -> None:
+    spans = _label_spans([100.0, 500.0, 900.0], 200.0)
+    assert spans[0] == (100.0, 300.0)  # first extends right
+    assert spans[1] == (400.0, 600.0)  # middle is centered
+    assert spans[2] == (700.0, 900.0)  # last extends left
+
+
+def test_thin_label_spans_drop_a_middle_that_crowds_the_first() -> None:
+    spans = [(0.0, 200.0), (150.0, 350.0), (800.0, 1000.0)]
+    assert _thin_label_spans(spans, 48.0) == [0, 2]
+
+
+def test_thin_label_spans_keep_middles_with_room() -> None:
+    spans = [(0.0, 200.0), (400.0, 600.0), (800.0, 1000.0)]
+    assert _thin_label_spans(spans, 48.0) == [0, 1, 2]
+
+
+def test_thin_label_spans_always_pin_first_and_last() -> None:
+    assert _thin_label_spans([(0.0, 10.0)], 48.0) == [0]
+    assert _thin_label_spans([(0.0, 10.0), (5.0, 15.0)], 48.0) == [0, 1]
 
 
 def test_image_reply_keeps_the_passive_element(

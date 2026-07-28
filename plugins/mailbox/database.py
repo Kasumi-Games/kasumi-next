@@ -28,6 +28,7 @@ def init_database():
 
     # 创建所有表
     Base.metadata.create_all(engine)
+    migrate_mailbox_schema(engine)
 
     # 创建会话
     session = sessionmaker(bind=engine)()
@@ -38,3 +39,23 @@ def get_session():
     if session is None:
         init_database()
     return session
+
+
+def migrate_mailbox_schema(engine) -> None:
+    """Add columns/indexes that ``create_all`` cannot retrofit.
+
+    ``external_key`` is the exactly-once boundary used by cross-database
+    outboxes such as season settlement rewards. SQLite permits multiple NULL
+    values in a unique index, so ordinary mails remain unrestricted.
+    """
+
+    with engine.begin() as conn:
+        columns = {
+            row[1] for row in conn.exec_driver_sql("PRAGMA table_info(mails)").fetchall()
+        }
+        if "external_key" not in columns:
+            conn.exec_driver_sql("ALTER TABLE mails ADD COLUMN external_key VARCHAR")
+        conn.exec_driver_sql(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_mails_external_key "
+            "ON mails(external_key)"
+        )

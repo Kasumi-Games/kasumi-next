@@ -53,6 +53,11 @@ BanGDreamFont = Literal["chinese", "display"]
 #: Height of the reveal-tile art slot (contain-fit, so any aspect letterboxes).
 _ART_SLOT_HEIGHT = 96
 
+#: Width of the player card's standing-art column. The column exists only
+#: when a standing art is equipped, so an art-less card keeps its exact
+#: former layout.
+_STANDING_ART_COLUMN_WIDTH = 240
+
 
 class BanGDreamKit(BaseKit):
     """BanG Dream!-styled rendering kit.
@@ -417,6 +422,7 @@ class BanGDreamKit(BaseKit):
         description: str,
         width: SizeValue | int,
         height: SizeValue | int,
+        standing_art: ImageSource | None = None,
     ) -> Component:
         """Create the BanG Dream! player identity card.
 
@@ -424,10 +430,16 @@ class BanGDreamKit(BaseKit):
         (frame art overlays it once assets exist), then nickname + level chip,
         a fixed-height title slot (a primary accent bar until title art
         exists, so titles land later without reflow), and the profile line.
-        Bottom band: season Pt and level as display-font numerals, with a
-        muted watermark. All must-read text is ``text_color`` or white on
-        ``text_color``; the primary appears only as ring, accent bar, and
-        panel chrome.
+        Bottom band: season Pt and level as display-font numerals. All
+        must-read text is ``text_color`` or white on ``text_color``; the
+        primary appears only as ring, accent bar, and panel chrome.
+
+        An equipped standing art (``standing_art``, dispatcher-threaded — see
+        the authoring guide §2) adds a right-side contain-fit art column,
+        anchored bottom-right like a trim card. The column exists only when
+        art is provided: the left column keeps its exact composition — same
+        rows, same fixed heights — and only narrows, its single-line texts
+        ellipsizing rather than reflowing.
         """
 
         card_width = _as_px(width, fallback=784)
@@ -493,8 +505,10 @@ class BanGDreamKit(BaseKit):
             slot_child = self.separator(
                 length=Fixed(96), thickness=6, color=self.primary
             )
+        # Top-aligned inside the fixed slot: the accent bar hugs the name line
+        # while the slot's remaining height keeps the distance to the bio.
         title_slot = Frame(
-            slot_child, height=Fixed(44), align_x="start", align_y="center"
+            slot_child, height=Fixed(44), align_x="start", align_y="start"
         )
 
         profile_text = description.strip()
@@ -526,29 +540,33 @@ class BanGDreamKit(BaseKit):
                 self.separator(orientation="vertical", length=Fixed(52), thickness=3),
                 self._stat_block("等级", chip_text),
                 Spacer(width=Fill()),
-                Frame(
-                    self.text(
-                        "BanG Dream!",
-                        font_size=20,
-                        color=self.muted_text_color,
-                        wrap=False,
-                        max_lines=1,
-                        font="display",
-                    ),
-                    align_x="end",
-                    align_y="end",
-                ),
             ],
             gap=24,
             align="center",
         )
 
-        return self.panel(
-            VStack(
-                [top, Spacer(height=Fill()), self.separator(length=Fill()), stats],
-                gap=18,
+        column: Component = VStack(
+            [top, Spacer(height=Fill()), self.separator(length=Fill()), stats],
+            gap=18,
+            align="stretch",
+        )
+        if standing_art is not None:
+            column = HStack(
+                [
+                    Frame(column, width=Fill(), align_x="stretch", align_y="stretch"),
+                    Frame(
+                        self.image(standing_art, height=Fill(), fit="contain"),
+                        width=Fixed(_STANDING_ART_COLUMN_WIDTH),
+                        align_x="end",
+                        align_y="end",
+                    ),
+                ],
+                gap=24,
                 align="stretch",
-            ),
+            )
+
+        return self.panel(
+            column,
             width=Fixed(card_width),
             height=Fixed(card_height),
             padding=Insets.only(left=36, top=32, right=36, bottom=30),
@@ -574,7 +592,13 @@ class BanGDreamKit(BaseKit):
 
         grid_width = _as_px(width, fallback=720)
         count = max(1, len(pulls))
-        columns = 5 if len(pulls) > 5 else count
+        columns = (
+            10
+            if len(pulls) > 5 and grid_width >= 1200
+            else 5
+            if len(pulls) > 5
+            else count
+        )
         gap = 12
         tile_width = min(240, (grid_width - gap * (columns - 1)) // columns)
         # Batch-driven art slot: when any pull carries art, every tile grows

@@ -75,7 +75,9 @@ def _convert_db_games_to_records(
     return game_records
 
 
-def get_blackjack_stats(user_id: str) -> BlackjackStats:
+def get_blackjack_stats(
+    user_id: str, *, start_time: int | None = None, end_time: int | None = None
+) -> BlackjackStats:
     """
     获取用户的blackjack游戏统计数据
 
@@ -86,7 +88,9 @@ def get_blackjack_stats(user_id: str) -> BlackjackStats:
         完整的blackjack统计数据
     """
     # 从数据库获取统计信息
-    stats_dict = BlackjackGameService.get_user_stats(user_id)
+    stats_dict = BlackjackGameService.get_user_stats(
+        user_id, start_time=start_time, end_time=end_time
+    )
 
     if stats_dict["total_games"] == 0:
         # 没有游戏记录，返回空统计
@@ -111,7 +115,9 @@ def get_blackjack_stats(user_id: str) -> BlackjackStats:
         )
 
     # 获取最近30次游戏记录
-    recent_db_games = BlackjackGameService.get_user_games(user_id, limit=30)
+    recent_db_games = BlackjackGameService.get_user_games(
+        user_id, limit=30, start_time=start_time, end_time=end_time
+    )
     recent_games = _convert_db_games_to_records(recent_db_games)
 
     return BlackjackStats(

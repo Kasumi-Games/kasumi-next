@@ -22,9 +22,9 @@ from dataclasses import dataclass
 from PIL import Image
 
 from utils.cards import LABEL_SIZE
+from utils.cards import CONTENT_WIDTH
 from utils.cards import card_page
 from utils.cards import pull_reveal
-from utils.cards import panel_section
 from plugins.render import Frame
 from plugins.render import VStack
 from plugins.render import BaseKit
@@ -37,6 +37,10 @@ from ..service import GachaBanner
 from ..service import GachaResult
 
 _COMPENSATION_PATTERN = re.compile(r"already_owned_compensated:(\d+)")
+
+# A ten-pull is a result screen: ten narrow character tickets sit in one
+# uninterrupted horizontal strip.
+TEN_PULL_CONTENT_WIDTH = 1480
 
 
 @dataclass(frozen=True)
@@ -198,12 +202,18 @@ def pull_page(data: PullPageData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+    is_ten = len(data.pulls) >= 10
+    page_width = TEN_PULL_CONTENT_WIDTH if is_ten else CONTENT_WIDTH
     return card_page(
         kit,
         title=data.banner_name,
-        subtitle="十连" if len(data.pulls) >= 10 else "单抽",
-        body=panel_section(kit, pull_reveal(kit, data.pulls)),
+        subtitle="十连" if is_ten else "单抽",
+        # The tickets are the result screen. Keeping them directly on the
+        # themed sky lets the character art breathe instead of nesting it in
+        # a second, featureless white card.
+        body=pull_reveal(kit, data.pulls, width=page_width),
         footer=_footer(kit, data),
+        width=page_width,
     )
 
 
