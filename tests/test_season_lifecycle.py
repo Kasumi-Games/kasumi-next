@@ -27,6 +27,7 @@ from plugins.inventory.models import UserItem
 from plugins.inventory.models import CurrencyItem
 from plugins.inventory.models import SeasonReward
 from plugins.inventory.models import SeasonRanking
+from plugins.inventory.models import SeasonRankSnapshot
 from plugins.inventory.models import SeasonParticipation
 from plugins.inventory.service import grant_item
 from plugins.inventory.service import get_quantity
@@ -148,6 +149,40 @@ def test_real_first_season_uses_the_committed_28_day_window():
     ends_at = datetime.fromisoformat(first["ends_at"])
     assert first["starts_at"] == "2026-08-01T00:00:00+08:00"
     assert (ends_at - starts_at).days == 28
+    assert first["snapshot_interval_minutes"] == 5
+
+
+def test_rank_snapshots_capture_each_five_minute_window(lifecycle_db):
+    """Each five-minute bucket is captured once, even when ranks stay put."""
+    session, config = lifecycle_db
+    config["seasons"][0]["snapshot_interval_minutes"] = 5
+    season = season_service.sync_seasons_config(now=START)[0]
+    assert season_service.activate_due_seasons(now=START) == 1
+
+    for user_id, quantity in (("u1", 300), ("u2", 200), ("u3", 100)):
+        grant_item(
+            user_id,
+            SEASON_POINT_ITEM_ID,
+            quantity,
+            "test",
+            scope=(SEASON_SCOPE_TYPE, str(season.id)),
+        )
+
+    assert season_service.capture_rank_snapshots(now=START + 4 * 60 + 50) == 2
+    assert season_service.capture_rank_snapshots(now=START + 4 * 60 + 59) == 0
+    assert season_service.capture_rank_snapshots(now=START + 5 * 60 + 1) == 2
+
+    snapshots = (
+        session.query(SeasonRankSnapshot)
+        .order_by(SeasonRankSnapshot.captured_at, SeasonRankSnapshot.rank)
+        .all()
+    )
+    assert [(row.captured_at, row.rank, row.points) for row in snapshots] == [
+        (START, 1, 325),
+        (START, 3, 125),
+        (START + 5 * 60, 1, 325),
+        (START + 5 * 60, 3, 125),
+    ]
 
 
 def test_inventory_migration_adds_opened_at_and_unique_season_key(monkeypatch):
