@@ -6,7 +6,7 @@ from nonebot.adapters.satori import MessageEvent
 from utils import PassiveGenerator
 from utils.content_safety import ContentSafetyError
 from utils.content_safety import ensure_safe_text
-from utils.images import image_segment
+from utils.images import image_segment_async
 from utils.theming import kit_for_user
 
 from .render import board_page
@@ -102,6 +102,22 @@ plugin_data = {
         # No 装备 example: real item ids exceed the 224px example cell and an
         # ellipsized example cannot be copied; the usage row shows the shape.
         "examples": ["/装扮", "/装扮 卸下 头像框"],
+    },
+    "流星堂": {
+        "description": "使用重复装扮产生的盆栽兑换收藏",
+        "usage": {
+            "/流星堂": "查看流星堂货架、盆栽余额和本季加抽额度",
+            "/流星堂 <立绘|头像框|主题> [页码]": "查看指定货架",
+            "/流星堂 预览 <主题商品编号>": "用待售主题真实渲染一张实机预览卡",
+            "/流星堂 购买 <商品编号>": "直接购买商品",
+            "/流星堂 加抽": "花费 400 盆栽进行本季加抽，每季最多 5 次",
+        },
+        "examples": [
+            "/流星堂",
+            "/流星堂 立绘",
+            "/流星堂 购买 A01",
+            "/流星堂 加抽",
+        ],
     },
     "个人资料": {
         "description": "个人资料卡与个人简介",
@@ -244,7 +260,7 @@ async def _(event: MessageEvent, plugin: Message = CommandArg()):  # type: ignor
     if token == "":
         image = await board_page(HELP_ENTRIES, kit).render_async()
         await help.finish(
-            image_segment(image) + passive_generator.element,
+            await image_segment_async(image) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
@@ -261,7 +277,7 @@ async def _(event: MessageEvent, plugin: Message = CommandArg()):  # type: ignor
     if len(matches) == 1:
         image = await detail_page(matches[0], kit).render_async()
         await help.finish(
-            image_segment(image) + passive_generator.element,
+            await image_segment_async(image) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 

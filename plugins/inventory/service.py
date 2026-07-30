@@ -1,11 +1,11 @@
 """Inventory service APIs."""
 
-import json
 import re
+import json
 import time
-from pathlib import Path
 from typing import Iterable
 from typing import Optional
+from pathlib import Path
 
 from nonebot.log import logger
 
@@ -232,6 +232,9 @@ def cost_item(
     quantity: int,
     reason: str,
     scope: Optional[ItemScope | tuple[str, str]] = None,
+    source_type: str = "",
+    source_id: str = "",
+    idempotency_key: str | None = None,
 ) -> int:
     if quantity <= 0:
         raise ValueError("quantity must be positive")
@@ -241,6 +244,9 @@ def cost_item(
     scope_type, scope_id = resolve_scope(item_id, scope)
     if item_id == SEASON_POINT_ITEM_ID:
         _ensure_point_wallet(user_id, scope_type, scope_id)
+    tx_key = _tx_key(idempotency_key, user_id, item_id, scope_type, scope_id)
+    if tx_key and _has_transaction(tx_key):
+        return get_quantity(user_id, item_id, (scope_type, scope_id))
     row = _get_user_item(user_id, item_id, scope_type, scope_id)
     if row is None or row.quantity < quantity:
         raise ValueError("insufficient quantity")
@@ -258,9 +264,82 @@ def cost_item(
         -quantity,
         row.quantity,
         reason,
+        source_type,
+        source_id,
+        tx_key,
     )
     session.commit()
     return row.quantity
+
+
+def exchange_for_nonstackable(
+    user_id: str,
+    payment_item_id: str,
+    payment_amount: int,
+    item_id: str,
+    reason: str,
+    *,
+    source_type: str = "",
+    source_id: str = "",
+    idempotency_key: str | None = None,
+) -> GrantResult:
+    """Atomically exchange a stackable currency for one unowned cosmetic."""
+
+    if payment_amount <= 0:
+        raise ValueError("payment_amount must be positive")
+
+    session = get_session()
+    payment_item = _require_item(payment_item_id)
+    target_item = _require_item(item_id)
+    if not payment_item.stackable:
+        raise ValueError("payment item must be stackable")
+    if target_item.stackable:
+        raise ValueError("target item must be non-stackable")
+
+    payment_scope = resolve_scope(payment_item_id)
+    target_scope = resolve_scope(item_id)
+    owned = _get_user_item(user_id, item_id, *target_scope)
+    if owned is not None and owned.quantity > 0:
+        raise ValueError("item already owned")
+
+    wallet = _get_user_item(user_id, payment_item_id, *payment_scope)
+    if wallet is None or wallet.quantity < payment_amount:
+        raise ValueError("insufficient quantity")
+
+    target = _ensure_user_item(user_id, item_id, *target_scope)
+    wallet.quantity -= payment_amount
+    wallet.updated_at = int(time.time())
+    target.quantity = 1
+    target.updated_at = int(time.time())
+
+    payment_tx_key = (
+        None if idempotency_key is None else f"{idempotency_key}:payment"
+    )
+    grant_tx_key = None if idempotency_key is None else f"{idempotency_key}:grant"
+    _log_transaction(
+        user_id,
+        payment_item_id,
+        *payment_scope,
+        -payment_amount,
+        wallet.quantity,
+        reason,
+        source_type,
+        source_id,
+        payment_tx_key,
+    )
+    _log_transaction(
+        user_id,
+        item_id,
+        *target_scope,
+        1,
+        target.quantity,
+        reason,
+        source_type,
+        source_id,
+        grant_tx_key,
+    )
+    session.commit()
+    return GrantResult(item_id, 1, 1, target.quantity)
 
 
 def set_quantity(
@@ -409,9 +488,7 @@ def validate_profile_description(description: str) -> str:
     normalized = "\n".join(line.strip() for line in normalized.split("\n"))
     normalized = "\n".join(line for line in normalized.split("\n") if line)
     if len(normalized) > PROFILE_DESCRIPTION_MAX_LENGTH:
-        raise ValueError(
-            f"个人简介最多 {PROFILE_DESCRIPTION_MAX_LENGTH} 个字符"
-        )
+        raise ValueError(f"个人简介最多 {PROFILE_DESCRIPTION_MAX_LENGTH} 个字符")
     if not PROFILE_DESCRIPTION_PATTERN.fullmatch(normalized):
         raise ValueError("个人简介只能使用常见中日英文字、数字、空格和基础标点")
     return normalized

@@ -161,6 +161,67 @@ def pull(user_id: str, count: int = 1) -> list[GachaResult]:
     return results
 
 
+def pull_with_currency(
+    user_id: str,
+    payment_item_id: str,
+    payment_amount: int,
+    *,
+    idempotency_key: str,
+) -> GachaResult:
+    """Perform one normal banner pull paid with a non-sticker currency.
+
+    The draw uses the same banner, rates, pity state, rewards, and history as
+    ``pull``. Only the inventory debit differs. A failed draw is compensated
+    with an idempotent refund so the shop can safely expose paid bonus pulls.
+    """
+
+    if payment_amount <= 0:
+        raise ValueError("payment_amount must be positive")
+    if not idempotency_key:
+        raise ValueError("idempotency_key is required")
+
+    banner = get_current_banner()
+    if banner is None:
+        raise ValueError("当前没有开放的限定卡池")
+    _validate_banner_rewards(banner)
+
+    from ..inventory.service import cost_item
+    from ..inventory.service import grant_item
+
+    try:
+        cost_item(
+            user_id,
+            payment_item_id,
+            payment_amount,
+            "gacha_alternate_payment",
+            source_type="gacha",
+            source_id=banner.banner_key,
+            idempotency_key=f"{idempotency_key}:payment",
+        )
+    except ValueError:
+        raise ValueError("盆栽不足") from None
+
+    try:
+        return _pull_once(
+            user_id,
+            banner,
+            payment_amount,
+            0,
+            payment_item_id=payment_item_id,
+        )
+    except Exception:
+        grant_item(
+            user_id,
+            payment_item_id,
+            payment_amount,
+            "gacha_failed_pull_refund",
+            source_type="gacha_refund",
+            source_id=banner.banner_key,
+            idempotency_key=f"{idempotency_key}:refund",
+        )
+        raise
+
+
 def get_history(user_id: str, page: int, page_size: int = DEFAULT_PAGE_SIZE) -> HistoryPage:
     page = max(1, page)
     session = get_session()
@@ -193,7 +254,12 @@ def current_rates(banner: GachaBanner, pity_count: int) -> dict[int, float]:
 
 
 def _pull_once(
-    user_id: str, banner: GachaBanner, cost: int, batch_index: int
+    user_id: str,
+    banner: GachaBanner,
+    cost: int,
+    batch_index: int,
+    *,
+    payment_item_id: str = "star_sticker",
 ) -> GachaResult:
     session = get_session()
     state = get_state(user_id)
@@ -263,6 +329,7 @@ def _pull_once(
         character_id=entry.character_id,
         rarity=rarity,
         cost=cost,
+        payment_item_id=payment_item_id,
         pity_before=pity_before,
         pity_after=pity_after,
         message=grant_message,

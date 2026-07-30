@@ -25,13 +25,15 @@ from plugins.render.kits.bangdream import BanGDreamKit
 
 @dataclass(frozen=True)
 class InventoryListRow:
-    index: int
+    index: int | str
     name: str
     detail: str
     kind: str
     rarity: int = 0
     art: ImageSource | None = None
     equipped: bool = False
+    show_art_slot: bool = True
+    show_trailing: bool = True
 
 
 @dataclass(frozen=True)
@@ -118,48 +120,52 @@ def _row(kit: BaseKit, row: InventoryListRow) -> Component:
             kit.text("已装备", font_size=LABEL_SIZE, align="right", wrap=False)
         )
 
-    return kit.panel(
-        HStack(
-            [
-                badge(kit, str(row.index), width=48, height=40, font_size=20),
-                Frame(
-                    art_slot,
-                    width=Fixed(64),
-                    height=Fixed(64),
-                    align_x="center",
-                    align_y="center",
-                ),
-                Frame(
-                    VStack(
-                        [
-                            kit.text(
-                                row.name,
-                                font_size=BODY_SIZE,
-                                wrap=False,
-                                max_lines=1,
-                                overflow="shrink",
-                            ),
-                            kit.text(
-                                row.detail,
-                                font_size=LABEL_SIZE,
-                                color=kit.muted_text_color,
-                                wrap=False,
-                                max_lines=1,
-                                overflow="ellipsis",
-                            ),
-                        ],
-                        gap=5,
-                        align="stretch",
+    row_children: list[Component] = [
+        badge(kit, str(row.index), width=48, height=40, font_size=20)
+    ]
+    if row.show_art_slot:
+        row_children.append(
+            Frame(
+                art_slot,
+                width=Fixed(64),
+                height=Fixed(64),
+                align_x="center",
+                align_y="center",
+            )
+        )
+    row_children.append(
+        Frame(
+            VStack(
+                [
+                    kit.text(
+                        row.name,
+                        font_size=BODY_SIZE,
+                        wrap=False,
+                        max_lines=1,
+                        overflow="shrink",
                     ),
-                    width=Fill(),
-                    align_x="stretch",
-                    align_y="center",
-                ),
-                VStack(right_rows, gap=4, align="end"),
-            ],
-            gap=16,
-            align="center",
-        ),
+                    kit.text(
+                        row.detail,
+                        font_size=LABEL_SIZE,
+                        color=kit.muted_text_color,
+                        wrap=False,
+                        max_lines=1,
+                        overflow="ellipsis",
+                    ),
+                ],
+                gap=5,
+                align="stretch",
+            ),
+            width=Fill(),
+            align_x="stretch",
+            align_y="center",
+        )
+    )
+    if row.show_trailing:
+        row_children.append(VStack(right_rows, gap=4, align="end"))
+
+    return kit.panel(
+        HStack(row_children, gap=16, align="center"),
         width=Fixed(INNER_WIDTH),
         height=Fixed(92),
         padding=Insets.only(left=12, top=10, right=16, bottom=10),

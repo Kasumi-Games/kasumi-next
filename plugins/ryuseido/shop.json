@@ -1,0 +1,134 @@
+{
+  "items": [
+    {
+      "sku": "A01",
+      "section": "standing_art",
+      "item_id": "standing_art_placeholder_r4_001",
+      "price": 500
+    },
+    {
+      "sku": "A02",
+      "section": "standing_art",
+      "item_id": "standing_art_placeholder_r4_002",
+      "price": 500
+    },
+    {
+      "sku": "A03",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_moca_warm_moment",
+      "price": 500
+    },
+    {
+      "sku": "A04",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_misaki_aquarium",
+      "price": 500
+    },
+    {
+      "sku": "A05",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_hina_on_my_mind",
+      "price": 500
+    },
+    {
+      "sku": "A06",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_lisa_dont_worry",
+      "price": 500
+    },
+    {
+      "sku": "A07",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_tomori_little_animal",
+      "price": 500
+    },
+    {
+      "sku": "A08",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_anon_getting_along",
+      "price": 500
+    },
+    {
+      "sku": "A09",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_soyo_calm_mediator",
+      "price": 500
+    },
+    {
+      "sku": "A10",
+      "section": "standing_art",
+      "item_id": "standing_art_placeholder_r5_002",
+      "price": 900
+    },
+    {
+      "sku": "A11",
+      "section": "standing_art",
+      "item_id": "standing_art_placeholder_r3_002",
+      "price": 900
+    },
+    {
+      "sku": "A12",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_kokoro_prayer",
+      "price": 900
+    },
+    {
+      "sku": "A13",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_mashiro_sea_story",
+      "price": 900
+    },
+    {
+      "sku": "A14",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_rokka_home_run",
+      "price": 900
+    },
+    {
+      "sku": "A15",
+      "section": "standing_art",
+      "item_id": "standing_art_placeholder_r5_001",
+      "price": 1400
+    },
+    {
+      "sku": "A16",
+      "section": "standing_art",
+      "item_id": "standing_art_placeholder_r3_001",
+      "price": 1400
+    },
+    {
+      "sku": "A17",
+      "section": "standing_art",
+      "item_id": "standing_art_standard_aya_self_search",
+      "price": 1400
+    },
+    {
+      "sku": "F01",
+      "section": "avatar_frame",
+      "item_id": "frame_shop_stardust",
+      "price": 1200
+    },
+    {
+      "sku": "F02",
+      "section": "avatar_frame",
+      "item_id": "frame_shop_greenhouse",
+      "price": 1200
+    },
+    {
+      "sku": "F03",
+      "section": "avatar_frame",
+      "item_id": "frame_shop_neon_record",
+      "price": 1800
+    },
+    {
+      "sku": "T01",
+      "section": "theme",
+      "item_id": "theme_sakura",
+      "price": 3000
+    }
+  ],
+  "season_pull": {
+    "price": 400,
+    "limit": 5
+  }
+}

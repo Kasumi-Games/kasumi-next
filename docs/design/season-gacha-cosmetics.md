@@ -226,14 +226,35 @@ Past themes can later enter the 盆栽 shop.
 
 ## 盆栽 Shop
 
-The 盆栽 shop is deferred to a later phase.
+The player-facing shop is called `流星堂`, matching the BanG Dream! setting.
+`盆栽` remains the permanent currency name.
 
-For this update, players can receive 盆栽 from duplicates, but they cannot spend
-it yet.
+The shop is controlled by the git-tracked
+`plugins/ryuseido/shop.json`. Its first permanent catalog contains:
 
-When the shop is added later, it should be controlled by a git-tracked JSON file
-similar to `plugins/inventory/items.json`. It does not need `version`,
-`available`, `starts_at`, or `ends_at` fields in the first shop version.
+- the existing ★★★–★★★★★ normal-pool standing art
+- three replaceable placeholder avatar frames
+- the previously unissued `樱色` theme
+- up to five current-banner bonus pulls per player and season
+
+Permanent prices are:
+
+| Product | 盆栽 |
+| --- | ---: |
+| ★★★ standing art | 500 |
+| ★★★★ standing art | 900 |
+| ★★★★★ standing art | 1,400 |
+| Standard shop avatar frame | 1,200 |
+| Premium shop avatar frame | 1,800 |
+| Permanent theme | 3,000 |
+| Current-season bonus pull | 400, limit 5 per season |
+
+Bonus pulls execute immediately, use the current limited banner, and count
+toward normal pity and history. No ticket is created, so pulls cannot be
+stockpiled across seasons.
+
+Past season-limited themes must not be sold for 盆栽. Rank avatar frames and
+titles also remain achievement-only.
 
 ## Avatar Frame Policy
 
@@ -420,5 +441,3 @@ Defer:
 - low-rarity cosmetic filler
 - duo rewards for collecting both ★★★★★★ characters
 - multiple theme variants in the same season
-- 盆栽 shop
-- 盆栽 shop JSON loader

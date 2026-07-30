@@ -28,6 +28,7 @@ class GachaPull(Base):
     character_id = Column(String, default="", nullable=False)
     rarity = Column(Integer, nullable=False)
     cost = Column(Integer, nullable=False)
+    payment_item_id = Column(String, default="star_sticker", nullable=False)
     pity_before = Column(Integer, nullable=False)
     pity_after = Column(Integer, nullable=False)
     message = Column(String, default="", nullable=False)

@@ -81,6 +81,7 @@ class GachaServiceTest(unittest.TestCase):
         history = get_history("u1", 1)
         self.assertEqual(history.total, 1)
         self.assertEqual(history.rows[0].item_id, "standing_art_placeholder_r3_001")
+        self.assertEqual(history.rows[0].payment_item_id, STAR_STICKER_ITEM_ID)
 
     def test_ten_pull_failure_only_charges_completed_pulls(self) -> None:
         grant_item("u1", STAR_STICKER_ITEM_ID, 1200, "test")
