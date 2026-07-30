@@ -1,10 +1,14 @@
 from nonebot import get_driver
 from nonebot import on_command
+from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot.adapters import Message
 from nonebot.adapters.satori import MessageEvent
 
 from utils import PassiveGenerator
+from utils.content_safety import ContentSafetyError
+from utils.content_safety import ensure_safe_text
+from utils.content_safety import safe_display_text
 
 from .. import monetary
 from .data_source import Nickname
@@ -12,6 +16,7 @@ from .data_source import get
 from .data_source import get_id
 from .data_source import session
 from .data_source import init_database
+from .data_source import purge_unsafe_nicknames
 
 set_nickname = on_command("setnick", priority=30, aliases={"叫我", "设置昵称"})
 get_nickname = on_command("getnick", priority=30, aliases={"我的昵称"})
@@ -22,6 +27,10 @@ async def init():
     global session
     init_database()
     from .data_source import session
+
+    removed = purge_unsafe_nicknames()
+    if removed:
+        logger.warning(f"nickname compliance cleanup removed {removed} record(s)")
 
 
 @set_nickname.handle()
@@ -46,6 +55,14 @@ async def handle_set_nickname(event: MessageEvent, arg: Message = CommandArg()):
     if "\n" in text:
         await set_nickname.finish(
             "昵称不能包含换行符" + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    try:
+        ensure_safe_text(text)
+    except ContentSafetyError as error:
+        await set_nickname.finish(
+            str(error) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
@@ -120,7 +137,8 @@ async def handle_get_nickname(event: MessageEvent):
         )
 
     await get_nickname.finish(
-        f"你的昵称是{nickname.nickname}" + passive_generator.element,
+        f"你的昵称是{safe_display_text(nickname.nickname, fallback='未设置')}"
+        + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 

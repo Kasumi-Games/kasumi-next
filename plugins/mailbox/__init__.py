@@ -35,6 +35,7 @@ from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import PassiveGenerator  # noqa: E402
 from utils.clock import format_ts
+from utils.content_safety import ensure_safe_text  # noqa: E402
 from utils.images import image_segment  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 
@@ -550,6 +551,8 @@ async def send_mail_now(
     passive_generator = PassiveGenerator(event)
 
     try:
+        ensure_safe_text(title)
+        ensure_safe_text(content)
         if expire_days < 1 or expire_days > 30:
             await schedule_mail_cmd.finish(
                 "过期天数必须在1-30之间！" + passive_generator.element,
@@ -632,6 +635,8 @@ async def create_scheduled_mail(
     passive_generator = PassiveGenerator(event)
 
     try:
+        ensure_safe_text(title)
+        ensure_safe_text(content)
         # 解析时间
         scheduled_time = parse_time_string(time_str)
         if scheduled_time is None:

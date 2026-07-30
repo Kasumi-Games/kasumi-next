@@ -22,6 +22,8 @@ require("nonebot_plugin_waiter")
 from nonebot_plugin_waiter import waiter  # noqa: E402
 
 from utils import encode_with_ntsilk  # noqa: E402
+from utils.content_safety import ContentSafetyError  # noqa: E402
+from utils.content_safety import ensure_safe_text  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
 from .. import monetary  # noqa: E402
@@ -159,6 +161,14 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
             )
 
         text = resp.get_message().extract_plain_text()
+
+    try:
+        ensure_safe_text(text)
+    except ContentSafetyError as error:
+        await vits.finish(
+            str(error) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
 
     required_amount = (len(text) / 10).__ceil__()
     has_amount = monetary.get(event.get_user_id())

@@ -17,6 +17,8 @@ from nonebot.adapters.satori import MessageEvent
 from utils import PassiveGenerator
 from utils.clock import format_ts
 from utils.avatar import get_avatar
+from utils.content_safety import ensure_safe_text
+from utils.content_safety import safe_display_text
 from utils.images import image_segment
 from utils.theming import kit_for_user
 from utils.theming import theme_by_token
@@ -478,7 +480,7 @@ def _resolve_cosmetic_token(user_id: str, token: str):
             an ambiguous name and near matches on an unknown one.
     """
 
-    needle = token.strip()
+    needle = ensure_safe_text(token.strip())
     folded = needle.casefold()
     catalog = _catalog_cosmetics()
 
@@ -1014,6 +1016,7 @@ async def handle_profile(
     if parts[0] in {"简介", "description", "desc"}:
         description = parts[1] if len(parts) > 1 else ""
         try:
+            ensure_safe_text(description)
             set_profile_description(user_id, description)
         except ValueError as e:
             await matcher.finish(
@@ -1167,7 +1170,7 @@ def assemble_profile(
     return ProfileData(
         identity=identity_for(user_id, avatar=avatar),
         current_pt=monetary.get(user_id),
-        description=get_profile_description(user_id),
+        description=safe_display_text(get_profile_description(user_id)),
         star_stickers=get_quantity(user_id, STAR_STICKER_ITEM_ID),
         bonsai=get_quantity(user_id, BONSAI_ITEM_ID),
         season_name=season.name if season else None,

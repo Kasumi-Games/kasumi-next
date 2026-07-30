@@ -4,6 +4,8 @@ from nonebot.adapters import Message
 from nonebot.adapters.satori import MessageEvent
 
 from utils import PassiveGenerator
+from utils.content_safety import ContentSafetyError
+from utils.content_safety import ensure_safe_text
 from utils.images import image_segment
 from utils.theming import kit_for_user
 
@@ -243,6 +245,14 @@ async def _(event: MessageEvent, plugin: Message = CommandArg()):  # type: ignor
         image = await board_page(HELP_ENTRIES, kit).render_async()
         await help.finish(
             image_segment(image) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    try:
+        ensure_safe_text(token)
+    except ContentSafetyError as error:
+        await help.finish(
+            str(error) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 

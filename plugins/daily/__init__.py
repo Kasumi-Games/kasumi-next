@@ -16,6 +16,8 @@ require("daily_task")
 
 from utils import PassiveGenerator
 from utils import has_no_argument  # noqa: E402
+from utils.content_safety import ContentSafetyError  # noqa: E402
+from utils.content_safety import ensure_safe_text  # noqa: E402
 from utils.clock import bot_date
 from utils.clock import bot_today  # noqa: E402
 from utils.avatar import get_avatar  # noqa: E402
@@ -252,6 +254,13 @@ async def handle_transfer(
     to_user_nick = (
         to_user_segs[0] if not is_number(to_user_segs[0]) else to_user_segs[1]
     )
+    try:
+        ensure_safe_text(to_user_nick)
+    except ContentSafetyError as error:
+        await matcher.finish(
+            str(error) + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
     try:
         amount = (
             int(to_user_segs[0]) if is_number(to_user_segs[0]) else int(to_user_segs[1])

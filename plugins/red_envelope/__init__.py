@@ -21,6 +21,9 @@ from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import PassiveGenerator  # noqa: E402
 from utils.avatar import get_avatar  # noqa: E402
+from utils.content_safety import ContentSafetyError  # noqa: E402
+from utils.content_safety import ensure_safe_text  # noqa: E402
+from utils.content_safety import safe_display_text  # noqa: E402
 from utils.images import image_segment  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
@@ -116,6 +119,14 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
     except ValueError:
         await create_cmd.finish(
             Messages.CREATE_USAGE + passive_generator.element,
+            referrer=passive_generator.event.referrer,
+        )
+
+    try:
+        ensure_safe_text(title)
+    except ContentSafetyError as error:
+        await create_cmd.finish(
+            str(error) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
@@ -303,7 +314,7 @@ async def _send_completion_card(
     lucky_king_name = _display_name(info.lucky_king_id)
     data = EnvelopeCompletionData(
         channel_index=info.channel_index,
-        title=info.title,
+        title=safe_display_text(info.title, fallback="红包"),
         total_amount=info.total_amount,
         total_count=info.total_count,
         creator_name=creator_name,
@@ -376,7 +387,7 @@ async def handle_list(event: MessageEvent):
         items.append(
             EnvelopeListItem(
                 channel_index=envelope.channel_index,
-                title=envelope.title,
+                title=safe_display_text(envelope.title, fallback="红包"),
                 remaining_amount=envelope.remaining_amount,
                 total_amount=envelope.total_amount,
                 remaining_count=envelope.remaining_count,
@@ -399,7 +410,7 @@ async def handle_list(event: MessageEvent):
         lines = [
             Messages.LIST_ITEM.format(
                 id=envelope.channel_index,
-                title=envelope.title,
+                title=safe_display_text(envelope.title, fallback="红包"),
                 remaining_amount=envelope.remaining_amount,
                 total_amount=envelope.total_amount,
                 remaining_count=envelope.remaining_count,

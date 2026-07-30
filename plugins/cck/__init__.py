@@ -27,6 +27,8 @@ from nonebot_plugin_waiter import waiter  # noqa: E402
 
 from utils import get_today_birthday  # noqa: E402
 from utils.avatar import get_avatar  # noqa: E402
+from utils.content_safety import ContentSafetyError  # noqa: E402
+from utils.content_safety import ensure_safe_text  # noqa: E402
 from utils.images import image_segment  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
@@ -212,6 +214,14 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         await start_cck.finish(
             "没有正在进行的猜卡面，你可以直接使用 @Kasumi /猜卡面 来开始"
             + gens[event.message.id].element,
+            referrer=gens[event.message.id].event.referrer,
+        )
+
+    try:
+        ensure_safe_text(arg_text)
+    except ContentSafetyError as error:
+        await start_cck.finish(
+            str(error) + gens[event.message.id].element,
             referrer=gens[event.message.id].event.referrer,
         )
 
