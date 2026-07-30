@@ -42958,5 +42958,2345 @@
       672,
       335
     ]
+  },
+  "res001097_card_after_training.png": {
+    "bbox": [
+      884,
+      228,
+      272,
+      229
+    ],
+    "center": [
+      1020,
+      342
+    ]
+  },
+  "res001097_card_normal.png": {
+    "bbox": [
+      679,
+      163,
+      304,
+      322
+    ],
+    "center": [
+      831,
+      324
+    ]
+  },
+  "res001098_card_normal.png": {
+    "bbox": [
+      598,
+      226,
+      166,
+      195
+    ],
+    "center": [
+      681,
+      323
+    ]
+  },
+  "res001099_card_normal.png": {
+    "bbox": [
+      577,
+      235,
+      170,
+      184
+    ],
+    "center": [
+      662,
+      327
+    ]
+  },
+  "res001100_card_after_training.png": {
+    "bbox": [
+      918,
+      137,
+      260,
+      273
+    ],
+    "center": [
+      1048,
+      273
+    ]
+  },
+  "res001100_card_normal.png": {
+    "bbox": [
+      688,
+      182,
+      150,
+      153
+    ],
+    "center": [
+      763,
+      258
+    ]
+  },
+  "res002081_card_after_training.png": {
+    "bbox": [
+      685,
+      178,
+      228,
+      193
+    ],
+    "center": [
+      799,
+      274
+    ]
+  },
+  "res002081_card_normal.png": {
+    "bbox": [
+      541,
+      178,
+      338,
+      374
+    ],
+    "center": [
+      710,
+      365
+    ]
+  },
+  "res002082_card_after_training.png": {
+    "bbox": [
+      369,
+      181,
+      228,
+      250
+    ],
+    "center": [
+      483,
+      306
+    ]
+  },
+  "res002082_card_normal.png": {
+    "bbox": [
+      682,
+      261,
+      209,
+      235
+    ],
+    "center": [
+      786,
+      378
+    ]
+  },
+  "res003080_card_normal.png": {
+    "bbox": [
+      580,
+      266,
+      162,
+      163
+    ],
+    "center": [
+      661,
+      347
+    ]
+  },
+  "res003081_card_after_training.png": {
+    "bbox": [
+      667,
+      244,
+      287,
+      266
+    ],
+    "center": [
+      810,
+      377
+    ]
+  },
+  "res003081_card_normal.png": {
+    "bbox": [
+      722,
+      299,
+      254,
+      238
+    ],
+    "center": [
+      849,
+      418
+    ]
+  },
+  "res004079_card_after_training.png": {
+    "bbox": [
+      502,
+      255,
+      197,
+      209
+    ],
+    "center": [
+      600,
+      359
+    ]
+  },
+  "res004079_card_normal.png": {
+    "bbox": [
+      436,
+      226,
+      312,
+      325
+    ],
+    "center": [
+      592,
+      388
+    ]
+  },
+  "res004080_card_after_training.png": {
+    "bbox": [
+      246,
+      167,
+      228,
+      267
+    ],
+    "center": [
+      360,
+      300
+    ]
+  },
+  "res004080_card_normal.png": {
+    "bbox": [
+      728,
+      168,
+      395,
+      384
+    ],
+    "center": [
+      925,
+      360
+    ]
+  },
+  "res004081_card_after_training.png": {
+    "bbox": [
+      497,
+      176,
+      279,
+      308
+    ],
+    "center": [
+      636,
+      330
+    ]
+  },
+  "res004081_card_normal.png": {
+    "bbox": [
+      461,
+      150,
+      298,
+      362
+    ],
+    "center": [
+      610,
+      331
+    ]
+  },
+  "res005091_card_after_training.png": {
+    "bbox": [
+      370,
+      179,
+      258,
+      291
+    ],
+    "center": [
+      499,
+      324
+    ]
+  },
+  "res005091_card_normal.png": {
+    "bbox": [
+      381,
+      245,
+      253,
+      288
+    ],
+    "center": [
+      507,
+      389
+    ]
+  },
+  "res005092_card_after_training.png": {
+    "bbox": [
+      781,
+      172,
+      268,
+      255
+    ],
+    "center": [
+      915,
+      299
+    ]
+  },
+  "res005092_card_normal.png": {
+    "bbox": [
+      1043,
+      432,
+      223,
+      243
+    ],
+    "center": [
+      1154,
+      553
+    ]
+  },
+  "res006090_card_after_training.png": {
+    "bbox": [
+      124,
+      184,
+      307,
+      279
+    ],
+    "center": [
+      277,
+      323
+    ]
+  },
+  "res006090_card_normal.png": {
+    "bbox": [
+      693,
+      157,
+      103,
+      122
+    ],
+    "center": [
+      744,
+      218
+    ]
+  },
+  "res006091_card_after_training.png": {
+    "bbox": [
+      173,
+      150,
+      234,
+      288
+    ],
+    "center": [
+      290,
+      294
+    ]
+  },
+  "res006091_card_normal.png": {
+    "bbox": [
+      465,
+      293,
+      369,
+      393
+    ],
+    "center": [
+      649,
+      489
+    ]
+  },
+  "res007080_card_normal.png": {
+    "bbox": [
+      531,
+      243,
+      177,
+      164
+    ],
+    "center": [
+      619,
+      325
+    ]
+  },
+  "res007081_card_after_training.png": {
+    "bbox": [
+      501,
+      182,
+      219,
+      190
+    ],
+    "center": [
+      610,
+      277
+    ]
+  },
+  "res007081_card_normal.png": {
+    "bbox": [
+      129,
+      256,
+      263,
+      287
+    ],
+    "center": [
+      260,
+      399
+    ]
+  },
+  "res007082_card_after_training.png": {
+    "bbox": [
+      290,
+      230,
+      296,
+      316
+    ],
+    "center": [
+      438,
+      388
+    ]
+  },
+  "res007082_card_normal.png": {
+    "bbox": [
+      351,
+      220,
+      306,
+      295
+    ],
+    "center": [
+      504,
+      367
+    ]
+  },
+  "res008082_card_normal.png": {
+    "bbox": [
+      592,
+      234,
+      164,
+      176
+    ],
+    "center": [
+      674,
+      322
+    ]
+  },
+  "res008083_card_after_training.png": {
+    "bbox": [
+      778,
+      189,
+      251,
+      257
+    ],
+    "center": [
+      903,
+      317
+    ]
+  },
+  "res008083_card_normal.png": {
+    "bbox": [
+      540,
+      215,
+      469,
+      456
+    ],
+    "center": [
+      774,
+      443
+    ]
+  },
+  "res008084_card_normal.png": {
+    "bbox": [
+      573,
+      233,
+      163,
+      178
+    ],
+    "center": [
+      654,
+      322
+    ]
+  },
+  "res009080_card_after_training.png": {
+    "bbox": [
+      791,
+      194,
+      295,
+      261
+    ],
+    "center": [
+      938,
+      324
+    ]
+  },
+  "res009080_card_normal.png": {
+    "bbox": [
+      422,
+      292,
+      276,
+      273
+    ],
+    "center": [
+      560,
+      428
+    ]
+  },
+  "res009081_card_after_training.png": {
+    "bbox": [
+      525,
+      171,
+      219,
+      198
+    ],
+    "center": [
+      634,
+      270
+    ]
+  },
+  "res009081_card_normal.png": {
+    "bbox": [
+      302,
+      195,
+      287,
+      286
+    ],
+    "center": [
+      445,
+      338
+    ]
+  },
+  "res009082_card_after_training.png": {
+    "bbox": [
+      759,
+      154,
+      285,
+      356
+    ],
+    "center": [
+      901,
+      332
+    ]
+  },
+  "res009082_card_normal.png": {
+    "bbox": [
+      713,
+      255,
+      219,
+      201
+    ],
+    "center": [
+      822,
+      355
+    ]
+  },
+  "res010084_card_normal.png": {
+    "bbox": [
+      590,
+      247,
+      160,
+      172
+    ],
+    "center": [
+      670,
+      333
+    ]
+  },
+  "res010085_card_after_training.png": {
+    "bbox": [
+      876,
+      146,
+      270,
+      296
+    ],
+    "center": [
+      1011,
+      294
+    ]
+  },
+  "res010085_card_normal.png": {
+    "bbox": [
+      529,
+      213,
+      255,
+      297
+    ],
+    "center": [
+      656,
+      361
+    ]
+  },
+  "res011092_card_after_training.png": {
+    "bbox": [
+      610,
+      260,
+      177,
+      182
+    ],
+    "center": [
+      698,
+      351
+    ]
+  },
+  "res011092_card_normal.png": {
+    "bbox": [
+      750,
+      270,
+      378,
+      404
+    ],
+    "center": [
+      939,
+      472
+    ]
+  },
+  "res011093_card_after_training.png": {
+    "bbox": [
+      868,
+      258,
+      258,
+      239
+    ],
+    "center": [
+      997,
+      377
+    ]
+  },
+  "res011093_card_normal.png": {
+    "bbox": [
+      377,
+      173,
+      212,
+      242
+    ],
+    "center": [
+      483,
+      294
+    ]
+  },
+  "res011094_card_after_training.png": {
+    "bbox": [
+      164,
+      174,
+      382,
+      333
+    ],
+    "center": [
+      355,
+      340
+    ]
+  },
+  "res011094_card_normal.png": {
+    "bbox": [
+      456,
+      249,
+      176,
+      201
+    ],
+    "center": [
+      544,
+      349
+    ]
+  },
+  "res012087_card_normal.png": {
+    "bbox": [
+      559,
+      221,
+      162,
+      169
+    ],
+    "center": [
+      640,
+      305
+    ]
+  },
+  "res012088_card_after_training.png": {
+    "bbox": [
+      832,
+      185,
+      162,
+      176
+    ],
+    "center": [
+      913,
+      273
+    ]
+  },
+  "res012088_card_normal.png": {
+    "bbox": [
+      627,
+      217,
+      383,
+      396
+    ],
+    "center": [
+      818,
+      415
+    ]
+  },
+  "res012089_card_after_training.png": {
+    "bbox": [
+      479,
+      197,
+      191,
+      199
+    ],
+    "center": [
+      574,
+      296
+    ]
+  },
+  "res012089_card_normal.png": {
+    "bbox": [
+      621,
+      243,
+      287,
+      238
+    ],
+    "center": [
+      764,
+      362
+    ]
+  },
+  "res013084_card_after_training.png": {
+    "bbox": [
+      205,
+      178,
+      238,
+      272
+    ],
+    "center": [
+      324,
+      314
+    ]
+  },
+  "res013084_card_normal.png": {
+    "bbox": [
+      461,
+      240,
+      345,
+      378
+    ],
+    "center": [
+      633,
+      429
+    ]
+  },
+  "res013085_card_after_training.png": {
+    "bbox": [
+      265,
+      197,
+      230,
+      235
+    ],
+    "center": [
+      380,
+      314
+    ]
+  },
+  "res013085_card_normal.png": {
+    "bbox": [
+      370,
+      245,
+      288,
+      264
+    ],
+    "center": [
+      514,
+      377
+    ]
+  },
+  "res014084_card_after_training.png": {
+    "bbox": [
+      230,
+      204,
+      272,
+      239
+    ],
+    "center": [
+      366,
+      323
+    ]
+  },
+  "res014084_card_normal.png": {
+    "bbox": [
+      587,
+      364,
+      123,
+      137
+    ],
+    "center": [
+      648,
+      432
+    ]
+  },
+  "res014085_card_after_training.png": {
+    "bbox": [
+      734,
+      239,
+      220,
+      219
+    ],
+    "center": [
+      844,
+      348
+    ]
+  },
+  "res014085_card_normal.png": {
+    "bbox": [
+      664,
+      281,
+      304,
+      318
+    ],
+    "center": [
+      816,
+      440
+    ]
+  },
+  "res014086_card_after_training.png": {
+    "bbox": [
+      257,
+      196,
+      216,
+      233
+    ],
+    "center": [
+      365,
+      312
+    ]
+  },
+  "res014086_card_normal.png": {
+    "bbox": [
+      402,
+      242,
+      206,
+      213
+    ],
+    "center": [
+      505,
+      348
+    ]
+  },
+  "res014087_card_after_training.png": {
+    "bbox": [
+      705,
+      220,
+      210,
+      190
+    ],
+    "center": [
+      810,
+      315
+    ]
+  },
+  "res014087_card_normal.png": {
+    "bbox": [
+      338,
+      248,
+      111,
+      96
+    ],
+    "center": [
+      393,
+      296
+    ]
+  },
+  "res014088_card_normal.png": {
+    "bbox": [
+      579,
+      264,
+      166,
+      168
+    ],
+    "center": [
+      662,
+      348
+    ]
+  },
+  "res015087_card_after_training.png": {
+    "bbox": [
+      444,
+      289,
+      47,
+      52
+    ],
+    "center": [
+      467,
+      315
+    ]
+  },
+  "res015087_card_normal.png": {
+    "bbox": [
+      677,
+      273,
+      318,
+      332
+    ],
+    "center": [
+      836,
+      439
+    ]
+  },
+  "res015088_card_after_training.png": {
+    "bbox": [
+      793,
+      187,
+      251,
+      288
+    ],
+    "center": [
+      918,
+      331
+    ]
+  },
+  "res015088_card_normal.png": {
+    "bbox": [
+      661,
+      201,
+      306,
+      300
+    ],
+    "center": [
+      814,
+      351
+    ]
+  },
+  "res016097_card_after_training.png": {
+    "bbox": [
+      684,
+      194,
+      189,
+      202
+    ],
+    "center": [
+      778,
+      295
+    ]
+  },
+  "res016097_card_normal.png": {
+    "bbox": [
+      634,
+      195,
+      337,
+      382
+    ],
+    "center": [
+      802,
+      386
+    ]
+  },
+  "res016098_card_after_training.png": {
+    "bbox": [
+      372,
+      268,
+      141,
+      217
+    ],
+    "center": [
+      442,
+      376
+    ]
+  },
+  "res016098_card_normal.png": {
+    "bbox": [
+      847,
+      270,
+      242,
+      235
+    ],
+    "center": [
+      968,
+      387
+    ]
+  },
+  "res016099_card_after_training.png": {
+    "bbox": [
+      321,
+      238,
+      230,
+      225
+    ],
+    "center": [
+      436,
+      350
+    ]
+  },
+  "res016099_card_normal.png": {
+    "bbox": [
+      522,
+      272,
+      273,
+      310
+    ],
+    "center": [
+      658,
+      427
+    ]
+  },
+  "res016100_card_after_training.png": {
+    "bbox": [
+      838,
+      192,
+      243,
+      254
+    ],
+    "center": [
+      959,
+      319
+    ]
+  },
+  "res016100_card_normal.png": {
+    "bbox": [
+      526,
+      194,
+      183,
+      173
+    ],
+    "center": [
+      617,
+      280
+    ]
+  },
+  "res017085_card_after_training.png": {
+    "bbox": [
+      788,
+      223,
+      276,
+      297
+    ],
+    "center": [
+      926,
+      371
+    ]
+  },
+  "res017085_card_normal.png": {
+    "bbox": [
+      388,
+      250,
+      193,
+      194
+    ],
+    "center": [
+      484,
+      347
+    ]
+  },
+  "res017086_card_normal.png": {
+    "bbox": [
+      610,
+      241,
+      168,
+      177
+    ],
+    "center": [
+      694,
+      329
+    ]
+  },
+  "res017087_card_normal.png": {
+    "bbox": [
+      619,
+      256,
+      162,
+      157
+    ],
+    "center": [
+      700,
+      334
+    ]
+  },
+  "res018083_card_after_training.png": {
+    "bbox": [
+      213,
+      170,
+      259,
+      273
+    ],
+    "center": [
+      342,
+      306
+    ]
+  },
+  "res018083_card_normal.png": {
+    "bbox": [
+      390,
+      147,
+      459,
+      486
+    ],
+    "center": [
+      619,
+      390
+    ]
+  },
+  "res018084_card_after_training.png": {
+    "bbox": [
+      719,
+      215,
+      190,
+      190
+    ],
+    "center": [
+      814,
+      310
+    ]
+  },
+  "res018084_card_normal.png": {
+    "bbox": [
+      326,
+      311,
+      273,
+      234
+    ],
+    "center": [
+      462,
+      428
+    ]
+  },
+  "res018085_card_after_training.png": {
+    "bbox": [
+      434,
+      203,
+      212,
+      186
+    ],
+    "center": [
+      540,
+      296
+    ]
+  },
+  "res018085_card_normal.png": {
+    "bbox": [
+      568,
+      237,
+      224,
+      217
+    ],
+    "center": [
+      680,
+      345
+    ]
+  },
+  "res018086_card_after_training.png": {
+    "bbox": [
+      298,
+      200,
+      296,
+      298
+    ],
+    "center": [
+      446,
+      349
+    ]
+  },
+  "res018086_card_normal.png": {
+    "bbox": [
+      440,
+      262,
+      290,
+      313
+    ],
+    "center": [
+      585,
+      418
+    ]
+  },
+  "res019081_card_normal.png": {
+    "bbox": [
+      621,
+      272,
+      164,
+      155
+    ],
+    "center": [
+      703,
+      349
+    ]
+  },
+  "res019082_card_after_training.png": {
+    "bbox": [
+      580,
+      202,
+      347,
+      340
+    ],
+    "center": [
+      753,
+      372
+    ]
+  },
+  "res019082_card_normal.png": {
+    "bbox": [
+      515,
+      275,
+      224,
+      230
+    ],
+    "center": [
+      627,
+      390
+    ]
+  },
+  "res019083_card_after_training.png": {
+    "bbox": [
+      462,
+      199,
+      176,
+      179
+    ],
+    "center": [
+      550,
+      288
+    ]
+  },
+  "res019083_card_normal.png": {
+    "bbox": [
+      723,
+      233,
+      268,
+      244
+    ],
+    "center": [
+      857,
+      355
+    ]
+  },
+  "res019084_card_after_training.png": {
+    "bbox": [
+      851,
+      173,
+      266,
+      248
+    ],
+    "center": [
+      984,
+      297
+    ]
+  },
+  "res019084_card_normal.png": {
+    "bbox": [
+      352,
+      173,
+      233,
+      200
+    ],
+    "center": [
+      468,
+      273
+    ]
+  },
+  "res019085_card_after_training.png": {
+    "bbox": [
+      843,
+      191,
+      198,
+      162
+    ],
+    "center": [
+      942,
+      272
+    ]
+  },
+  "res019085_card_normal.png": {
+    "bbox": [
+      747,
+      254,
+      151,
+      156
+    ],
+    "center": [
+      822,
+      332
+    ]
+  },
+  "res019086_card_after_training.png": {
+    "bbox": [
+      892,
+      174,
+      234,
+      276
+    ],
+    "center": [
+      1009,
+      312
+    ]
+  },
+  "res019086_card_normal.png": {
+    "bbox": [
+      1,
+      111,
+      293,
+      448
+    ],
+    "center": [
+      147,
+      335
+    ]
+  },
+  "res020086_card_after_training.png": {
+    "bbox": [
+      842,
+      218,
+      299,
+      275
+    ],
+    "center": [
+      991,
+      355
+    ]
+  },
+  "res020086_card_normal.png": {
+    "bbox": [
+      504,
+      149,
+      322,
+      365
+    ],
+    "center": [
+      665,
+      331
+    ]
+  },
+  "res020087_card_after_training.png": {
+    "bbox": [
+      217,
+      193,
+      287,
+      237
+    ],
+    "center": [
+      360,
+      311
+    ]
+  },
+  "res020087_card_normal.png": {
+    "bbox": [
+      291,
+      240,
+      167,
+      157
+    ],
+    "center": [
+      374,
+      318
+    ]
+  },
+  "res020088_card_after_training.png": {
+    "bbox": [
+      253,
+      157,
+      261,
+      252
+    ],
+    "center": [
+      383,
+      283
+    ]
+  },
+  "res020088_card_normal.png": {
+    "bbox": [
+      174,
+      1,
+      468,
+      372
+    ],
+    "center": [
+      408,
+      187
+    ]
+  },
+  "res021085_card_after_training.png": {
+    "bbox": [
+      921,
+      158,
+      239,
+      206
+    ],
+    "center": [
+      1040,
+      261
+    ]
+  },
+  "res021085_card_normal.png": {
+    "bbox": [
+      644,
+      206,
+      147,
+      150
+    ],
+    "center": [
+      717,
+      281
+    ]
+  },
+  "res021086_card_after_training.png": {
+    "bbox": [
+      916,
+      225,
+      236,
+      262
+    ],
+    "center": [
+      1034,
+      356
+    ]
+  },
+  "res021086_card_normal.png": {
+    "bbox": [
+      396,
+      269,
+      215,
+      177
+    ],
+    "center": [
+      503,
+      357
+    ]
+  },
+  "res022084_card_after_training.png": {
+    "bbox": [
+      529,
+      151,
+      183,
+      217
+    ],
+    "center": [
+      620,
+      259
+    ]
+  },
+  "res022084_card_normal.png": {
+    "bbox": [
+      420,
+      265,
+      289,
+      296
+    ],
+    "center": [
+      564,
+      413
+    ]
+  },
+  "res022085_card_after_training.png": {
+    "bbox": [
+      193,
+      172,
+      273,
+      244
+    ],
+    "center": [
+      329,
+      294
+    ]
+  },
+  "res022085_card_normal.png": {
+    "bbox": [
+      404,
+      238,
+      198,
+      203
+    ],
+    "center": [
+      503,
+      339
+    ]
+  },
+  "res023088_card_after_training.png": {
+    "bbox": [
+      874,
+      209,
+      204,
+      225
+    ],
+    "center": [
+      976,
+      321
+    ]
+  },
+  "res023088_card_normal.png": {
+    "bbox": [
+      733,
+      271,
+      201,
+      224
+    ],
+    "center": [
+      833,
+      383
+    ]
+  },
+  "res023089_card_after_training.png": {
+    "bbox": [
+      478,
+      197,
+      174,
+      185
+    ],
+    "center": [
+      565,
+      289
+    ]
+  },
+  "res023089_card_normal.png": {
+    "bbox": [
+      456,
+      264,
+      186,
+      194
+    ],
+    "center": [
+      549,
+      361
+    ]
+  },
+  "res024083_card_after_training.png": {
+    "bbox": [
+      767,
+      206,
+      256,
+      264
+    ],
+    "center": [
+      895,
+      338
+    ]
+  },
+  "res024083_card_normal.png": {
+    "bbox": [
+      297,
+      318,
+      379,
+      385
+    ],
+    "center": [
+      486,
+      510
+    ]
+  },
+  "res024084_card_after_training.png": {
+    "bbox": [
+      410,
+      219,
+      196,
+      186
+    ],
+    "center": [
+      508,
+      312
+    ]
+  },
+  "res024084_card_normal.png": {
+    "bbox": [
+      385,
+      289,
+      278,
+      272
+    ],
+    "center": [
+      524,
+      425
+    ]
+  },
+  "res024085_card_after_training.png": {
+    "bbox": [
+      513,
+      183,
+      188,
+      198
+    ],
+    "center": [
+      607,
+      282
+    ]
+  },
+  "res024085_card_normal.png": {
+    "bbox": [
+      587,
+      159,
+      170,
+      172
+    ],
+    "center": [
+      672,
+      245
+    ]
+  },
+  "res024086_card_after_training.png": {
+    "bbox": [
+      183,
+      344,
+      329,
+      287
+    ],
+    "center": [
+      347,
+      487
+    ]
+  },
+  "res024086_card_normal.png": {
+    "bbox": [
+      573,
+      280,
+      283,
+      314
+    ],
+    "center": [
+      714,
+      437
+    ]
+  },
+  "res024087_card_normal.png": {
+    "bbox": [
+      516,
+      250,
+      208,
+      202
+    ],
+    "center": [
+      620,
+      351
+    ]
+  },
+  "res025080_card_normal.png": {
+    "bbox": [
+      345,
+      247,
+      163,
+      166
+    ],
+    "center": [
+      426,
+      330
+    ]
+  },
+  "res025081_card_normal.png": {
+    "bbox": [
+      540,
+      239,
+      184,
+      180
+    ],
+    "center": [
+      632,
+      329
+    ]
+  },
+  "res025082_card_after_training.png": {
+    "bbox": [
+      860,
+      189,
+      206,
+      210
+    ],
+    "center": [
+      963,
+      294
+    ]
+  },
+  "res025082_card_normal.png": {
+    "bbox": [
+      588,
+      160,
+      272,
+      285
+    ],
+    "center": [
+      724,
+      302
+    ]
+  },
+  "res025083_card_normal.png": {
+    "bbox": [
+      578,
+      252,
+      172,
+      156
+    ],
+    "center": [
+      664,
+      330
+    ]
+  },
+  "res026053_card_normal.png": {
+    "bbox": [
+      596,
+      241,
+      166,
+      168
+    ],
+    "center": [
+      679,
+      325
+    ]
+  },
+  "res026054_card_after_training.png": {
+    "bbox": [
+      856,
+      183,
+      233,
+      216
+    ],
+    "center": [
+      972,
+      291
+    ]
+  },
+  "res026054_card_normal.png": {
+    "bbox": [
+      637,
+      172,
+      228,
+      230
+    ],
+    "center": [
+      751,
+      287
+    ]
+  },
+  "res027048_card_after_training.png": {
+    "bbox": [
+      730,
+      150,
+      232,
+      254
+    ],
+    "center": [
+      846,
+      277
+    ]
+  },
+  "res027048_card_normal.png": {
+    "bbox": [
+      1,
+      212,
+      309,
+      345
+    ],
+    "center": [
+      155,
+      384
+    ]
+  },
+  "res027049_card_after_training.png": {
+    "bbox": [
+      874,
+      237,
+      191,
+      218
+    ],
+    "center": [
+      969,
+      346
+    ]
+  },
+  "res027049_card_normal.png": {
+    "bbox": [
+      585,
+      251,
+      254,
+      263
+    ],
+    "center": [
+      712,
+      382
+    ]
+  },
+  "res028046_card_normal.png": {
+    "bbox": [
+      598,
+      265,
+      162,
+      159
+    ],
+    "center": [
+      679,
+      344
+    ]
+  },
+  "res028047_card_after_training.png": {
+    "bbox": [
+      380,
+      177,
+      318,
+      320
+    ],
+    "center": [
+      539,
+      337
+    ]
+  },
+  "res028047_card_normal.png": {
+    "bbox": [
+      670,
+      233,
+      136,
+      146
+    ],
+    "center": [
+      738,
+      306
+    ]
+  },
+  "res028048_card_after_training.png": {
+    "bbox": [
+      874,
+      211,
+      197,
+      193
+    ],
+    "center": [
+      972,
+      307
+    ]
+  },
+  "res028048_card_normal.png": {
+    "bbox": [
+      971,
+      221,
+      84,
+      87
+    ],
+    "center": [
+      1013,
+      264
+    ]
+  },
+  "res028049_card_after_training.png": {
+    "bbox": [
+      188,
+      199,
+      236,
+      255
+    ],
+    "center": [
+      306,
+      326
+    ]
+  },
+  "res028049_card_normal.png": {
+    "bbox": [
+      685,
+      191,
+      369,
+      341
+    ],
+    "center": [
+      869,
+      361
+    ]
+  },
+  "res028050_card_after_training.png": {
+    "bbox": [
+      141,
+      243,
+      349,
+      389
+    ],
+    "center": [
+      315,
+      437
+    ]
+  },
+  "res028050_card_normal.png": {
+    "bbox": [
+      465,
+      266,
+      257,
+      276
+    ],
+    "center": [
+      593,
+      404
+    ]
+  },
+  "res029043_card_after_training.png": {
+    "bbox": [
+      326,
+      177,
+      239,
+      243
+    ],
+    "center": [
+      445,
+      298
+    ]
+  },
+  "res029043_card_normal.png": {
+    "bbox": [
+      879,
+      281,
+      248,
+      259
+    ],
+    "center": [
+      1003,
+      410
+    ]
+  },
+  "res029044_card_after_training.png": {
+    "bbox": [
+      814,
+      202,
+      217,
+      211
+    ],
+    "center": [
+      922,
+      307
+    ]
+  },
+  "res029044_card_normal.png": {
+    "bbox": [
+      347,
+      317,
+      244,
+      274
+    ],
+    "center": [
+      469,
+      454
+    ]
+  },
+  "res029045_card_after_training.png": {
+    "bbox": [
+      423,
+      275,
+      254,
+      254
+    ],
+    "center": [
+      550,
+      402
+    ]
+  },
+  "res029045_card_normal.png": {
+    "bbox": [
+      692,
+      201,
+      149,
+      159
+    ],
+    "center": [
+      766,
+      280
+    ]
+  },
+  "res029046_card_normal.png": {
+    "bbox": [
+      579,
+      251,
+      160,
+      169
+    ],
+    "center": [
+      659,
+      335
+    ]
+  },
+  "res030046_card_after_training.png": {
+    "bbox": [
+      267,
+      183,
+      189,
+      207
+    ],
+    "center": [
+      361,
+      286
+    ]
+  },
+  "res030046_card_normal.png": {
+    "bbox": [
+      710,
+      349,
+      218,
+      241
+    ],
+    "center": [
+      819,
+      469
+    ]
+  },
+  "res030047_card_after_training.png": {
+    "bbox": [
+      307,
+      168,
+      223,
+      238
+    ],
+    "center": [
+      418,
+      287
+    ]
+  },
+  "res030047_card_normal.png": {
+    "bbox": [
+      915,
+      466,
+      151,
+      138
+    ],
+    "center": [
+      990,
+      535
+    ]
+  },
+  "res031047_card_after_training.png": {
+    "bbox": [
+      345,
+      189,
+      193,
+      251
+    ],
+    "center": [
+      441,
+      314
+    ]
+  },
+  "res031047_card_normal.png": {
+    "bbox": [
+      612,
+      225,
+      385,
+      425
+    ],
+    "center": [
+      804,
+      437
+    ]
+  },
+  "res031048_card_after_training.png": {
+    "bbox": [
+      460,
+      165,
+      188,
+      212
+    ],
+    "center": [
+      554,
+      271
+    ]
+  },
+  "res031048_card_normal.png": {
+    "bbox": [
+      828,
+      244,
+      314,
+      295
+    ],
+    "center": [
+      985,
+      391
+    ]
+  },
+  "res032047_card_after_training.png": {
+    "bbox": [
+      501,
+      237,
+      246,
+      235
+    ],
+    "center": [
+      624,
+      354
+    ]
+  },
+  "res032047_card_normal.png": {
+    "bbox": [
+      157,
+      456,
+      157,
+      154
+    ],
+    "center": [
+      235,
+      533
+    ]
+  },
+  "res032048_card_after_training.png": {
+    "bbox": [
+      303,
+      260,
+      219,
+      200
+    ],
+    "center": [
+      412,
+      360
+    ]
+  },
+  "res032048_card_normal.png": {
+    "bbox": [
+      691,
+      285,
+      171,
+      160
+    ],
+    "center": [
+      776,
+      365
+    ]
+  },
+  "res033044_card_after_training.png": {
+    "bbox": [
+      459,
+      223,
+      298,
+      338
+    ],
+    "center": [
+      608,
+      392
+    ]
+  },
+  "res033044_card_normal.png": {
+    "bbox": [
+      0,
+      69,
+      311,
+      465
+    ],
+    "center": [
+      155,
+      301
+    ]
+  },
+  "res033045_card_normal.png": {
+    "bbox": [
+      538,
+      195,
+      175,
+      180
+    ],
+    "center": [
+      625,
+      285
+    ]
+  },
+  "res033046_card_after_training.png": {
+    "bbox": [
+      913,
+      176,
+      234,
+      228
+    ],
+    "center": [
+      1030,
+      290
+    ]
+  },
+  "res033046_card_normal.png": {
+    "bbox": [
+      495,
+      189,
+      278,
+      351
+    ],
+    "center": [
+      634,
+      364
+    ]
+  },
+  "res034043_card_after_training.png": {
+    "bbox": [
+      741,
+      162,
+      226,
+      220
+    ],
+    "center": [
+      854,
+      272
+    ]
+  },
+  "res034043_card_normal.png": {
+    "bbox": [
+      579,
+      270,
+      276,
+      264
+    ],
+    "center": [
+      717,
+      402
+    ]
+  },
+  "res035045_card_after_training.png": {
+    "bbox": [
+      660,
+      266,
+      237,
+      217
+    ],
+    "center": [
+      778,
+      374
+    ]
+  },
+  "res035045_card_normal.png": {
+    "bbox": [
+      386,
+      523,
+      85,
+      83
+    ],
+    "center": [
+      428,
+      564
+    ]
+  },
+  "res035046_card_after_training.png": {
+    "bbox": [
+      554,
+      187,
+      182,
+      197
+    ],
+    "center": [
+      645,
+      285
+    ]
+  },
+  "res035046_card_normal.png": {
+    "bbox": [
+      690,
+      231,
+      251,
+      315
+    ],
+    "center": [
+      815,
+      388
+    ]
+  },
+  "res040016_card_normal.png": {
+    "bbox": [
+      604,
+      241,
+      153,
+      169
+    ],
+    "center": [
+      680,
+      325
+    ]
+  },
+  "res040017_card_after_training.png": {
+    "bbox": [
+      342,
+      190,
+      234,
+      208
+    ],
+    "center": [
+      459,
+      294
+    ]
+  },
+  "res040017_card_normal.png": {
+    "bbox": [
+      341,
+      174,
+      343,
+      319
+    ],
+    "center": [
+      512,
+      333
+    ]
+  },
+  "res900041_card_normal.png": {
+    "bbox": [
+      577,
+      257,
+      203,
+      187
+    ],
+    "center": [
+      678,
+      350
+    ]
+  },
+  "res900042_card_normal.png": {
+    "bbox": [
+      575,
+      211,
+      178,
+      203
+    ],
+    "center": [
+      664,
+      312
+    ]
+  },
+  "res900043_card_normal.png": {
+    "bbox": [
+      579,
+      285,
+      191,
+      168
+    ],
+    "center": [
+      674,
+      369
+    ]
+  },
+  "res900044_card_normal.png": {
+    "bbox": [
+      564,
+      229,
+      222,
+      206
+    ],
+    "center": [
+      675,
+      332
+    ]
+  },
+  "res900045_card_normal.png": {
+    "bbox": [
+      561,
+      248,
+      198,
+      200
+    ],
+    "center": [
+      660,
+      348
+    ]
+  },
+  "res900046_card_normal.png": {
+    "bbox": [
+      594,
+      285,
+      167,
+      174
+    ],
+    "center": [
+      677,
+      372
+    ]
+  },
+  "res900047_card_normal.png": {
+    "bbox": [
+      589,
+      207,
+      190,
+      198
+    ],
+    "center": [
+      684,
+      306
+    ]
+  },
+  "res900048_card_normal.png": {
+    "bbox": [
+      602,
+      279,
+      171,
+      176
+    ],
+    "center": [
+      687,
+      367
+    ]
+  },
+  "res900049_card_normal.png": {
+    "bbox": [
+      576,
+      267,
+      166,
+      168
+    ],
+    "center": [
+      659,
+      351
+    ]
+  },
+  "res900050_card_normal.png": {
+    "bbox": [
+      561,
+      274,
+      184,
+      185
+    ],
+    "center": [
+      653,
+      366
+    ]
   }
 }
