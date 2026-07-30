@@ -377,7 +377,8 @@ def test_images_only_at_create_completion_and_list():
     # 成本纪律（一致性评审 #14）：广播面只在创建与抢完各渲染一次；列表卡是
     # 玩家主动查询才渲染的按需面。单次抢红包与所有报错保持文本。
     source = (ROOT / "plugins/red_envelope/__init__.py").read_text(encoding="utf-8")
-    assert source.count("image_segment(image)") == 3
+    assert source.count("image_segment_async(image)") == 3
+    assert "image_segment(image)" not in source
     assert "Messages.CLAIM_SUCCESS" in source
     assert "Messages.CLAIM_COMPLETE" in source  # 渲染失败的文本兜底
     # 列表卡渲染失败时退化为原文本列表/空提示

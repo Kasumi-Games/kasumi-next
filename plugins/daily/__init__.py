@@ -21,7 +21,7 @@ from utils.content_safety import ensure_safe_text  # noqa: E402
 from utils.clock import bot_date
 from utils.clock import bot_today  # noqa: E402
 from utils.avatar import get_avatar  # noqa: E402
-from utils.images import image_segment  # noqa: E402
+from utils.images import image_segment_async  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
 from utils.identity import identities_for  # noqa: E402
@@ -85,7 +85,7 @@ async def info(matcher: Matcher, event: MessageEvent):
             referrer=passive_generator.event.referrer,
         )
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -206,7 +206,7 @@ async def handle_daily(matcher: Matcher, event: MessageEvent):
             referrer=passive_generator.event.referrer,
         )
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -368,7 +368,7 @@ async def handle_levelrank(matcher: Matcher, event: MessageEvent):
             referrer=passive_generator.event.referrer,
         )
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 

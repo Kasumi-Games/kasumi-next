@@ -9,7 +9,8 @@ from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
 
 from utils.avatar import get_avatar
-from utils.images import image_segment
+from utils.images import image_segment_async
+from utils.images import render_image_segment
 from utils.theming import kit_for_user
 from utils.identity import identity_for
 from utils.error_handler import handle_error
@@ -23,7 +24,6 @@ from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
 from .. import monetary  # noqa: E402
-from ..inventory.season_service import get_current_season_bounds  # noqa: E402
 from .models import MoveResult  # noqa: E402
 from .models import OneStrokeGame  # noqa: E402
 from .render import OneStrokeResultData  # noqa: E402
@@ -44,12 +44,17 @@ from ..daily_task import get_today_task  # noqa: E402
 from .graph_generator import generate_graph  # noqa: E402
 from .graph_generator import parse_difficulty  # noqa: E402
 from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
+from ..inventory.season_service import get_current_season_bounds  # noqa: E402
 
 game_manager = GameManager()
 
 
-def _render_image(session, kit=None, identity=None, detail=None) -> MessageSegment:
-    return image_segment(render(session, kit=kit, identity=identity, detail=detail))
+async def _render_image(
+    session, kit=None, identity=None, detail=None
+) -> MessageSegment:
+    return await render_image_segment(
+        render, session, kit=kit, identity=identity, detail=detail
+    )
 
 
 def _mask_user_id(user_id: str) -> str:
@@ -109,17 +114,19 @@ async def handle_leaderboard(event: MessageEvent):
     easy_rows = _build_leaderboard_rows("简单", season_bounds)
     normal_rows = _build_leaderboard_rows("普通", season_bounds)
     hard_rows = _build_leaderboard_rows("困难", season_bounds)
-    image = render_leaderboard(easy_rows, normal_rows, hard_rows)
+    image = await render_image_segment(
+        render_leaderboard, easy_rows, normal_rows, hard_rows
+    )
     await leaderboard_cmd.finish(
-        image_segment(image) + passive_generator.element,
+        image + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
 
 @game_start.handle()
 async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
-    gens[event.message.id] = PG(event)
-    latest_message_id = event.message.id
+    current_pg = PG(event)
+    gens[event.message.id] = current_pg
 
     @waiter(waits=["message"], matcher=game_start, block=False, keep_session=True)
     async def check(event_: MessageEvent) -> MessageEvent:
@@ -129,8 +136,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
 
     if difficulty_text.lower() in {"h", "--help", "help", "-h"}:
         await game_start.finish(
-            Messages.HELP + gens[latest_message_id].element,
-            referrer=gens[latest_message_id].event.referrer,
+            Messages.HELP + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     config = parse_difficulty(difficulty_text)
@@ -147,8 +154,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
         )
         if session is None:
             await game_start.finish(
-                "你已经在进行一笔画挑战了。" + gens[latest_message_id].element,
-                referrer=gens[latest_message_id].event.referrer,
+                "你已经在进行一笔画挑战了。" + current_pg.element,
+                referrer=current_pg.event.referrer,
             )
 
         # Resolved once per game on the event-loop thread, then passed into
@@ -161,7 +168,7 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
         detail = f"难度 {config.label} · 奖励 {reward} Pt"
 
         await game_start.send(
-            _render_image(session, kit=kit, identity=identity, detail=detail)
+            await _render_image(session, kit=kit, identity=identity, detail=detail)
             + MessageSegment.text(
                 Messages.START
                 + "\n"
@@ -169,8 +176,8 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 + "\n"
                 + Messages.PROMPT
             )
-            + gens[latest_message_id].element,
-            referrer=gens[latest_message_id].event.referrer,
+            + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
         session.restart_timer()
 
@@ -179,35 +186,37 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
             if resp is None:
                 game_manager.end_game(event.get_user_id())
                 await game_start.finish(
-                    Messages.TIMEOUT + gens[latest_message_id].element,
-                    referrer=gens[latest_message_id].event.referrer,
+                    Messages.TIMEOUT + current_pg.element,
+                    referrer=current_pg.event.referrer,
                 )
 
-            latest_message_id = resp.message.id
-            gens[latest_message_id] = PG(resp)
+            current_pg = PG(resp)
+            gens[resp.message.id] = current_pg
             msg = str(resp.get_message()).strip().upper()
 
             if msg == "Q":
                 game_manager.end_game(event.get_user_id())
                 await game_start.finish(
-                    Messages.GIVE_UP + gens[latest_message_id].element,
-                    referrer=gens[latest_message_id].event.referrer,
+                    Messages.GIVE_UP + current_pg.element,
+                    referrer=current_pg.event.referrer,
                 )
 
             if msg == "R":
                 session.reset()
                 await game_start.send(
-                    _render_image(session, kit=kit, identity=identity, detail=detail)
+                    await _render_image(
+                        session, kit=kit, identity=identity, detail=detail
+                    )
                     + MessageSegment.text(Messages.RESET + "\n" + Messages.PROMPT)
-                    + gens[latest_message_id].element,
-                    referrer=gens[latest_message_id].event.referrer,
+                    + current_pg.element,
+                    referrer=current_pg.event.referrer,
                 )
                 continue
 
             if not msg or any(ch not in {"W", "A", "S", "D"} for ch in msg):
                 await game_start.send(
-                    Messages.INVALID_INPUT + gens[latest_message_id].element,
-                    referrer=gens[latest_message_id].event.referrer,
+                    Messages.INVALID_INPUT + current_pg.element,
+                    referrer=current_pg.event.referrer,
                 )
                 continue
 
@@ -271,9 +280,11 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 # The completed board first — the finished figure is the
                 # trophy; the result card that follows carries the outcome.
                 await game_start.send(
-                    _render_image(session, kit=kit, identity=identity, detail=detail)
-                    + gens[latest_message_id].element,
-                    referrer=gens[latest_message_id].event.referrer,
+                    await _render_image(
+                        session, kit=kit, identity=identity, detail=detail
+                    )
+                    + current_pg.element,
+                    referrer=current_pg.event.referrer,
                 )
 
                 # Daily task: its completion text becomes card rows, so keep
@@ -332,8 +343,9 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                     identity=identity_for(event.get_user_id(), avatar=avatar),
                 ).render_async()
                 await game_start.send(
-                    image_segment(result_image) + gens[latest_message_id].element,
-                    referrer=gens[latest_message_id].event.referrer,
+                    await image_segment_async(result_image)
+                    + current_pg.element,
+                    referrer=current_pg.event.referrer,
                 )
 
                 await game_start.finish(referrer=event.referrer)
@@ -349,10 +361,12 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
                 status_text = fail_text + "\n" + status_text
 
             await game_start.send(
-                _render_image(session, kit=kit, identity=identity, detail=detail)
+                await _render_image(
+                    session, kit=kit, identity=identity, detail=detail
+                )
                 + MessageSegment.text(status_text)
-                + gens[latest_message_id].element,
-                referrer=gens[latest_message_id].event.referrer,
+                + current_pg.element,
+                referrer=current_pg.event.referrer,
             )
 
     except MatcherException:
@@ -363,6 +377,6 @@ async def handle_start(event: MessageEvent, arg: Message = CommandArg()):
         await game_start.finish(
             MessageSegment.text("错误码：{}\n".format(code))
             + Messages.ERROR
-            + gens[latest_message_id].element,
-            referrer=gens[latest_message_id].event.referrer,
+            + current_pg.element,
+            referrer=current_pg.event.referrer,
         )

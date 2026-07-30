@@ -407,26 +407,21 @@ class BlackjackRenderer:
                     f"没有找到符合条件的卡牌 (suit={suit}, rarity={rarity})"
                 )
 
-            # 重试逻辑：最多尝试3次选择卡牌和图片
-            card = None
-            card_images = []
-
-            for attempt in range(3):
-                card = random.choice(available_cards)
+            # Walk a shuffled candidate pool exactly once.  Retrying a random
+            # pick can select the same missing resource repeatedly even when
+            # another matching card has already been downloaded.
+            candidates = available_cards.copy()
+            random.shuffle(candidates)
+            for card in candidates:
                 card_images = self.get_card_images(card["resource_set_name"])
-
                 if card_images:
                     card_image_path = random.choice(card_images)
                     band_id = card["band_id"]
                     break
-                else:
-                    logger.warning(
-                        f"尝试 {attempt + 1}: 没有找到卡牌图片: {card['resource_set_name']}"
-                    )
 
             if card_image_path is None:
                 raise ValueError(
-                    f"重试3次后仍然没有找到可用的卡牌图片 (suit={suit}, rarity={rarity})"
+                    f"没有已下载的可用卡牌图片 (suit={suit}, rarity={rarity})"
                 )
 
         card_image = self.cut_card(card_image_path)

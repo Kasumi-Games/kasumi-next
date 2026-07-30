@@ -23,10 +23,18 @@ class PassiveGenerator:
 
     @property
     def element(self):
-        seq = _seq_counters[self.event.message.id].next()
+        message_id = self.event.message.id
+        counter = _seq_counters.get(message_id)
+        if counter is None:
+            # A game may legitimately outlive the cache TTL.  Recreate only
+            # the reply sequence state instead of turning a timeout/result
+            # message into a KeyError.
+            counter = SeqCounter()
+            _seq_counters[message_id] = counter
+        seq = counter.next()
         return MessageSegment(
             type="qq:passive",
-            data={"id": self.event.message.id, "seq": seq},
+            data={"id": message_id, "seq": seq},
         )
 
 

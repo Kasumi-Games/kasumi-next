@@ -1,4 +1,3 @@
-import asyncio
 from math import ceil
 from typing import Literal
 from typing import Sequence
@@ -8,6 +7,8 @@ from concurrent.futures import Executor
 
 from PIL import Image
 from PIL import ImageDraw
+
+from utils.image_tasks import run_image_task
 
 from .core import Rect
 from .core import Size
@@ -89,15 +90,14 @@ class Page:
 
         Args:
             ctx: Shared render context. A default context is created when omitted.
-            executor: Optional executor to use. When omitted, asyncio's default
-                thread pool executor is used.
+            executor: Optional executor to use. When omitted, the bounded image
+                thread pool is used.
 
         Returns:
             The rendered page image.
         """
 
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(executor, self.render, ctx)
+        return await run_image_task(self.render, ctx, executor=executor)
 
 
 @dataclass(frozen=True)
@@ -188,15 +188,14 @@ class AutoPage:
 
         Args:
             ctx: Shared render context. A default context is created when omitted.
-            executor: Optional executor to use. When omitted, asyncio's default
-                thread pool executor is used.
+            executor: Optional executor to use. When omitted, the bounded image
+                thread pool is used.
 
         Returns:
             The rendered page image.
         """
 
-        loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(executor, self.render, ctx)
+        return await run_image_task(self.render, ctx, executor=executor)
 
 
 @dataclass(frozen=True)

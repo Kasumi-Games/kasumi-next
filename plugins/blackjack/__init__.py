@@ -13,7 +13,7 @@ from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
 
 from utils.avatar import get_avatar
-from utils.images import image_segment
+from utils.images import image_segment_async
 from utils.theming import kit_for_user
 from utils.identity import identity_for
 from utils.error_handler import handle_error
@@ -134,7 +134,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         kit = kit_for_user(event.get_user_id())
         image = await help_page(kit).render_async()
         await game_start.finish(
-            image_segment(image) + gens[latest_message_id].element,
+            await image_segment_async(image) + gens[latest_message_id].element,
             referrer=gens[latest_message_id].event.referrer,
         )
 
@@ -276,7 +276,7 @@ async def handle_stats(event: MessageEvent):
         image = await stats_page(stats_card_data(stats, identity), kit).render_async()
 
         await game_stats.finish(
-            image_segment(image) + gens[event.message.id].element,
+            await image_segment_async(image) + gens[event.message.id].element,
             referrer=gens[event.message.id].event.referrer,
         )
 

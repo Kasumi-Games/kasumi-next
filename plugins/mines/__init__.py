@@ -12,7 +12,8 @@ from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
 
 from utils.avatar import get_avatar
-from utils.images import image_segment
+from utils.images import image_segment_async
+from utils.images import render_image_segment
 from utils.theming import kit_for_user
 from plugins.render import BaseKit
 from plugins.render import PlayerIdentity
@@ -47,11 +48,13 @@ from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
 game_manager = GameManager()
 
 
-def _render_field_image(
+async def _render_field_image(
     field, kit=None, identity=None, detail=None
 ) -> MessageSegment:
     """Render the game field to an image MessageSegment."""
-    return image_segment(render(field, kit=kit, identity=identity, detail=detail))
+    return await render_image_segment(
+        render, field, kit=kit, identity=identity, detail=detail
+    )
 
 
 async def _send_result_card(
@@ -120,7 +123,7 @@ async def _send_result_card(
     )
     image = await result_page(data, kit, identity=identity).render_async()
     await matcher.send(
-        image_segment(image) + pg.element,
+        await image_segment_async(image) + pg.element,
         referrer=pg.event.referrer,
     )
 
@@ -297,7 +300,9 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         detail = f"押注 {bet_amount} Pt · 剩 {mines} 雷"
 
         await game_start.send(
-            _render_field_image(session.field, kit=kit, identity=identity, detail=detail)
+            await _render_field_image(
+                session.field, kit=kit, identity=identity, detail=detail
+            )
             + MessageSegment.text(
                 Messages.START.format(number=mines)
                 + "\n"
@@ -340,7 +345,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 # The final revealed board is the game state and keeps its
                 # own send; everything else collapses into one result card.
                 await game_start.send(
-                    _render_field_image(
+                    await _render_field_image(
                         session.field, kit=kit, identity=identity, detail=detail
                     )
                     + gens[latest_message_id].element,
@@ -385,7 +390,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 session.field.reveal_all_mines()
                 game_manager.end_game(event.get_user_id(), GameResult.LOSE, payout=0)
                 await game_start.send(
-                    _render_field_image(
+                    await _render_field_image(
                         session.field, kit=kit, identity=identity, detail=detail
                     )
                     + gens[latest_message_id].element,
@@ -417,7 +422,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 # The final revealed board is the game state and keeps its
                 # own send; everything else collapses into one result card.
                 await game_start.send(
-                    _render_field_image(
+                    await _render_field_image(
                         session.field, kit=kit, identity=identity, detail=detail
                     )
                     + gens[latest_message_id].element,
@@ -436,7 +441,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 await game_start.finish(referrer=event.referrer)
 
             await game_start.send(
-                _render_field_image(
+                await _render_field_image(
                     session.field, kit=kit, identity=identity, detail=detail
                 )
                 + MessageSegment.text(
@@ -494,7 +499,7 @@ async def handle_stats(event: MessageEvent):
         kit = kit_for_user(user_id)
         image = await stats_page(stats, kit).render_async()
         await game_stats.finish(
-            image_segment(image) + gens[event.message.id].element,
+            await image_segment_async(image) + gens[event.message.id].element,
             referrer=event.referrer,
         )
 

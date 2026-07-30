@@ -9,13 +9,13 @@ from nonebot.adapters.satori import MessageEvent
 from nonebot.adapters.satori import MessageSegment
 
 from utils import image_to_bytes
+from utils.images import render_image_value
 from plugins.render import PlayerIdentity
 from utils.passive_generator import PassiveGenerator as PG
 from utils.passive_generator import generators as gens
 
 from .. import monetary
 from .utils import get_action
-from .models import Card
 from .models import Hand
 from .models import GameResult
 from .session import GameManager
@@ -28,24 +28,9 @@ require("daily_task")
 from ..daily_task import check_progress  # noqa: E402
 
 
-def get_card_image(card: Card, renderer) -> MessageSegment:
-    """获取牌的图片"""
-    ace_value = card.ace_value if card.rank == "A" else None
-
-    if card._get_image is not None:
-        return MessageSegment.image(
-            raw=image_to_bytes(card._get_image(ace_value)),
-            mime="image/jpeg",
-        )
-
-    image, _get_image = renderer.generate_card(
-        card.rank, card.suit, ace_value=ace_value
-    )
-    card._get_image = _get_image
-    return MessageSegment.image(
-        raw=image_to_bytes(image),
-        mime="image/jpeg",
-    )
+async def _render_jpeg_segment(renderer, /, *args, **kwargs) -> MessageSegment:
+    raw = await render_image_value(renderer, image_to_bytes, *args, **kwargs)
+    return MessageSegment.image(raw=raw, mime="image/jpeg")
 
 
 def _bet_detail(bet_amount: int) -> str:
@@ -53,7 +38,7 @@ def _bet_detail(bet_amount: int) -> str:
     return f"押注 {bet_amount} Pt"
 
 
-def play_dealer_turn(
+async def play_dealer_turn(
     dealer_hand: Hand,
     channel_id: str,
     user_id: str,
@@ -71,13 +56,12 @@ def play_dealer_turn(
         dealer_hand.add_card(game_manager.get_shoe(channel_id).deal())
         count += 1
 
-    hand_image = MessageSegment.image(
-        raw=image_to_bytes(
-            game_manager.renderer_for(user_id).generate_hand(
-                dealer_hand, False, identity=identity, detail=detail
-            )
-        ),
-        mime="image/jpeg",
+    hand_image = await _render_jpeg_segment(
+        game_manager.renderer_for(user_id).generate_hand,
+        dealer_hand,
+        False,
+        identity=identity,
+        detail=detail,
     )
     if count > 0:
         result_messages += Messages.DEALER_DRAWN.format(count=count) + hand_image
@@ -167,17 +151,13 @@ async def handle_surrender(
     loss_amount = (bet_amount / 2).__ceil__()
     game_manager.end_game(user_id, GameResult.SURRENDER, winnings=-loss_amount)
     await matcher.send(
-        MessageSegment.image(
-            raw=image_to_bytes(
-                renderer.generate_table(
-                    dealer_hand,
-                    player_hand,
-                    False,
-                    identity=identity,
-                    detail=_bet_detail(bet_amount),
-                )
-            ),
-            mime="image/jpeg",
+        await _render_jpeg_segment(
+            renderer.generate_table,
+            dealer_hand,
+            player_hand,
+            False,
+            identity=identity,
+            detail=_bet_detail(bet_amount),
         )
         + Messages.SURRENDER_LOSE.format(amount=loss_amount)
         + (
@@ -218,17 +198,13 @@ async def play_player_turn(
             prompt = Messages.ACTION_PROMPT
 
         await matcher.send(
-            MessageSegment.image(
-                raw=image_to_bytes(
-                    renderer.generate_table(
-                        dealer_hand,
-                        player_hand,
-                        True,
-                        identity=identity,
-                        detail=_bet_detail(bet_amount),
-                    )
-                ),
-                mime="image/jpeg",
+            await _render_jpeg_segment(
+                renderer.generate_table,
+                dealer_hand,
+                player_hand,
+                True,
+                identity=identity,
+                detail=_bet_detail(bet_amount),
             )
             + prompt
             + gens[latest_message_id].element,
@@ -278,17 +254,13 @@ async def play_player_turn(
                         next_prompt = ""
 
                     await matcher.send(
-                        MessageSegment.image(
-                            raw=image_to_bytes(
-                                renderer.generate_table(
-                                    dealer_hand,
-                                    player_hand,
-                                    player_hand.value <= 21,
-                                    identity=identity,
-                                    detail=_bet_detail(bet_amount),
-                                )
-                            ),
-                            mime="image/jpeg",
+                        await _render_jpeg_segment(
+                            renderer.generate_table,
+                            dealer_hand,
+                            player_hand,
+                            player_hand.value <= 21,
+                            identity=identity,
+                            detail=_bet_detail(bet_amount),
                         )
                         + next_prompt
                         + gens[latest_message_id].element,
@@ -343,17 +315,13 @@ async def play_player_turn(
                     game_manager.set_player_bet(event.get_user_id(), bet_amount)
                     player_hand.add_card(game_manager.get_shoe(event.channel.id).deal())
                     await matcher.send(
-                        MessageSegment.image(
-                            raw=image_to_bytes(
-                                renderer.generate_table(
-                                    dealer_hand,
-                                    player_hand,
-                                    player_hand.value <= 21,
-                                    identity=identity,
-                                    detail=_bet_detail(bet_amount),
-                                )
-                            ),
-                            mime="image/jpeg",
+                        await _render_jpeg_segment(
+                            renderer.generate_table,
+                            dealer_hand,
+                            player_hand,
+                            player_hand.value <= 21,
+                            identity=identity,
+                            detail=_bet_detail(bet_amount),
                         )
                         + gens[latest_message_id].element,
                         referrer=gens[latest_message_id].event.referrer,
@@ -467,17 +435,13 @@ async def handle_initial_blackjack(
             winnings=-bet_amount,
         )
         await matcher.finish(
-            MessageSegment.image(
-                raw=image_to_bytes(
-                    renderer.generate_table(
-                        session.dealer_hand,
-                        session.player_hand,
-                        False,
-                        identity=identity,
-                        detail=_bet_detail(bet_amount),
-                    )
-                ),
-                mime="image/jpeg",
+            await _render_jpeg_segment(
+                renderer.generate_table,
+                session.dealer_hand,
+                session.player_hand,
+                False,
+                identity=identity,
+                detail=_bet_detail(bet_amount),
             )
             + Messages.DEALER_BLACKJACK_LOSE.format(amount=bet_amount)
             + f"你现在有 {monetary.get(session.user_id)} 个Pt"
@@ -490,17 +454,13 @@ async def handle_initial_blackjack(
         if dealer_blackjack:
             game_manager.end_game(session.user_id, GameResult.PUSH, winnings=0)
             await matcher.finish(
-                MessageSegment.image(
-                    raw=image_to_bytes(
-                        renderer.generate_table(
-                            session.dealer_hand,
-                            session.player_hand,
-                            False,
-                            identity=identity,
-                            detail=_bet_detail(bet_amount),
-                        )
-                    ),
-                    mime="image/jpeg",
+                await _render_jpeg_segment(
+                    renderer.generate_table,
+                    session.dealer_hand,
+                    session.player_hand,
+                    False,
+                    identity=identity,
+                    detail=_bet_detail(bet_amount),
                 )
                 + Messages.BLACKJACK_PUSH
                 + f"你现在有 {monetary.get(session.user_id)} 个Pt"
@@ -519,17 +479,13 @@ async def handle_initial_blackjack(
             )
             # Plugin message first
             await matcher.send(
-                MessageSegment.image(
-                    raw=image_to_bytes(
-                        renderer.generate_table(
-                            session.dealer_hand,
-                            session.player_hand,
-                            False,
-                            identity=identity,
-                            detail=_bet_detail(bet_amount),
-                        )
-                    ),
-                    mime="image/jpeg",
+                await _render_jpeg_segment(
+                    renderer.generate_table,
+                    session.dealer_hand,
+                    session.player_hand,
+                    False,
+                    identity=identity,
+                    detail=_bet_detail(bet_amount),
                 )
                 + win_msg
                 + f"你现在有 {monetary.get(session.user_id)} 个Pt！"
@@ -577,17 +533,13 @@ async def handle_split_decision(
     ):
         sentence = Messages.SPLIT_PROMPT
         await matcher.send(
-            MessageSegment.image(
-                raw=image_to_bytes(
-                    renderer.generate_table(
-                        session.dealer_hand,
-                        session.player_hand,
-                        True,
-                        identity=identity,
-                        detail=_bet_detail(bet_amount),
-                    )
-                ),
-                mime="image/jpeg",
+            await _render_jpeg_segment(
+                renderer.generate_table,
+                session.dealer_hand,
+                session.player_hand,
+                True,
+                identity=identity,
+                detail=_bet_detail(bet_amount),
             )
             + sentence
             + Messages.SPLIT_CHOICE
@@ -654,17 +606,13 @@ async def handle_split_game(
     for idx, hand in enumerate([session.player_hand, session.split_hand]):
         if hand.value == 21:
             await matcher.send(
-                MessageSegment.image(
-                    raw=image_to_bytes(
-                        renderer.generate_table(
-                            session.dealer_hand,
-                            hand,
-                            True,
-                            identity=identity,
-                            detail=_bet_detail(bet_amount // 2),
-                        )
-                    ),
-                    mime="image/jpeg",
+                await _render_jpeg_segment(
+                    renderer.generate_table,
+                    session.dealer_hand,
+                    hand,
+                    True,
+                    identity=identity,
+                    detail=_bet_detail(bet_amount // 2),
                 )
                 + f"【第 {idx + 1} 幅牌】"
                 + gens[latest_message_id].element,
@@ -685,7 +633,7 @@ async def handle_split_game(
             )
             game_ended_map[idx + 1] = game_ended
 
-    dealer_result = play_dealer_turn(
+    dealer_result = await play_dealer_turn(
         session.dealer_hand,
         event.channel.id,
         session.user_id,
@@ -767,7 +715,7 @@ async def handle_normal_game(
     if game_ended:
         return
 
-    dealer_result = play_dealer_turn(
+    dealer_result = await play_dealer_turn(
         session.dealer_hand,
         event.channel.id,
         session.user_id,

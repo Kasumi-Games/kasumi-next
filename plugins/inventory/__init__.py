@@ -19,7 +19,8 @@ from utils.clock import format_ts
 from utils.avatar import get_avatar
 from utils.content_safety import ensure_safe_text
 from utils.content_safety import safe_display_text
-from utils.images import image_segment
+from utils.images import image_segment_async
+from utils.images import render_image_segment
 from utils.theming import kit_for_user
 from utils.theming import theme_by_token
 from utils.identity import identity_for
@@ -60,7 +61,7 @@ from .service import set_profile_description  # noqa: E402
 from .database import init_database  # noqa: E402
 from ..render.types import ImageSource  # noqa: E402
 from .season_render import season_trend_data  # noqa: E402
-from .season_render import season_trend_page  # noqa: E402
+from .season_render import render_season_trend  # noqa: E402
 from .season_service import settle_season  # noqa: E402
 from .season_service import list_snapshots  # noqa: E402
 from .season_service import get_latest_season  # noqa: E402
@@ -219,7 +220,7 @@ async def handle_inventory(
             referrer=passive_generator.event.referrer,
         )
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -260,7 +261,7 @@ async def handle_cosmetic(
                     referrer=passive_generator.event.referrer,
                 )
             await matcher.finish(
-                image_segment(image) + passive_generator.element,
+                await image_segment_async(image) + passive_generator.element,
                 referrer=passive_generator.event.referrer,
             )
 
@@ -643,7 +644,7 @@ async def handle_season(
             referrer=passive_generator.event.referrer,
         )
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -783,7 +784,7 @@ async def handle_season_rank(matcher: Matcher, event: MessageEvent):
             referrer=passive_generator.event.referrer,
         )
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -929,9 +930,9 @@ async def handle_season_trend(matcher: Matcher, event: MessageEvent):
         )
 
     kit = kit_for_user(user_id)
-    image = await season_trend_page(data, kit).render_async()
+    image = await render_image_segment(render_season_trend, data, kit)
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        image + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -1008,7 +1009,7 @@ async def handle_profile(
         data = assemble_profile(user_id, avatar=await get_avatar(user_id))
         image = await profile_page(data, kit).render_async()
         await matcher.finish(
-            image_segment(image) + passive_generator.element,
+            await image_segment_async(image) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 

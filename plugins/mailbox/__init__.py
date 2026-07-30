@@ -36,7 +36,7 @@ from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 from utils import PassiveGenerator  # noqa: E402
 from utils.clock import format_ts
 from utils.content_safety import ensure_safe_text  # noqa: E402
-from utils.images import image_segment  # noqa: E402
+from utils.images import image_segment_async  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 
 from .models import ServiceMail  # noqa: E402
@@ -131,7 +131,7 @@ async def send_inbox(user_id: str, passive_generator: PassiveGenerator):
     image = await inbox_page(mails, kit).render_async()
 
     await mailbox_cmd.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -143,7 +143,7 @@ async def send_claim_all(user_id: str, passive_generator: PassiveGenerator):
     image = await claim_all_page(outcome, kit).render_async()
 
     await mailbox_cmd.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -199,7 +199,7 @@ async def send_mail_detail(
     image = await mail_page(mail, results, kit, ordinal=ordinal).render_async()
 
     await mailbox_cmd.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 

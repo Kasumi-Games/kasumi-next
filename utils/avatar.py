@@ -26,6 +26,8 @@ from PIL import Image
 from nonebot import get_driver
 from nonebot.log import logger
 
+from .image_tasks import run_image_task
+
 #: Where q.qlogo.cn serves QQ-bot app avatars; mode 5 is the 140px variant,
 #: plenty for the 52-96px render sizes.
 _URL_TEMPLATE = "https://q.qlogo.cn/qqapp/{app_id}/{user_id}/5"
@@ -57,6 +59,20 @@ def _app_id() -> str | None:
     return str(value) if value else None
 
 
+def _load_rgba(source: Path | BytesIO) -> Image.Image:
+    """Decode an image fully so no lazy PIL file handle crosses threads."""
+
+    with Image.open(source) as opened:
+        return opened.convert("RGBA")
+
+
+def _decode_and_store(payload: bytes, disk_path: Path) -> Image.Image:
+    image = _load_rgba(BytesIO(payload))
+    disk_path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(disk_path)
+    return image
+
+
 async def get_avatar(user_id: str) -> Image.Image | None:
     """Fetch a user's QQ avatar, cached. Never raises.
 
@@ -84,7 +100,7 @@ async def _get_avatar(user_id: str) -> Image.Image | None:
     disk_path = _cache_dir() / f"{user_id}.png"
     if disk_path.exists() and time.time() - disk_path.stat().st_mtime < _DISK_TTL_SECONDS:
         try:
-            image = Image.open(disk_path).convert("RGBA")
+            image = await run_image_task(_load_rgba, disk_path)
             _remember(user_id, image)
             return image
         except OSError:
@@ -107,9 +123,7 @@ async def _get_avatar(user_id: str) -> Image.Image | None:
             # generic penguin, so the stock image counts as "no avatar".
             _negative[user_id] = time.monotonic() + _NEGATIVE_TTL_SECONDS
             return None
-        image = Image.open(BytesIO(payload)).convert("RGBA")
-        disk_path.parent.mkdir(parents=True, exist_ok=True)
-        image.save(disk_path)
+        image = await run_image_task(_decode_and_store, payload, disk_path)
         _remember(user_id, image)
         return image
 

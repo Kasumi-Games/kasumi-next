@@ -1,5 +1,8 @@
 import sys
+import time
+import asyncio
 import unittest
+import threading
 from pathlib import Path
 from unittest import mock
 
@@ -10,6 +13,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import theming
 from utils.images import image_bytes
 from utils.images import image_segment
+from utils.images import render_image_segment
+from utils.image_tasks import IMAGE_WORKERS
+from utils.image_tasks import run_image_task
 from plugins.render.kit import BaseKit
 from plugins.render.kits import KITS
 from plugins.render.kits import KIT_DISPLAY_NAMES
@@ -234,6 +240,41 @@ class ImageHelperTest(unittest.TestCase):
                 segment = encode(Image.new("RGBA", (4, 4), (1, 2, 3, 255)))
                 self.assertEqual(segment.type, "img")
                 self.assertTrue(segment.data["src"].startswith("data:image/png"))
+
+
+class AsyncImageHelperTest(unittest.IsolatedAsyncioTestCase):
+    async def test_render_and_encoding_do_not_block_event_loop(self) -> None:
+        def slow_renderer() -> Image.Image:
+            time.sleep(0.1)
+            return Image.new("RGBA", (4, 4), (1, 2, 3, 255))
+
+        render_task = asyncio.create_task(render_image_segment(slow_renderer))
+        await asyncio.sleep(0.02)
+
+        self.assertFalse(render_task.done())
+        segment = await render_task
+        self.assertEqual(segment.type, "img")
+        self.assertTrue(segment.data["src"].startswith("data:image/png"))
+
+    async def test_image_bursts_have_bounded_concurrency(self) -> None:
+        lock = threading.Lock()
+        active = 0
+        peak = 0
+
+        def slow_image_work() -> None:
+            nonlocal active, peak
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(0.03)
+            with lock:
+                active -= 1
+
+        await asyncio.gather(
+            *(run_image_task(slow_image_work) for _ in range(IMAGE_WORKERS + 4))
+        )
+
+        self.assertLessEqual(peak, IMAGE_WORKERS)
 
 
 if __name__ == "__main__":

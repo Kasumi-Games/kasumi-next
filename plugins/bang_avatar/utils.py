@@ -7,6 +7,12 @@ from aiohttp import ClientSession
 from nonebot.adapters.satori import MessageSegment
 
 from utils.images import image_segment
+from utils.image_tasks import run_image_task
+
+
+def _decode_image(payload: bytes) -> Image.Image:
+    with Image.open(BytesIO(payload)) as opened:
+        return opened.convert("RGBA")
 
 
 def paste_img(imgbase: Image, imgadd: Image, position: tuple[int, int]) -> Image:
@@ -102,8 +108,7 @@ async def get_group_member_head(
         async with await cs.get(avatar_url) as response:
             response.raise_for_status()
             img_bytes = await response.read()
-            img = Image.open(BytesIO(img_bytes))
-            return img
+            return await run_image_task(_decode_image, img_bytes)
 
 
 def image_to_message(image: Image.Image) -> MessageSegment:

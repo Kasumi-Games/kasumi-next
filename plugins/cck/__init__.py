@@ -3,7 +3,6 @@ import random
 from typing import Any
 from typing import Dict
 from typing import List
-from typing import Union
 from pathlib import Path
 
 from PIL import Image
@@ -27,11 +26,14 @@ from nonebot_plugin_waiter import waiter  # noqa: E402
 
 from utils import get_today_birthday  # noqa: E402
 from utils.avatar import get_avatar  # noqa: E402
-from utils.content_safety import ContentSafetyError  # noqa: E402
-from utils.content_safety import ensure_safe_text  # noqa: E402
-from utils.images import image_segment  # noqa: E402
+from utils.images import image_segment_async  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
+from utils.image_tasks import run_image_task  # noqa: E402
+from utils.waiter_rules import same_channel  # noqa: E402
+from utils.waiter_rules import is_force_stop_message  # noqa: E402
+from utils.content_safety import ContentSafetyError  # noqa: E402
+from utils.content_safety import ensure_safe_text  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
@@ -65,6 +67,23 @@ cut_name_to_amount = {
     "[寻找记忆]": (5, 7),
     "[6块床板]": (5, 8),
 }
+
+
+def _prepare_game_images(image_path: Path, image_cut_setting: dict):
+    """Decode, crop and encode the two in-round images in one worker."""
+
+    with Image.open(image_path) as source:
+        source.load()
+        full_image = image_to_message(source)
+        cropped_image = random_crop_image(
+            source,
+            image_cut_setting["cut_width"],
+            image_cut_setting["cut_length"],
+            image_cut_setting["is_black"],
+            image_cut_setting["cut_counts"],
+        )
+    return full_image, cropped_image
+
 
 data_path = localstore.get_data_dir("cck")
 cache_path = localstore.get_cache_dir("cck")
@@ -175,14 +194,15 @@ async def _send_reveal_card(
         )
         return
     await start_cck.send(
-        image_segment(image) + pg.element, referrer=pg.event.referrer
+        await image_segment_async(image) + pg.element, referrer=pg.event.referrer
     )
 
 
 @start_cck.handle()
 async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
     arg_text = arg.extract_plain_text().strip()
-    gens[event.message.id] = PG(event)
+    current_pg = PG(event)
+    gens[event.message.id] = current_pg
 
     if arg_text == "-h":
         await start_cck.finish(
@@ -199,30 +219,30 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             .replace("<", "&lt;")
             .replace(">", "&gt;")
             .replace('"', "&quot;")
-            + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     if arg_text == "-f" and event.channel.id in gamers_store.get():
         gamers_store.remove(event.channel.id)
         await start_cck.finish(
-            "已强制结束猜卡面" + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            "已强制结束猜卡面" + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     if arg_text == "-f":
         await start_cck.finish(
             "没有正在进行的猜卡面，你可以直接使用 @Kasumi /猜卡面 来开始"
-            + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     try:
         ensure_safe_text(arg_text)
     except ContentSafetyError as error:
         await start_cck.finish(
-            str(error) + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            str(error) + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     image_cut_setting: Dict[str, Any]
@@ -234,14 +254,14 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         await start_cck.finish(
             f"未知难度：{arg_text}\n"
             f"可用难度：{available_difficulties}\n"
-            "可使用 /猜卡面 -h 查看帮助" + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            "可使用 /猜卡面 -h 查看帮助" + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     if event.channel.id in gamers_store.get():
         await start_cck.finish(
-            "你已经在猜卡面咯" + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            "你已经在猜卡面咯" + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     gamers_store.add(event.channel.id)
@@ -273,47 +293,37 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             **kwargs,
         )
 
-    pil_full_image = Image.open(image_path)
-    full_image = image_to_message(pil_full_image)
-    image = random_crop_image(
-        pil_full_image,
-        image_cut_setting["cut_width"],
-        image_cut_setting["cut_length"],
-        image_cut_setting["is_black"],
-        image_cut_setting["cut_counts"],
+    full_image, image = await run_image_task(
+        _prepare_game_images,
+        image_path,
+        image_cut_setting,
     )
-
-    gens[event.message.id] = PG(event)
-    latest_message_id = event.message.id
 
     await start_cck.send(
         image
         + f"{image_cut_setting['cut_name']}获取帮助: @Kasumi /help 猜卡面"
-        + gens[event.message.id].element,
-        referrer=gens[event.message.id].event.referrer,
+        + current_pg.element,
+        referrer=current_pg.event.referrer,
     )
 
-    @waiter(waits=["message"], matcher=start_cck, block=False)
-    async def check(event_: MessageEvent) -> Union[MessageEvent, bool, bool]:
-        if event_.channel.id != event.channel.id:
-            return False
+    @waiter(
+        waits=["message"],
+        matcher=start_cck,
+        block=False,
+        rule=same_channel(event.channel.id),
+    )
+    async def check(event_: MessageEvent) -> MessageEvent:
         return event_
 
     player_counts: Dict[str, int] = {}
 
     async for resp in check(timeout=180):
-        if resp is False:
-            continue
-
-        if resp is True:
-            raise Exception("Unexpected response")
-
         if resp is None:
             gamers_store.remove(event.channel.id)
             await _send_reveal_card(
                 _reveal_data("timeout"),
                 kit_for_user(event.get_user_id()),
-                gens[latest_message_id],
+                current_pg,
                 f"时间到！答案是———{character_name} card_id: {card_id}",
                 full_image,
             )
@@ -324,15 +334,18 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
             resp.get_user_id(),
             resp.message.id,
         )
-        gens[msg_id] = PG(resp)
-        latest_message_id = msg_id
+        current_pg = PG(resp)
+        gens[msg_id] = current_pg
+
+        if is_force_stop_message(msg, {"猜卡面", "猜猜看", "cck"}):
+            break
 
         if msg == "bzd":
             gamers_store.remove(event.channel.id)
             await _send_reveal_card(
                 _reveal_data("bzd"),
                 kit_for_user(event.get_user_id()),
-                gens[msg_id],
+                current_pg,
                 f"答案是———{character_name} card_id: {card_id}",
                 full_image,
             )
@@ -350,8 +363,8 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
 
         if player_counts[user_id] >= 3:
             await start_cck.send(
-                "你已经回答三次啦，可以回复 bzd 查看答案～" + gens[msg_id].element,
-                referrer=gens[msg_id].event.referrer,
+                "你已经回答三次啦，可以回复 bzd 查看答案～" + current_pg.element,
+                referrer=current_pg.event.referrer,
             )
             continue
 
@@ -364,8 +377,8 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
         # result-card render, both of which can take noticeably longer than a
         # plain text reply.
         await start_cck.send(
-            "回答正确！本局猜卡面结束，正在生成结果图片……" + gens[msg_id].element,
-            referrer=gens[msg_id].event.referrer,
+            "回答正确！本局猜卡面结束，正在生成结果图片……" + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
         characters = get_today_birthday()
         base_amount = random.randint(
@@ -414,7 +427,7 @@ async def handle_cck(event: MessageEvent, arg: Message = CommandArg()):
                 owner_name=winner.nickname,
             ),
             kit_for_user(user_id),
-            gens[msg_id],
+            current_pg,
             f"正确！答案是———{character_name}，奖励你 {amount} 个Pt！card_id: {card_id}",
             full_image,
         )

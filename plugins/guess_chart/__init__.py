@@ -1,7 +1,6 @@
 import io
 import random
 from typing import List
-from typing import Union
 from typing import Optional
 from pathlib import Path
 
@@ -37,9 +36,12 @@ from nonebot_plugin_apscheduler import scheduler  # noqa: E402
 
 from utils import get_today_birthday  # noqa: E402
 from utils.avatar import get_avatar  # noqa: E402
-from utils.images import image_segment  # noqa: E402
+from utils.images import image_segment_async  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
+from utils.image_tasks import run_image_task  # noqa: E402
+from utils.waiter_rules import same_channel  # noqa: E402
+from utils.waiter_rules import is_force_stop_message  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
@@ -54,7 +56,6 @@ from .utils import get_jacket_image  # noqa: E402
 from .utils import read_csv_to_dict  # noqa: E402
 from .utils import render_to_slices  # noqa: E402
 from .utils import flatten_song_data  # noqa: E402
-from .utils import pil_image_to_bytes  # noqa: E402
 from .utils import sort_by_difficulty  # noqa: E402
 from .utils import get_value_from_list  # noqa: E402
 from .utils import build_enriched_dictionary  # noqa: E402
@@ -156,7 +157,7 @@ async def _send_reveal_card(
         )
         return
     await game_start.send(
-        image_segment(image) + pg.element, referrer=pg.event.referrer
+        await image_segment_async(image) + pg.element, referrer=pg.event.referrer
     )
 
 
@@ -178,8 +179,8 @@ async def handle_start(
     game_difficulty: str = Depends(get_difficulty),
     song_raw_data: dict = Depends(song_store.get_raw),
 ):
-    gens[event.message.id] = PG(event)
-    latest_message_id = event.message.id
+    current_pg = PG(event)
+    gens[event.message.id] = current_pg
 
     if (
         arg is not None
@@ -188,28 +189,28 @@ async def handle_start(
     ):
         gamers_store.remove(event.channel.id)
         await game_start.finish(
-            "已强制退出猜谱面" + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            "已强制退出猜谱面" + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     if arg is not None and arg.extract_plain_text().strip() == "-f":
         await game_start.finish(
-            "没有正在进行的猜谱面" + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            "没有正在进行的猜谱面" + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     if await is_gaming(event):
         await game_start.finish(
             "已经在猜谱面了哦，如果有异常，请使用 @Kasumi /猜谱面 -f 以强制结束游戏"
-            + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     gamers_store.add(event.channel.id)
 
     await game_start.send(
-        "正在加载谱面..." + gens[event.message.id].element,
-        referrer=gens[event.message.id].event.referrer,
+        "正在加载谱面..." + current_pg.element,
+        referrer=current_pg.event.referrer,
     )
 
     flat_song_data: list = flatten_song_data(song_data)
@@ -230,8 +231,8 @@ async def handle_start(
             gamers_store.remove(event.channel.id)
             await game_start.finish(
                 f"{song_difficulty} 的曲子一共只有 {song_num} 首，太简单了哦！试试换个等级吧"
-                + gens[event.message.id].element,
-                referrer=gens[event.message.id].event.referrer,
+                + current_pg.element,
+                referrer=current_pg.event.referrer,
             )
         potential_song_number = song_num
     elif game_difficulty == "easy":
@@ -256,8 +257,8 @@ async def handle_start(
     if not filtered_song_data:
         gamers_store.remove(event.channel.id)
         await game_start.finish(
-            "没有符合条件的谱面" + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            "没有符合条件的谱面" + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     song = random.choice(filtered_song_data)
@@ -275,20 +276,22 @@ async def handle_start(
         code = handle_error(e, context="guess_chart", user_id=event.get_user_id())
         await game_start.finish(
             "发生错误！重新开一把吧\n错误码：{}".format(code)
-            + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     try:
         if game_difficulty in ["easy", "normal"]:
-            img = render_chart(chart)
+            img = await run_image_task(lambda: render_chart(chart))
         else:
-            img = render_to_slices(chart, game_difficulty)
+            img = await run_image_task(
+                render_to_slices, chart, game_difficulty
+            )
     except MemoryError:
         gamers_store.remove(event.channel.id)
         await game_start.finish(
-            "发生谱面渲染错误！重新开一把吧" + gens[event.message.id].element,
-            referrer=gens[event.message.id].event.referrer,
+            "发生谱面渲染错误！重新开一把吧" + current_pg.element,
+            referrer=current_pg.event.referrer,
         )
 
     correct_chart_id: str = str(song_id)
@@ -315,7 +318,7 @@ async def handle_start(
 
     logger.debug(f"谱面：{song_name} {diff.upper()} LV.{level}")
 
-    jacket_pil = _decode_jacket(jacket_image)
+    jacket_pil = await run_image_task(_decode_jacket, jacket_image)
     main_bpm = int(chart_statistics.main_bpm)
 
     def _reveal_data(outcome: str, **kwargs) -> GuessChartRevealData:
@@ -334,31 +337,28 @@ async def handle_start(
         )
 
     await game_start.send(
-        MessageSegment.image(raw=pil_image_to_bytes(img), mime="image/png")
+        await image_segment_async(img)
         + "获取帮助: @Kasumi /help 猜谱面"
-        + gens[event.message.id].element,
-        referrer=gens[event.message.id].event.referrer,
+        + current_pg.element,
+        referrer=current_pg.event.referrer,
     )
 
-    @waiter(waits=["message"], matcher=game_start, block=False)
-    async def check(event_: MessageEvent) -> Union[Optional[MessageEvent], bool]:
-        if event_.channel.id != event.channel.id:
-            return False
+    @waiter(
+        waits=["message"],
+        matcher=game_start,
+        block=False,
+        rule=same_channel(event.channel.id),
+    )
+    async def check(event_: MessageEvent) -> MessageEvent:
         return event_
 
     async for resp in check(timeout=180):
-        if resp is False:
-            continue
-
-        if resp is True:
-            raise Exception("Unexpected response")
-
         if resp is None:
             gamers_store.remove(event.channel.id)
             await _send_reveal_card(
                 _reveal_data("timeout"),
                 kit_for_user(event.get_user_id()),
-                gens[latest_message_id],
+                current_pg,
                 f"时间到了哦\n谱面：{song_name} {diff.upper()} LV.{level}",
                 jacket_image,
             )
@@ -369,8 +369,14 @@ async def handle_start(
             resp.get_user_id(),
             resp.message.id,
         )
-        gens[message_id] = PG(resp)
-        latest_message_id = message_id
+        current_pg = PG(resp)
+        gens[message_id] = current_pg
+
+        if is_force_stop_message(
+            msg,
+            {"猜谱面", "猜谱", "cpm", "谱面挑战"},
+        ):
+            break
 
         if msg.isdigit():
             guessed_chart_id = msg
@@ -379,19 +385,19 @@ async def handle_start(
                 if game_type == "given_game_difficulty":
                     if game_difficulty in {"hard", "expert"}:
                         await game_start.send(
-                            "hard 和 expert 难度没有提示哦" + gens[message_id].element,
-                            referrer=gens[message_id].event.referrer,
+                            "hard 和 expert 难度没有提示哦" + current_pg.element,
+                            referrer=current_pg.event.referrer,
                         )
                         continue
                 if not tips:
                     await game_start.send(
-                        "没有更多提示了哦" + gens[message_id].element,
-                        referrer=gens[message_id].event.referrer,
+                        "没有更多提示了哦" + current_pg.element,
+                        referrer=current_pg.event.referrer,
                     )
                 else:
                     await game_start.send(
-                        tips[0] + gens[message_id].element,
-                        referrer=gens[message_id].event.referrer,
+                        tips[0] + current_pg.element,
+                        referrer=current_pg.event.referrer,
                     )
                     tips.pop(0)
                 continue
@@ -400,7 +406,7 @@ async def handle_start(
                 await _send_reveal_card(
                     _reveal_data("bzd"),
                     kit_for_user(event.get_user_id()),
-                    gens[message_id],
+                    current_pg,
                     f"要再试一次吗？\n谱面：{song_name} {diff.upper()} LV.{level}",
                     jacket_image,
                 )
@@ -426,8 +432,8 @@ async def handle_start(
                 ).__ceil__()
             else:
                 await game_start.finish(
-                    "未知游戏类型！" + gens[message_id].element,
-                    referrer=gens[message_id].event.referrer,
+                    "未知游戏类型！" + current_pg.element,
+                    referrer=current_pg.event.referrer,
                 )
 
             base_amount = amount
@@ -466,7 +472,7 @@ async def handle_start(
                     owner_name=winner.nickname,
                 ),
                 kit_for_user(user_id),
-                gens[message_id],
+                current_pg,
                 f"回答正确！奖励你 {amount} 个Pt\n谱面：{song_name} {diff.upper()} LV.{level}",
                 jacket_image,
             )

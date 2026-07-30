@@ -5,6 +5,7 @@ from nonebot import get_plugin_config
 from nonebot.adapters.satori import MessageSegment
 
 from utils.images import image_segment
+from utils.image_tasks import run_image_task
 
 from .utils import paste_img
 from .utils import resize_img
@@ -36,7 +37,7 @@ async def render(wife_data: WifeData,
     avatar = await get_group_member_head(app_id,user_id,avatar_url = avatar_url)
 
     #实际渲染，获取Image对象
-    return _render(avatar,star,band,attr,src_path)
+    return await run_image_task(_render, avatar, star, band, attr, src_path)
 
 
 def _render(base:Image,
@@ -77,4 +78,3 @@ def _render(base:Image,
 
     #返回MessageSegment对象
     return image_segment(base)
-    

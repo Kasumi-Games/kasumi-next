@@ -24,7 +24,7 @@ from utils.avatar import get_avatar  # noqa: E402
 from utils.content_safety import ContentSafetyError  # noqa: E402
 from utils.content_safety import ensure_safe_text  # noqa: E402
 from utils.content_safety import safe_display_text  # noqa: E402
-from utils.images import image_segment  # noqa: E402
+from utils.images import image_segment_async  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
 
@@ -220,7 +220,7 @@ async def _send_create_card(
             referrer=passive_generator.event.referrer,
         )
     await create_cmd.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -346,7 +346,7 @@ async def _send_completion_card(
             referrer=passive_generator.event.referrer,
         )
     await claim_cmd.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -427,6 +427,6 @@ async def handle_list(event: MessageEvent):
         )
 
     await list_cmd.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )

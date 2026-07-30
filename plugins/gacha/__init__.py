@@ -18,7 +18,7 @@ from nonebot.adapters.satori import MessageEvent
 from pydantic import BaseModel
 
 from utils import PassiveGenerator
-from utils.images import image_segment
+from utils.images import image_segment_async
 from utils.theming import kit_by_name
 from utils.theming import kit_for_user
 from utils.theming import kit_name_for_item
@@ -130,7 +130,7 @@ async def _send_banner_showcase(
     data = _banner_showcase_data(user_id, banner)
     image = await banner_page(data, kit).render_async()
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -237,7 +237,7 @@ async def _send_pull_reveal(
     data = pull_page_data(results, banner, item_names=item_names, item_art=item_art)
     image = await pull_page(data, kit).render_async()
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 
@@ -319,7 +319,7 @@ async def _send_history(
     )
     image = await history_page(data, kit).render_async()
     await matcher.finish(
-        image_segment(image) + passive_generator.element,
+        await image_segment_async(image) + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )
 

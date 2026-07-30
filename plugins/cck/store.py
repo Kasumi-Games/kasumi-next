@@ -23,10 +23,12 @@ class GamersStore(DataStore):
 
     def add(self, gamer: str) -> None:
         gamers = self.get()
-        gamers.append(gamer)
+        if gamer not in gamers:
+            gamers.append(gamer)
         self.set("gamers", gamers)
 
     def remove(self, gamer: str) -> None:
         gamers = self.get()
-        gamers.remove(gamer)
+        if gamer in gamers:
+            gamers.remove(gamer)
         self.set("gamers", gamers)
