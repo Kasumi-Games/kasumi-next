@@ -47,18 +47,26 @@ class BandStore(DataStore):
 class GamersStore(DataStore):
     def __init__(self) -> None:
         super().__init__()
+        self._sessions: Dict[str, object] = {}
 
     def get(self) -> List[str]:
         return self.data.get("gamers", [])
 
-    def add(self, gamer: str) -> None:
+    def add(self, gamer: str) -> object:
         gamers = self.get()
         if gamer not in gamers:
             gamers.append(gamer)
         self.set("gamers", gamers)
+        session = object()
+        self._sessions[gamer] = session
+        return session
 
     def remove(self, gamer: str) -> None:
         gamers = self.get()
         if gamer in gamers:
             gamers.remove(gamer)
         self.set("gamers", gamers)
+        self._sessions.pop(gamer, None)
+
+    def is_current(self, gamer: str, session: object) -> bool:
+        return self._sessions.get(gamer) is session

@@ -78,6 +78,17 @@ song_store = SongStore()
 band_store = BandStore()
 gamers_store = GamersStore()
 
+_FORCE_STOP_COMMANDS = {"猜谱面", "猜谱", "cpm", "谱面挑战"}
+
+
+def _stop_if_force_stop(message: str, channel_id: str) -> bool:
+    """Consume a force-stop command and clear the channel's active game."""
+
+    if not is_force_stop_message(message, _FORCE_STOP_COMMANDS):
+        return False
+    gamers_store.remove(channel_id)
+    return True
+
 
 async def is_gaming(event: MessageEvent) -> bool:
     return event.channel.id in gamers_store.get()
@@ -206,7 +217,7 @@ async def handle_start(
             referrer=current_pg.event.referrer,
         )
 
-    gamers_store.add(event.channel.id)
+    session_token = gamers_store.add(event.channel.id)
 
     await game_start.send(
         "正在加载谱面..." + current_pg.element,
@@ -353,6 +364,13 @@ async def handle_start(
         return event_
 
     async for resp in check(timeout=180):
+        # ``/猜谱面 -f`` may be handled by the outer command matcher before
+        # this waiter resumes.  In that case the waiter is still registered,
+        # so reject any late response from this round before it can emit a
+        # hint into the next round.
+        if not gamers_store.is_current(event.channel.id, session_token):
+            break
+
         if resp is None:
             gamers_store.remove(event.channel.id)
             await _send_reveal_card(
@@ -372,10 +390,7 @@ async def handle_start(
         current_pg = PG(resp)
         gens[message_id] = current_pg
 
-        if is_force_stop_message(
-            msg,
-            {"猜谱面", "猜谱", "cpm", "谱面挑战"},
-        ):
+        if _stop_if_force_stop(msg, event.channel.id):
             break
 
         if msg.isdigit():

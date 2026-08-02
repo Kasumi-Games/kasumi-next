@@ -69,6 +69,33 @@ def test_force_stop_commands_are_not_consumed_as_game_guesses():
     assert not is_force_stop_message("/猜卡面 hard", {"猜卡面", "cck"})
 
 
+def test_guess_chart_waiter_force_stop_clears_active_game(monkeypatch):
+    import importlib
+
+    importlib.import_module("plugins.daily_task")
+    guess_chart = importlib.import_module("plugins.guess_chart")
+    from plugins.guess_chart.store import GamersStore
+
+    store = GamersStore()
+    store.add("game-channel")
+    monkeypatch.setattr(guess_chart, "gamers_store", store)
+
+    assert guess_chart._stop_if_force_stop("/cpm -f", "game-channel") is True
+    assert "game-channel" not in store.get()
+
+
+def test_guess_chart_force_stop_invalidates_the_previous_waiter_session():
+    from plugins.guess_chart.store import GamersStore
+
+    store = GamersStore()
+    old_session = store.add("game-channel")
+    store.remove("game-channel")
+    new_session = store.add("game-channel")
+
+    assert store.is_current("game-channel", old_session) is False
+    assert store.is_current("game-channel", new_session) is True
+
+
 def test_blackjack_chooses_from_cards_that_have_local_art(monkeypatch):
     from plugins.blackjack.render import BlackjackRenderer
 
