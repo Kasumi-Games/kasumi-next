@@ -251,6 +251,11 @@ class SignatureTest(unittest.TestCase):
         # bangdream ships no theme item, so it must render no credit line.
         self.assertIsNone(cards.signature_for(KITS["bangdream"]()))
 
+    def test_sakura_theme_never_renders_a_signature(self) -> None:
+        # Sakura's petals and palette already identify it; the repeated
+        # bottom-right 「谁谁的主题 · 樱色」 credit only adds visual clutter.
+        self.assertIsNone(cards.signature_for(KITS["sakura"](), "香澄"))
+
     def test_signature_present_for_a_catalogued_theme(self) -> None:
         from utils import theming
 

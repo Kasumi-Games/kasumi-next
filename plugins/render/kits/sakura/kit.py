@@ -40,6 +40,7 @@ class SakuraKit(BaseKit):
     panel_fill = rgba(255, 255, 255, 234)
     wash_top = rgba(255, 250, 251, 255)
     wash_bottom = rgba(252, 226, 236, 255)
+    theme_signature_enabled = False
 
     def background(
         self,

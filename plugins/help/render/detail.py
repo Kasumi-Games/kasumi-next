@@ -85,8 +85,9 @@ def detail_page(entry: HelpEntry, kit: BaseKit | None = None) -> AutoPage:
     return card_page(
         kit,
         title="帮助",
-        subtitle=None,
+        subtitle=entry.name,
         article_title=entry.name,
+        show_subtitle=False,
         body=VStack(sections, gap=SECTION_GAP, align="stretch"),
         footer=_meta_panel(kit),
     )

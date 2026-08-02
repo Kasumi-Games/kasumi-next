@@ -225,3 +225,18 @@ def test_mewtype_detail_uses_stream_headings_inside_panels() -> None:
     assert len(stream_headings) >= 3
     assert all(heading.child.font_size > 24 for heading in stream_headings)
     assert all(heading.marker_size >= 19 for heading in stream_headings)
+
+
+def test_bangdream_detail_keeps_the_feature_title_pill() -> None:
+    """The Mewtype article heading must not replace BangDream's title pill."""
+
+    from plugins.help.render import detail
+    from plugins.render.kits.bangdream import BanGDreamKit
+
+    entry = find_entries(HELP_ENTRIES, "猜卡面")[0]
+    page = detail.detail_page(entry, BanGDreamKit())
+    header = page.child.children[0]
+
+    assert type(header.child).__name__ == "BanGDreamTitlePill"
+    assert header.child.title == "帮助"
+    assert header.child.subtitle == entry.name
