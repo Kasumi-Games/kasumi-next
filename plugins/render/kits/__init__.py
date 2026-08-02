@@ -3,8 +3,10 @@ from .manga import MangaKit
 from .fluent import FluentKit
 from .kasumi import KasumiKit
 from .sakura import SakuraKit
+from .mewtype import MewtypeKit
 from .minimal import MinimalKit
 from .sailing import SailingKit
+from .endfield import EndfieldKit
 from .midnight import MidnightKit
 from .bangdream import BanGDreamKit
 
@@ -19,6 +21,8 @@ KITS = {
     "manga": MangaKit,
     "fluent": FluentKit,
     "kasumi": KasumiKit,
+    "mewtype": MewtypeKit,
+    "endfield": EndfieldKit,
 }
 
 #: Player-facing name for each kit. A theme item's ``name`` in ``items.json``
@@ -34,6 +38,8 @@ KIT_DISPLAY_NAMES = {
     "manga": "漫画分镜",
     "fluent": "Fluent",
     "kasumi": "星之鼓动",
+    "mewtype": "梦限大 Mewtype",
+    "endfield": "终末地工业",
 }
 
 __all__ = [
@@ -48,4 +54,6 @@ __all__ = [
     "NeonKit",
     "SailingKit",
     "SakuraKit",
+    "MewtypeKit",
+    "EndfieldKit",
 ]

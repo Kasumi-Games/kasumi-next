@@ -105,6 +105,8 @@ def rank_page(data: RankData, kit: BaseKit | None = None) -> AutoPage:
         kit,
         title="排行榜",
         subtitle=f"等级榜 · Top {len(data.rows)}" if data.rows else "等级榜",
+        article_title="等级排行榜",
+        show_subtitle=False,
         body=body,
         footer=_footer(kit, data),
     )

@@ -172,9 +172,7 @@ def test_mailbox_cards_render_in_multiple_kits(kit_cls):
     empty = render_inbox([], kit)
     assert empty.size[0] == 864
 
-    detail = render_mail(
-        mails[0], [GrantResult("season_point", 100, 100, 100)], kit
-    )
+    detail = render_mail(mails[0], [GrantResult("season_point", 100, 100, 100)], kit)
     assert detail.size[0] == 864
 
     # 已读邮件重新打开：没有发放结果，仍然要有奖励面板
@@ -197,13 +195,11 @@ def test_mailbox_cards_render_in_multiple_kits(kit_cls):
 
 
 def test_inbox_spells_out_status_and_uses_one_index_shape():
-    from plugins.mailbox.render.inbox import _index_cell
     from plugins.mailbox.render.inbox import inbox_page
+    from plugins.mailbox.render.inbox import _index_cell
 
     unread_reward = _mail(1, "待领", attachments=[("season_point", 100)])
-    read_reward = _mail(
-        2, "已领", attachments=[("season_point", 20)], is_read=True
-    )
+    read_reward = _mail(2, "已领", attachments=[("season_point", 20)], is_read=True)
     unread_notice = _mail(3, "公告")
     texts = _collect_text(
         inbox_page([unread_reward, read_reward, unread_notice], MinimalKit()).child
@@ -217,6 +213,33 @@ def test_inbox_spells_out_status_and_uses_one_index_shape():
     assert type(
         _index_cell(MinimalKit(), 1, unread_reward, size=64, font_size=30)
     ) is type(_index_cell(MinimalKit(), 2, read_reward, size=64, font_size=30))
+
+
+def test_mewtype_inbox_uses_an_action_summary_instead_of_a_subtitle():
+    from plugins.render.kits.mewtype import MewtypeKit
+    from plugins.mailbox.render.inbox import inbox_page
+
+    mails = [
+        _mail(1, "待领", attachments=[("season_point", 100)]),
+        _mail(2, "公告"),
+        _mail(3, "已读", is_read=True),
+    ]
+    texts = _collect_text(inbox_page(mails, MewtypeKit()).child)
+
+    assert "未领取" in texts
+    assert "未读通知" in texts
+    assert "全部邮件" in texts
+    assert "1 封未领取 · 1 封通知未读 · 共 3 封" not in texts
+
+
+def test_empty_mewtype_inbox_does_not_announce_zero_mail_twice():
+    from plugins.render.kits.mewtype import MewtypeKit
+    from plugins.mailbox.render.inbox import inbox_page
+
+    texts = _collect_text(inbox_page([], MewtypeKit()).child)
+
+    assert "0 封" not in texts
+    assert "收件箱" in texts
 
 
 def test_dense_and_spacious_inbox_share_the_same_expiry_badge_path():
@@ -238,9 +261,7 @@ def test_normalize_attachments_merges_duplicate_items():
     merged = _normalize_attachments(
         star_stickers=60, attachments=[ItemAmount("star_sticker", 60)]
     )
-    assert [(item.item_id, item.quantity) for item in merged] == [
-        ("star_sticker", 120)
-    ]
+    assert [(item.item_id, item.quantity) for item in merged] == [("star_sticker", 120)]
 
     # 不同 scope 不合并
     scoped = _normalize_attachments(
@@ -282,8 +303,7 @@ def test_scheduled_star_rewards_produce_one_attachment_row(sqlite_session):
 
     mails = MailService().get_user_mails("u1")
     assert [
-        (attachment.item_id, attachment.quantity)
-        for attachment in mails[0].attachments
+        (attachment.item_id, attachment.quantity) for attachment in mails[0].attachments
     ] == [("star_sticker", 60)]
 
 
@@ -341,14 +361,9 @@ def test_scheduled_targeted_mail_sends_once_per_recipient(sqlite_session):
     assert sorted(mail.recipients[0].user_id for mail in mails) == ["a", "b"]
     for mail in mails:
         rows = session.query(MailAttachment).filter_by(mail_id=mail.id).all()
-        assert [(row.item_id, row.quantity) for row in rows] == [
-            ("star_sticker", 60)
-        ]
+        assert [(row.item_id, row.quantity) for row in rows] == [("star_sticker", 60)]
 
-    assert (
-        session.query(ScheduledMail).filter_by(name="targeted").one().is_sent
-        is True
-    )
+    assert session.query(ScheduledMail).filter_by(name="targeted").one().is_sent is True
     # 已发送的定时邮件不能再次发送
     assert scheduled.process_due_mails() == 0
     assert session.query(Mail).count() == 2
@@ -438,16 +453,13 @@ def test_legacy_duplicate_rows_display_and_claim_as_one(sqlite_session, monkeypa
         )
     )
     session.commit()
-    assert (
-        session.query(MailAttachment).filter_by(mail_id=mail_id).count() == 2
-    )
+    assert session.query(MailAttachment).filter_by(mail_id=mail_id).count() == 2
 
     # 展示层：坏数据也只读出一条 60——领取幂等键按物品去重，第二行
     # 从来没有发放过，显示两行（或 120）都是在骗玩家
     mails = mail_service.get_user_mails("u1")
     assert [
-        (attachment.item_id, attachment.quantity)
-        for attachment in mails[0].attachments
+        (attachment.item_id, attachment.quantity) for attachment in mails[0].attachments
     ] == [("star_sticker", 60)]
 
     granted = []
@@ -462,9 +474,7 @@ def test_legacy_duplicate_rows_display_and_claim_as_one(sqlite_session, monkeypa
     monkeypatch.setattr(service_module, "grant_many", fake_grant_many)
 
     outcome = claim_all_mails(mail_service, "u1")
-    assert [(item.item_id, item.quantity) for item in granted] == [
-        ("star_sticker", 60)
-    ]
+    assert [(item.item_id, item.quantity) for item in granted] == [("star_sticker", 60)]
     assert outcome.totals[0].granted == 60
 
 
@@ -509,9 +519,7 @@ def test_mail_detail_collapses_duplicate_rows_into_one_tile(monkeypatch):
     from plugins.mailbox.render import rewards
     from plugins.mailbox.render import mail_page
 
-    monkeypatch.setattr(
-        rewards, "item_facts", lambda item_id: ("星星贴纸", "张", True)
-    )
+    monkeypatch.setattr(rewards, "item_facts", lambda item_id: ("星星贴纸", "张", True))
 
     # 线上真实存在的双行邮件必须渲染成一条 60（与实际发放一致）
     mail = _mail(
@@ -531,9 +539,7 @@ def test_reward_tile_keeps_unit_with_amount(monkeypatch):
     from plugins.mailbox.render import mail_page
     from plugins.inventory.models import GrantResult
 
-    monkeypatch.setattr(
-        rewards, "item_facts", lambda item_id: ("星星贴纸", "张", True)
-    )
+    monkeypatch.setattr(rewards, "item_facts", lambda item_id: ("星星贴纸", "张", True))
 
     mail = _mail(3, "补偿", attachments=[("star_sticker", 60)])
     texts = _collect_text(

@@ -3,14 +3,14 @@
 The first image a new player sees, and the one surface where every command in
 the bot is printed as the string you actually type. It is Tier B: composed only
 from ``BaseKit`` atoms through ``utils.cards``, so one implementation renders in
-all eight kits.
+every registered kit.
 
 Three structural decisions are load-bearing:
 
 * **Tiles sit on the page background, not inside a category panel.**
   ``MinimalKit`` paints its panel as a flat ``(245,245,245,255)`` fill with no
   border, so a panel nested in another panel is invisible there — the tile grid
-  would silently collapse into loose text in one of the eight kits. On the
+  would silently collapse into loose text in one of the registered kits. On the
   background every tile keeps its own kit-decided corner, which is also the
   whole theme-showcase argument for this card: 23 tiles is 23 corners.
 * **The tile ``Grid`` pins ``columns`` and omits ``rows`` on purpose.**
@@ -54,6 +54,7 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 from ..entries import SUPPORT_GROUP
 from ..entries import HelpEntry
@@ -134,6 +135,7 @@ def board_page(
         kit,
         title="帮助",
         subtitle=f"共 {total_commands(entries)} 条指令",
+        show_subtitle=False,
         body=body,
         footer=_meta_panel(kit),
     )
@@ -164,26 +166,38 @@ def _use_compact_tiles(entries: Sequence[HelpEntry]) -> bool:
 def _category_section(
     kit: BaseKit, category: str, commands: Sequence[HelpCommand], compact: bool
 ) -> Component:
+    children: list[Component] = [
+        _section_head(kit, category, f"{len(commands)} 项")
+    ]
+    # Yumemita's c-article-head is already the section delimiter.  The source
+    # places content after it without a second horizontal rule.
+    if not isinstance(kit, MewtypeKit):
+        children.append(kit.separator(length=Fixed(CONTENT_WIDTH)))
+    children.append(
+        Grid(
+            children=[_tile(kit, command, compact) for command in commands],
+            columns=COLUMNS,
+            column_track=Fixed(TILE_WIDTH),
+            row_track=Fixed(COMPACT_TILE_HEIGHT if compact else TILE_HEIGHT),
+            gap=(TILE_GAP_X, TILE_GAP_Y),
+        )
+    )
     return VStack(
-        [
-            _section_head(kit, category, f"{len(commands)} 项"),
-            kit.separator(length=Fixed(CONTENT_WIDTH)),
-            Grid(
-                children=[_tile(kit, command, compact) for command in commands],
-                columns=COLUMNS,
-                column_track=Fixed(TILE_WIDTH),
-                row_track=Fixed(
-                    COMPACT_TILE_HEIGHT if compact else TILE_HEIGHT
-                ),
-                gap=(TILE_GAP_X, TILE_GAP_Y),
-            ),
-        ],
-        gap=HEADING_GAP,
+        children,
+        gap=18 if isinstance(kit, MewtypeKit) else HEADING_GAP,
         align="start",
     )
 
 
 def _section_head(kit: BaseKit, title: str, count: str) -> Component:
+    if isinstance(kit, MewtypeKit):
+        return kit.article_header(
+            title,
+            detail=count,
+            width=CONTENT_WIDTH,
+            height=58,
+            font_size=22,
+        )
     return Frame(
         HStack(
             [

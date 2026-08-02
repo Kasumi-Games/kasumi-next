@@ -1,7 +1,7 @@
 """Shared card composition for themed image responses.
 
 This is the Tier B toolkit: composition built **only** from ``BaseKit`` atoms, so
-one implementation renders correctly in all eight kits. High-visibility surfaces
+one implementation renders correctly in every registered kit. High-visibility surfaces
 — game boards, the player card, gacha reveals — are Tier A and get bespoke
 per-kit treatments in each kit's own ``components.py`` instead.
 
@@ -12,10 +12,10 @@ it only arranges the atoms a kit already provides.
 Two rules in here are load-bearing and were derived from measurement, not taste:
 
 **Filled emphasis never uses ``primary``.** Filling a shape with ``kit.primary``
-and putting white text on it measures below AA in four of the eight kits
+and putting white text on it measures below AA in four of the original eight kits
 (sakura 2.16:1, midnight 2.59:1, neon 3.43:1, bangdream 3.60:1). Filling with
 ``kit.text_color`` and drawing the foreground in ``kit.panel_fill`` measures
-6.58:1 or better in all eight. Use :func:`emphasis`; do not pick these colors
+6.58:1 or better in every registered kit. Use :func:`emphasis`; do not pick these colors
 at a call site.
 
 **``muted_text_color`` is decoration, not content.** It measures below AA on its
@@ -34,9 +34,9 @@ from plugins.render import Fixed
 from plugins.render import Frame
 from plugins.render import HStack
 from plugins.render import Insets
-from plugins.render import Overlay
 from plugins.render import VStack
 from plugins.render import BaseKit
+from plugins.render import Overlay
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
@@ -264,13 +264,21 @@ def headline(kit: BaseKit, text: str, *, positive: bool = True) -> Component:
         Banner component.
     """
 
+    from plugins.render.kits.mewtype import MewtypeKit
+
+    if isinstance(kit, MewtypeKit):
+        return Frame(
+            kit.text(text, font_size=34, align="center", wrap=False),
+            width=Fill(),
+            height=Fixed(58),
+            align_x="center",
+            align_y="center",
+        )
     if positive:
         fill, on_fill = emphasis(kit)
         return kit.panel(
             Frame(
-                kit.text(
-                    text, font_size=34, color=on_fill, align="center", wrap=False
-                ),
+                kit.text(text, font_size=34, color=on_fill, align="center", wrap=False),
                 align_x="center",
                 align_y="center",
             ),
@@ -539,7 +547,9 @@ def theme_signature(
         Signature component.
     """
 
-    text = f"{owner_name} 的主题 · {theme_name}" if owner_name else f"主题 · {theme_name}"
+    text = (
+        f"{owner_name} 的主题 · {theme_name}" if owner_name else f"主题 · {theme_name}"
+    )
     return HStack(
         [
             kit.separator(orientation="vertical", length=Fixed(22), thickness=3),
@@ -595,6 +605,10 @@ def card_page(
     title: str,
     body: Component,
     subtitle: str | None = None,
+    article_title: str | None = None,
+    show_page_title: bool = True,
+    wordmark_title: str | None = None,
+    show_subtitle: bool = True,
     footer: Component | None = None,
     owner_name: str | None = None,
     width: int = CONTENT_WIDTH,
@@ -603,14 +617,17 @@ def card_page(
     """Build the page for a standard response card.
 
     This is the only header constructor. Renderers must not define their own
-    title bar: ``kit.title_pill`` exists on ``BanGDreamKit`` alone, and calling
-    it unguarded crashes the other seven kits.
+    title bar: kits expose their treatment through ``BaseKit.page_title``.
 
     Args:
         kit: Active kit.
         title: Card title.
         body: Card content.
         subtitle: Optional secondary line under the title.
+        article_title: Optional semantic section heading for kits that support it.
+        show_page_title: Whether supporting kits should draw their large wordmark.
+        wordmark_title: Optional short label for a kit-specific large wordmark.
+        show_subtitle: Whether supporting kits should draw the annotation line.
         footer: Optional footer content, placed above the theme signature.
         owner_name: Whose card this is, for the signature on shared surfaces.
         width: Content column width.
@@ -621,7 +638,19 @@ def card_page(
         Page ready to ``render()`` or ``await render_async()``.
     """
 
-    sections: list[Component] = [_header(kit, title, subtitle, width), body]
+    sections: list[Component] = [
+        _header(
+            kit,
+            title,
+            subtitle,
+            width,
+            article_title=article_title,
+            show_page_title=show_page_title,
+            wordmark_title=wordmark_title,
+            show_subtitle=show_subtitle,
+        ),
+        body,
+    ]
 
     tail: list[Component] = []
     if footer is not None:
@@ -649,6 +678,10 @@ def response_card(
     title: str,
     body: Component,
     subtitle: str | None = None,
+    article_title: str | None = None,
+    show_page_title: bool = True,
+    wordmark_title: str | None = None,
+    show_subtitle: bool = True,
     footer: Component | None = None,
     owner_name: str | None = None,
     width: int = CONTENT_WIDTH,
@@ -660,6 +693,10 @@ def response_card(
         title: Card title.
         body: Card content.
         subtitle: Optional secondary line.
+        article_title: Optional semantic section heading.
+        show_page_title: Whether supporting kits should draw their large wordmark.
+        wordmark_title: Optional short label for a kit-specific large wordmark.
+        show_subtitle: Whether supporting kits should draw the annotation line.
         footer: Optional footer content.
         owner_name: Whose card this is, for the signature.
         width: Content column width.
@@ -673,6 +710,10 @@ def response_card(
         title=title,
         body=body,
         subtitle=subtitle,
+        article_title=article_title,
+        show_page_title=show_page_title,
+        wordmark_title=wordmark_title,
+        show_subtitle=show_subtitle,
         footer=footer,
         owner_name=owner_name,
         width=width,
@@ -890,7 +931,9 @@ def _generic_game_identity(
     ]
     if detail:
         cells.append(
-            kit.text(detail, font_size=BODY_SIZE, align="right", wrap=False, max_lines=1)
+            kit.text(
+                detail, font_size=BODY_SIZE, align="right", wrap=False, max_lines=1
+            )
         )
 
     return kit.panel(
@@ -943,7 +986,9 @@ def _generic_player_card(
     if description:
         body.append(kit.separator(length=Fill()))
         body.append(
-            kit.text(description, font_size=LABEL_SIZE, max_lines=2, overflow="ellipsis")
+            kit.text(
+                description, font_size=LABEL_SIZE, max_lines=2, overflow="ellipsis"
+            )
         )
 
     column: Component = VStack(body, gap=16, align="stretch")
@@ -1011,9 +1056,7 @@ def _generic_pull_reveal(
     # the slot (empty on art-less pulls) so the whole grid stays one uniform
     # tile height; an art-less batch keeps the plain tile height unchanged.
     art_slot = any(pull.image is not None for pull in pulls)
-    tiles = [
-        _reveal_tile(kit, pull, tile_width, art_slot=art_slot) for pull in pulls
-    ]
+    tiles = [_reveal_tile(kit, pull, tile_width, art_slot=art_slot) for pull in pulls]
     return Grid(columns=columns, gap=gap, children=tiles)
 
 
@@ -1129,7 +1172,7 @@ def _reveal_tile(
 def _marker_px(text: str) -> int:
     """Measure a marker line at build time.
 
-    All nine kits draw body text with the shared CJK font from
+    All registered kits draw body text with the shared CJK font from
     ``plugins.render.kits.fonts``, so this measurement is exact for every
     kit that reaches the generic tile.
     """
@@ -1142,8 +1185,17 @@ def _marker_px(text: str) -> int:
 
 
 def _header(
-    kit: BaseKit, title: str, subtitle: str | None, width: int
+    kit: BaseKit,
+    title: str,
+    subtitle: str | None,
+    width: int,
+    *,
+    article_title: str | None,
+    show_page_title: bool,
+    wordmark_title: str | None,
+    show_subtitle: bool,
 ) -> Component:
+    from plugins.render.kits.mewtype import MewtypeKit
     from plugins.render.kits.bangdream import BanGDreamKit
 
     if isinstance(kit, BanGDreamKit) and subtitle:
@@ -1153,9 +1205,31 @@ def _header(
             align_x="start",
         )
 
-    lines: list[Component] = [
-        kit.text(title, font_size=TITLE_SIZE, wrap=False, max_lines=1)
-    ]
+    if isinstance(kit, MewtypeKit):
+        lines: list[Component] = []
+        if show_page_title:
+            lines.append(kit.page_title(wordmark_title or title))
+        if article_title:
+            lines.append(
+                kit.article_header(
+                    article_title,
+                    width=width,
+                    detail=subtitle if show_subtitle else None,
+                )
+            )
+        elif subtitle and show_subtitle:
+            # Mewtype has no generic pink subtitle tier. When a caller has not
+            # authored a section title yet, the meaningful context becomes the
+            # official cyan secondary heading rather than a floating annotation.
+            lines.append(kit.article_header(subtitle, width=width))
+        return Frame(
+            VStack(lines, gap=14, align="stretch"),
+            width=Fixed(width),
+            align_x="stretch",
+            align_y="center",
+        )
+
+    lines: list[Component] = [kit.page_title(title)]
     if subtitle:
         lines.append(
             kit.text(

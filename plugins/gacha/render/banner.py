@@ -44,6 +44,7 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 from ..service import GachaEntry
 from ..service import GachaBanner
@@ -218,7 +219,12 @@ def banner_page(data: BannerPageData, kit: BaseKit | None = None) -> AutoPage:
     return card_page(
         kit,
         title=data.banner_name,
-        subtitle=f"{data.season_name} · 期间限定",
+        subtitle=(
+            data.season_name
+            if isinstance(kit, MewtypeKit)
+            else f"{data.season_name} · 期间限定"
+        ),
+        article_title="限定卡池",
         body=VStack(sections, gap=24, align="stretch"),
         footer=_footer(kit),
     )

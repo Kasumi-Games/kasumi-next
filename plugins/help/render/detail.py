@@ -1,7 +1,7 @@
 """One plugin's detailed usage, for ``/help <功能名>``.
 
 Tier B: ``BaseKit`` atoms through ``utils.cards`` only, so the same composition
-renders in all eight kits.
+renders in every registered kit.
 
 The card exists for the case the board cannot serve. ``猜卡面`` documents twelve
 difficulty names inside a single sentence of prose — an enumerable value set
@@ -40,6 +40,7 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 from ..entries import HelpEntry
 
@@ -84,7 +85,8 @@ def detail_page(entry: HelpEntry, kit: BaseKit | None = None) -> AutoPage:
     return card_page(
         kit,
         title="帮助",
-        subtitle=entry.name,
+        subtitle=None,
+        article_title=entry.name,
         body=VStack(sections, gap=SECTION_GAP, align="stretch"),
         footer=_meta_panel(kit),
     )
@@ -108,11 +110,21 @@ def _usage_panel(kit: BaseKit, entry: HelpEntry) -> Component:
     if not entry.usage:
         return panel_section(kit, empty_state(kit, "这个功能还没有写用法"))
 
-    children: list[Component] = []
-    if entry.description:
-        children.append(kit.text(entry.description, font_size=BODY_SIZE))
-        children.append(kit.separator(length=Fill()))
-    children.append(_section_head(kit, "用法", f"{len(entry.usage)} 条"))
+    if isinstance(kit, MewtypeKit):
+        # Match ON AIR's stream unit: the small marked heading comes first,
+        # followed by supporting copy and then the content.  A horizontal rule
+        # here would introduce a hierarchy the source page does not have.
+        children: list[Component] = [
+            _section_head(kit, "用法", f"{len(entry.usage)} 条")
+        ]
+        if entry.description:
+            children.append(kit.text(entry.description, font_size=BODY_SIZE))
+    else:
+        children = []
+        if entry.description:
+            children.append(kit.text(entry.description, font_size=BODY_SIZE))
+            children.append(kit.separator(length=Fill()))
+        children.append(_section_head(kit, "用法", f"{len(entry.usage)} 条"))
     children.append(
         VStack(
             [_usage_row(kit, command, meaning) for command, meaning in entry.usage],
@@ -196,6 +208,10 @@ def _examples_panel(kit: BaseKit, entry: HelpEntry) -> Component:
 
 
 def _section_head(kit: BaseKit, title: str, count: str) -> Component:
+    if isinstance(kit, MewtypeKit):
+        # Counts are secondary metadata on detail pages; unlike the board's
+        # category census, they do not warrant a competing right-hand label.
+        return kit.panel_heading(title, width=INNER_WIDTH, font_size=26)
     return Frame(
         HStack(
             [

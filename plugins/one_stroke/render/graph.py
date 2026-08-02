@@ -26,6 +26,7 @@ from plugins.render.kits.bangdream import BG_DIR
 from plugins.render.kits.bangdream import CHINESE_FONT
 from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.kasumi import KasumiKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 from ..session import GameSession
 from ..difficulty import apply_time_decay
@@ -174,6 +175,7 @@ def _cell_type(
 @dataclass(frozen=True)
 class OneStrokeBoard:
     session: GameSession
+    palette: dict[str, tuple[int, int, int, int]] | None = None
 
     def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
         return constraints.clamp(Size(686, 686))
@@ -195,6 +197,7 @@ class OneStrokeBoard:
             offset_x,
             offset_y,
             ctx,
+            self.palette,
         )
 
 
@@ -208,10 +211,11 @@ def _render_board_cells(
     offset_x: int,
     offset_y: int,
     ctx: RenderContext,
+    palette_override: dict[str, tuple[int, int, int, int]] | None = None,
 ) -> None:
     corner_radius = max(6, cell_size // 7)
 
-    palette = {
+    palette = palette_override or {
         "wall": (90, 85, 110, 255),
         "traversable": (215, 215, 225, 255),
         "drawn": (234, 78, 116, 255),
@@ -273,7 +277,7 @@ def _render_board_cells(
                             cell_size + ctx.scale_px(7),
                             cell_size + ctx.scale_px(7),
                         ),
-                        outline=(66, 133, 244, 150),
+                        outline=(*palette["current"][:3], 150),
                         width=ctx.scale_px(4),
                     )
                     special_layer.paste(
@@ -375,6 +379,8 @@ def _title_bar(
     width: int,
     height: int,
 ):
+    if isinstance(kit, MewtypeKit):
+        return kit.compact_header("ONE STROKE", subtitle, width=BOARD_WIDTH)
     if isinstance(kit, KasumiKit):
         return kit.game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):
@@ -448,7 +454,16 @@ def render(
         sections.append(
             cards.game_identity(kit, identity, width=BOARD_WIDTH, detail=detail)
         )
-    sections.append(_board_panel(kit, OneStrokeBoard(session)))
+    palette = None
+    if isinstance(kit, MewtypeKit):
+        palette = {
+            "wall": (32, 47, 109, 255),
+            "traversable": (232, 225, 242, 255),
+            "drawn": (255, 115, 213, 255),
+            "start": (201, 131, 232, 255),
+            "current": (29, 211, 243, 255),
+        }
+    sections.append(_board_panel(kit, OneStrokeBoard(session, palette)))
 
     page = AutoPage(
         min_width=896,

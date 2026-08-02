@@ -31,6 +31,7 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 
 @dataclass(frozen=True)
@@ -119,17 +120,26 @@ def checkin_page(data: CheckinData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
-    sections: list[Component] = [
-        headline(kit, "签到成功"),
-        panel_section(kit, _rewards(kit, data)),
-        panel_section(kit, _streak(kit, data)),
-    ]
+    sections: list[Component] = []
+    if not isinstance(kit, MewtypeKit):
+        sections.append(headline(kit, "签到成功"))
+    sections.extend(
+        [
+            panel_section(kit, _rewards(kit, data)),
+            panel_section(kit, _streak(kit, data)),
+        ]
+    )
     if data.task is not None:
         sections.append(panel_section(kit, _task(kit, data.task)))
     return card_page(
         kit,
         title="签到",
-        subtitle=f"第 {data.streak} 天 · {data.nickname}",
+        subtitle=(
+            data.nickname
+            if isinstance(kit, MewtypeKit)
+            else f"第 {data.streak} 天 · {data.nickname}"
+        ),
+        article_title="签到成功",
         body=VStack(sections, gap=24, align="stretch"),
         footer=_notices(kit, data),
     )

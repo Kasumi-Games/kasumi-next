@@ -272,6 +272,32 @@ def test_no_emoji_reaches_a_mines_card():
         assert not emoji.search(source), module
 
 
+def test_mewtype_field_uses_semantic_candy_colors() -> None:
+    from plugins.mines.render.field import generate_revealed_field
+    from plugins.mines.render.field import generate_unrevealed_field
+    from plugins.render.kits.mewtype import MewtypeKit
+
+    kit = MewtypeKit()
+    hidden = generate_unrevealed_field(1, kit)
+    safe = generate_revealed_field(
+        Path("safe.png"),
+        (255, 124, 85),
+        kit,
+    )
+    mine = generate_revealed_field(
+        Path("mine.png"),
+        (184, 130, 225),
+        kit,
+    )
+
+    assert hidden.fill == kit.paper_fill
+    assert hidden.child.child.color == (169, 205, 245, 255)
+    assert safe.fill == (228, 248, 255, 255)
+    assert safe.frame_color == kit.primary
+    assert mine.fill == (255, 232, 248, 255)
+    assert mine.frame_color == kit.accent
+
+
 def test_matplotlib_is_gone_from_the_mines_flow():
     plugin_root = ROOT / "plugins" / "mines"
     for path in plugin_root.rglob("*.py"):

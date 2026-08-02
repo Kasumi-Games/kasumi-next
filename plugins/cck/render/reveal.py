@@ -37,6 +37,7 @@ from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render.types import ImageSource
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 #: Card art slot. ``INNER_WIDTH`` x 540 is exactly the 4:3 of bestdori's
 #: 1334x1002 full card art, so ``fit="contain"`` leaves no letterbox bars.
@@ -187,7 +188,12 @@ def reveal_page(data: CckRevealData, kit: BaseKit | None = None) -> AutoPage:
     return card_page(
         kit,
         title="猜卡面",
-        subtitle=_subtitle(data),
+        subtitle=(
+            data.difficulty
+            if isinstance(kit, MewtypeKit)
+            else _subtitle(data)
+        ),
+        article_title="ANSWER",
         body=VStack(sections, gap=18, align="stretch"),
         owner_name=data.owner_name,
     )

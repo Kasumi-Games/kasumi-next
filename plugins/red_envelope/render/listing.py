@@ -130,6 +130,8 @@ def list_page(
             kit,
             title="红包",
             subtitle="0 个",
+            article_title="进行中的红包",
+            show_subtitle=False,
             body=panel_section(
                 kit,
                 empty_state(kit, "现在没有可以抢的红包\n发一个就会出现在这里"),
@@ -146,6 +148,8 @@ def list_page(
         kit,
         title="红包",
         subtitle=f"进行中 {len(items)} 个",
+        article_title="进行中的红包",
+        show_subtitle=False,
         body=panel_section(kit, VStack(rows, gap=ROW_GAP, align="stretch")),
         footer=_footer(kit),
     )

@@ -16,7 +16,7 @@ Two constraints shape this module:
   out of a message handler.
 
 Nothing in here carries meaning by hue, which is what lets one implementation
-serve all eight kits. A tile the player just gained shows a large numeral; a
+serve every registered kit. A tile the player just gained shows a large numeral; a
 tile they already owned shows a word where the numeral would be. That is a
 size difference, a glyph difference and a color difference at once, so it
 survives ``MangaKit`` and it survives a chat client's downscale.

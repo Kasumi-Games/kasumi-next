@@ -1,4 +1,4 @@
-"""Render a visual census of every player-facing image in the Kasumi kit.
+"""Render a visual census of every player-facing image in any render kit.
 
 This script deliberately reuses the representative, handler-shaped fixtures
 from the render tests.  That keeps the preview gallery aligned with the actual
@@ -17,8 +17,6 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT_DIR = ROOT / ".cache" / "render-previews" / "kasumi-all"
-
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -36,11 +34,14 @@ def _test_namespace(filename: str) -> dict[str, object]:
     return runpy.run_path(str(ROOT / "tests" / filename))
 
 
-def _render_gallery(output_dir: Path) -> tuple[list[Path], list[str]]:
+def _render_gallery(
+    output_dir: Path,
+    kit_name: str = "kasumi",
+) -> tuple[list[Path], list[str]]:
     from plugins.render import PlayerIdentity
-    from plugins.render.kits import KasumiKit
+    from plugins.render.kits import KITS
 
-    kit = KasumiKit()
+    kit = KITS[kit_name]()
     output_dir.mkdir(parents=True, exist_ok=True)
     outputs: list[Path] = []
     failures: list[str] = []
@@ -154,10 +155,12 @@ def _render_gallery(output_dir: Path) -> tuple[list[Path], list[str]]:
         "standing_art_placeholder_r3_001": (
             ROOT
             / "plugins"
-            / "gacha"
+            / "render"
+            / "kits"
+            / "kasumi"
             / "resources"
             / "standing"
-            / "ran_tiptoe_after_training.png"
+            / "kasumi_starry_normal.png"
         ),
     }
     banner = gacha["_banner"]()
@@ -294,7 +297,7 @@ def _render_gallery(output_dir: Path) -> tuple[list[Path], list[str]]:
 
     blackjack_stats = _test_namespace("test_blackjack_stats_render.py")
     emit("blackjack-help", lambda: render_blackjack_help(kit))
-    blackjack_paths = preview_blackjack("kasumi", output_dir)
+    blackjack_paths = preview_blackjack(kit_name, output_dir)
     for slug, original in zip(
         ("blackjack-hand", "blackjack-table"), blackjack_paths, strict=True
     ):
@@ -318,7 +321,7 @@ def _render_gallery(output_dir: Path) -> tuple[list[Path], list[str]]:
     from scripts.preview_renderers import preview_mines
 
     mines = _test_namespace("test_mines_render.py")
-    mines_paths = preview_mines("kasumi", output_dir)
+    mines_paths = preview_mines(kit_name, output_dir)
     emit(
         "mines-board",
         lambda: Image.open(mines_paths[0]).convert("RGBA"),
@@ -366,7 +369,7 @@ def _render_gallery(output_dir: Path) -> tuple[list[Path], list[str]]:
     from plugins.one_stroke.render.result import render_result as render_stroke_result
     from scripts.preview_renderers import preview_one_stroke
 
-    stroke_paths = preview_one_stroke("kasumi", output_dir)
+    stroke_paths = preview_one_stroke(kit_name, output_dir)
     for slug, original in zip(
         ("one-stroke-board", "one-stroke-leaderboard"),
         stroke_paths,
@@ -427,19 +430,31 @@ def _render_gallery(output_dir: Path) -> tuple[list[Path], list[str]]:
 
 
 def main() -> None:
+    from plugins.render.kits import KITS
+
     parser = argparse.ArgumentParser(
-        description="Render every representative player-facing image in the Kasumi kit."
+        description="Render every representative player-facing image in one kit."
+    )
+    parser.add_argument(
+        "--kit",
+        default="kasumi",
+        choices=sorted(KITS),
+        help="Render kit used for every preview.",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=DEFAULT_OUTPUT_DIR,
+        default=None,
         help="Directory for the generated PNG gallery.",
     )
     args = parser.parse_args()
 
-    outputs, failures = _render_gallery(args.output_dir.resolve())
-    print(f"\nGenerated {len(outputs)} images in {args.output_dir.resolve()}")
+    output_dir = (
+        args.output_dir
+        or ROOT / ".cache" / "render-previews" / f"{args.kit}-all"
+    ).resolve()
+    outputs, failures = _render_gallery(output_dir, args.kit)
+    print(f"\nGenerated {len(outputs)} images in {output_dir}")
     if failures:
         print(f"{len(failures)} render(s) failed:")
         for failure in failures:

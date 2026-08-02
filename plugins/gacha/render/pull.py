@@ -208,6 +208,9 @@ def pull_page(data: PullPageData, kit: BaseKit | None = None) -> AutoPage:
         kit,
         title=data.banner_name,
         subtitle="十连" if is_ten else "单抽",
+        article_title="十连结果" if is_ten else "单抽结果",
+        show_subtitle=False,
+        show_page_title=False,
         # The tickets are the result screen. Keeping them directly on the
         # themed sky lets the character art breathe instead of nesting it in
         # a second, featureless white card.

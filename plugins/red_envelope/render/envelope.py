@@ -51,6 +51,7 @@ from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 #: 结算榜逐行展示的领取数上限；超出折叠成一行小结（红包最多 10000 份）。
 #: 两个金额极值另有 stat 行兜底，所以被折叠也不会丢信息。
@@ -234,6 +235,7 @@ def create_page(data: EnvelopeCreateData, kit: BaseKit | None = None) -> AutoPag
         kit,
         title="红包",
         subtitle=f"#{data.channel_index}",
+        article_title="创建红包",
         body=VStack(
             [panel_section(kit, hero), panel_section(kit, hint)],
             gap=24,
@@ -314,15 +316,21 @@ def completion_page(
     )
     summary = VStack(summary_rows, gap=16, align="stretch")
 
+    completion_sections: list[Component] = []
+    if not isinstance(kit, MewtypeKit):
+        completion_sections.append(headline(kit, "红包已抢完"))
+    completion_sections.append(panel_section(kit, summary))
     return card_page(
         kit,
         title="红包",
-        subtitle=f"#{data.channel_index} · {title}",
-        body=VStack(
-            [headline(kit, "红包已抢完"), panel_section(kit, summary)],
-            gap=24,
-            align="stretch",
+        subtitle=(
+            f"#{data.channel_index}"
+            if isinstance(kit, MewtypeKit)
+            else f"#{data.channel_index} · {title}"
         ),
+        article_title="红包已抢完",
+        show_page_title=False,
+        body=VStack(completion_sections, gap=24, align="stretch"),
         owner_name=creator_name,
     )
 

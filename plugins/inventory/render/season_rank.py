@@ -31,6 +31,7 @@ from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 
 @dataclass(frozen=True)
@@ -107,7 +108,12 @@ def season_rank_page(data: SeasonRankData, kit: BaseKit | None = None) -> AutoPa
     return card_page(
         kit,
         title="赛季排行",
-        subtitle=f"{data.season_name} · Pt 榜",
+        subtitle=(
+            data.season_name
+            if isinstance(kit, MewtypeKit)
+            else f"{data.season_name} · Pt 榜"
+        ),
+        article_title="赛季 Pt 排行",
         body=body,
         footer=_footer(kit, data),
     )

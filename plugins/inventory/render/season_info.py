@@ -79,6 +79,7 @@ def season_info_page(
         kit,
         title="赛季",
         subtitle=data.season_name,
+        article_title="赛季详情",
         body=VStack(sections, gap=24, align="stretch"),
         footer=_footer(kit),
     )

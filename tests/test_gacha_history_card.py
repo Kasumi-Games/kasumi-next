@@ -10,7 +10,8 @@ here:
    note decoding, page numbers, pity with and without an open banner.
 2. Product-timezone time wording: 今天/昨天 by calendar day, then dates.
 3. Render smoke across kits, fixed width, deterministic rasters.
-4. The ★6 row is a panel while other rarities stay open rows.
+4. Every row stays on the list's one shared panel; ★6 is emphasized by its
+   filled rarity chip and taller rhythm, never by nesting another panel.
 5. The matcher reply paths: one image send, empty history still a card,
    errors (including a non-numeric page) stay text.
 6. The render module stays DB-free.
@@ -200,13 +201,16 @@ def test_single_page_history_hides_the_paging_hint() -> None:
     assert "翻页" not in joined
 
 
-def test_six_star_rows_ride_a_panel_and_others_stay_open() -> None:
+def test_six_star_rows_stay_on_the_shared_panel_with_chip_emphasis() -> None:
     kit = MinimalKit()
     lifted = history_module._row(kit, HistoryRow(6, "六星", "今天 12:00"))
     plain = history_module._row(kit, HistoryRow(5, "五星", "今天 12:00"))
     assert isinstance(plain, Frame)
-    assert not isinstance(lifted, Frame)  # the kit's own panel surface
-    # The chip is a filled badge; the plain row keeps the bare numeral.
+    assert isinstance(lifted, Frame)
+    assert isinstance(lifted.height, history_module.Fixed)
+    assert lifted.height.value > plain.height.value
+    # The chip supplies the single-layer emphasis; the plain row keeps the
+    # bare numeral without adding another surface inside the list panel.
     assert "★6" in _collect_text(lifted)
     assert "★5" in _collect_text(plain)
 

@@ -7,9 +7,10 @@ player surface.
 
 Rarity is encoded by shape and weight, never hue alone, so the card survives
 the monochrome manga kit and client downscaling: a ★6 pull gets a filled
-``badge`` chip and its whole row is lifted onto a nested kit panel, while
-every other rarity is a bare ``★n`` numeral on the open card — the same
-two-signal idiom as the reveal tile and ``ladder_rows``.
+``badge`` chip and a slightly taller row, while every rarity stays on the
+list's one shared panel.  Other rarities use a bare ``★n`` numeral — the
+same two-signal idiom as the reveal tile and ``ladder_rows`` without nesting
+one surface inside another.
 
 :func:`history_page_data` is the one place that maps service history rows into
 plain display rows. It is pure given its inputs — item names come through the
@@ -201,6 +202,8 @@ def history_page(data: HistoryPageData, kit: BaseKit | None = None) -> AutoPage:
             kit,
             title="抽卡记录",
             subtitle="共 0 抽",
+            article_title="抽卡记录",
+            show_subtitle=False,
             body=panel_section(
                 kit,
                 empty_state(kit, "暂无抽卡记录\n试试 /抽卡 单抽"),
@@ -212,6 +215,8 @@ def history_page(data: HistoryPageData, kit: BaseKit | None = None) -> AutoPage:
         kit,
         title="抽卡记录",
         subtitle=f"共 {data.total} 抽",
+        article_title="抽卡记录",
+        show_subtitle=False,
         body=panel_section(kit, VStack(rows, gap=_ROW_GAP, align="stretch")),
         footer=_footer(kit, data),
     )
@@ -220,23 +225,16 @@ def history_page(data: HistoryPageData, kit: BaseKit | None = None) -> AutoPage:
 def _row(kit: BaseKit, row: HistoryRow) -> Component:
     """One pull row: rarity chip, name, optional note, time.
 
-    A ★6 row rides on a nested kit panel with a filled chip — lifted by
-    surface and shape, not hue. Both variants share :data:`_ROW_INSET` so the
-    columns line up down the whole card.
+    A ★6 row uses a filled chip and a slightly taller rhythm, but remains
+    on the list's shared surface. Both variants share :data:`_ROW_INSET` so
+    the columns line up down the whole card.
     """
 
     line = HStack(_cells(kit, row), gap=_ROW_GAP, align="center")
-    if row.rarity >= 6:
-        return kit.panel(
-            line,
-            width=Fixed(INNER_WIDTH),
-            height=Fixed(_TOP_ROW_HEIGHT),
-            padding=Insets.only(left=_ROW_INSET, right=_ROW_INSET),
-        )
     return Frame(
         line,
         width=Fixed(INNER_WIDTH),
-        height=Fixed(_ROW_HEIGHT),
+        height=Fixed(_TOP_ROW_HEIGHT if row.rarity >= 6 else _ROW_HEIGHT),
         padding=Insets.only(left=_ROW_INSET, right=_ROW_INSET),
         align_x="stretch",
         align_y="stretch",

@@ -89,6 +89,9 @@ def claim_all_page(
             kit,
             title="邮箱",
             subtitle="一键领取",
+            article_title="一键领取",
+            show_subtitle=False,
+            show_page_title=False,
             body=panel_section(kit, empty_state(kit, _nothing_message(outcome))),
             footer=_footer(kit),
         )
@@ -103,6 +106,9 @@ def claim_all_page(
         kit,
         title="邮箱",
         subtitle=f"一键领取 · {len(outcome.claimed)} 封",
+        article_title="一键领取",
+        show_subtitle=False,
+        show_page_title=False,
         body=VStack(sections, gap=32, align="stretch"),
         footer=_footer(kit),
     )

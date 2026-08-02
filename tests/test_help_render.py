@@ -176,3 +176,52 @@ def test_footer_left_aligns_usage_and_right_aligns_support() -> None:
     usage, support = footer.child.child.children
     assert usage.align_x == "start"
     assert support.align_x == "end"
+
+
+def test_mewtype_board_category_heading_has_the_official_line_box_and_no_rule() -> None:
+    """The c-article-head is a standalone band, not a clipped band plus rule."""
+
+    from plugins.help.render import board
+    from plugins.render.kits.mewtype import MewtypeKit
+
+    kit = MewtypeKit()
+    commands = commands_by_category(HELP_ENTRIES)[0][1]
+    section = board._category_section(kit, "游戏", commands, compact=True)
+    heading = section.children[0]
+
+    # Website CSS: 22px * 1.6 line-height + 10px/12px vertical padding = 57.2px.
+    assert heading.height.value >= 58
+    assert [type(child).__name__ for child in section.children] == [
+        "MewtypeArticleHeader",
+        "Grid",
+    ]
+
+
+def test_mewtype_detail_uses_stream_headings_inside_panels() -> None:
+    """Panel-local labels map to ON AIR's p-onair-article__stream-head."""
+
+    from plugins.help.render import detail
+    from plugins.render.kits.mewtype import MewtypeKit
+
+    entry = find_entries(HELP_ENTRIES, "猜卡面")[0]
+    page = detail.detail_page(entry, MewtypeKit())
+    body = page.child.children[1]
+
+    def descendants(component):
+        yield component
+        for attribute in ("child", "children"):
+            value = getattr(component, attribute, None)
+            if isinstance(value, (list, tuple)):
+                for item in value:
+                    yield from descendants(item)
+            elif value is not None:
+                yield from descendants(value)
+
+    nodes = list(descendants(body))
+    assert not any(type(node).__name__ == "MewtypeArticleHeader" for node in nodes)
+    stream_headings = [
+        node for node in nodes if type(node).__name__ == "MewtypeStreamHeading"
+    ]
+    assert len(stream_headings) >= 3
+    assert all(heading.child.font_size > 24 for heading in stream_headings)
+    assert all(heading.marker_size >= 19 for heading in stream_headings)

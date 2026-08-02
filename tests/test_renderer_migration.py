@@ -142,6 +142,38 @@ class RendererMigrationTest(unittest.TestCase):
         )
         self.assertLessEqual(total_height, 620)
 
+    def test_one_stroke_leaderboard_panels_share_the_available_width(self) -> None:
+        leaderboard_module = _load_module(
+            "one_stroke_leaderboard_equal_columns_for_test",
+            ROOT / "plugins" / "one_stroke" / "render" / "leaderboard.py",
+        )
+        from plugins.render.sizing import Fill
+        from plugins.render.kits import MewtypeKit
+
+        panels = [
+            leaderboard_module._ranking_panel(MewtypeKit(), title, [])
+            for title in ("简单", "普通", "困难")
+        ]
+        self.assertTrue(all(isinstance(panel.width, Fill) for panel in panels))
+
+    def test_mewtype_one_stroke_times_fit_without_ellipsis(self) -> None:
+        leaderboard_module = _load_module(
+            "one_stroke_leaderboard_time_budget_for_test",
+            ROOT / "plugins" / "one_stroke" / "render" / "leaderboard.py",
+        )
+        from plugins.render.core import Constraints
+        from plugins.render.kits import MewtypeKit
+
+        rows = leaderboard_module._ranking_rows(MewtypeKit(), [("kasumi", 12.34)])
+        first_row = rows.children[0].child
+        time_frame = first_row.children[1]
+        time_text = time_frame.child
+
+        self.assertEqual(
+            time_text._layout_text(Constraints(max_width=time_frame.width.value))[0],
+            ["12.34s"],
+        )
+
     def test_one_stroke_leaderboard_uses_bangdream_titled_panels(self) -> None:
         leaderboard_module = _load_module(
             "one_stroke_leaderboard_titled_panel_for_test",

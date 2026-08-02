@@ -16,6 +16,7 @@ from PIL import ImageFont
 from nonebot.log import logger
 
 from utils import cards
+from plugins.render import Fill
 from plugins.render import Fixed
 from plugins.render import Frame
 from plugins.render import HStack
@@ -27,6 +28,7 @@ from plugins.render import Component
 from plugins.render import RenderContext
 from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 if TYPE_CHECKING:
     from .models import Hand
@@ -452,9 +454,12 @@ class BlackjackRenderer:
             score_text = f"共 {hand.cards[0].get_value()} + ? 点"
         else:
             score_text = f"共 {hand.value} 点"
+        panel_width = self._cards_panel_width(len(hand.cards))
         sections: list[Component] = []
+        if isinstance(self.kit, MewtypeKit):
+            sections.append(self.kit.article_header("BLACKKASUMI", width=panel_width))
         strip = self._identity_strip(
-            identity, detail, width=self._cards_panel_width(len(hand.cards))
+            identity, detail, width=panel_width
         )
         if strip is not None:
             sections.append(strip)
@@ -465,7 +470,9 @@ class BlackjackRenderer:
                 self.RenderLayout.DEALER_TAG_COLOR,
             )
         )
-        sections.append(self._cards_panel(hand, second_card_back))
+        sections.append(
+            self._cards_panel(hand, second_card_back, width=panel_width)
+        )
         page = AutoPage(
             padding=self.RenderLayout.PAGE_PADDING,
             background=self.kit.background(),
@@ -575,6 +582,27 @@ class BlackjackRenderer:
                 height=Fixed(self.RenderLayout.NAME_TAG_HEIGHT),
                 font_size=self.RenderLayout.NAME_TAG_FONT_SIZE,
             )
+        if isinstance(self.kit, MewtypeKit):
+            role = "KASUMI" if name == "Kasumi" else "PLAYER"
+            frame = self.kit.primary if name == "Kasumi" else self.kit.accent
+            return self.kit.panel(
+                Frame(
+                    self.kit.text(
+                        f"{role} · {score_text}",
+                        font_size=28,
+                        color=self.kit.text_color,
+                        align="center",
+                        max_lines=1,
+                    ),
+                    align_x="center",
+                    align_y="center",
+                ),
+                width=Fixed(self.RenderLayout.NAME_TAG_WIDTH),
+                height=Fixed(self.RenderLayout.NAME_TAG_HEIGHT),
+                fill=self.kit.panel_fill,
+                radius=6,
+                frame_color=frame,
+            )
         return self.kit.panel(
             Frame(
                 self.kit.text(
@@ -593,19 +621,33 @@ class BlackjackRenderer:
             radius=self.RenderLayout.NAME_TAG_HEIGHT // 2,
         )
 
-    def _cards_panel(self, hand: "Hand", show_second_back: bool = False):
-        cards = []
+    def _cards_panel(
+        self,
+        hand: "Hand",
+        show_second_back: bool = False,
+        *,
+        width: int | None = None,
+    ):
+        hand_cards = []
         for index, card in enumerate(hand.cards):
             show_back = show_second_back and index == 1
-            cards.append(
+            hand_cards.append(
                 self.kit.image(
                     self._render_card_with_text(card, show_back),
                     width=Fixed(self.RenderLayout.CARD_WIDTH),
                     height=Fixed(self.RenderLayout.CARD_HEIGHT),
                 )
             )
+        row = HStack(hand_cards, gap=self.RenderLayout.CARD_GAP, align="center")
+        if isinstance(self.kit, MewtypeKit):
+            panel_width = width or self._cards_panel_width(len(hand.cards))
+            return self.kit.panel(
+                Frame(row, width=Fill(), align_x="center", align_y="center"),
+                width=Fixed(panel_width),
+                padding=self.RenderLayout.PANEL_PADDING,
+            )
         return self.kit.panel(
-            HStack(cards, gap=self.RenderLayout.CARD_GAP, align="center"),
+            row,
             padding=self.RenderLayout.PANEL_PADDING,
             radius=self.RenderLayout.PANEL_RADIUS,
         )
@@ -617,11 +659,12 @@ class BlackjackRenderer:
         score_text: str,
         color: ColorLike,
         show_second_back: bool = False,
+        width: int | None = None,
     ):
         return VStack(
             [
                 self._hand_label(name, score_text, color),
-                self._cards_panel(hand, show_second_back),
+                self._cards_panel(hand, show_second_back, width=width),
             ],
             gap=self.RenderLayout.SECTION_GAP,
             align="start",
@@ -666,6 +709,8 @@ class BlackjackRenderer:
             ),
         )
         sections: list[Component] = []
+        if isinstance(self.kit, MewtypeKit):
+            sections.append(self.kit.article_header("BLACKKASUMI", width=strip_width))
         strip = self._identity_strip(identity, detail, width=strip_width)
         if strip is not None:
             sections.append(strip)
@@ -676,6 +721,7 @@ class BlackjackRenderer:
                 dealer_score,
                 self.RenderLayout.DEALER_TAG_COLOR,
                 dealer_card_back,
+                strip_width,
             )
         )
         sections.append(
@@ -685,6 +731,7 @@ class BlackjackRenderer:
                 player_score,
                 self.RenderLayout.PLAYER_TAG_COLOR,
                 False,
+                strip_width,
             )
         )
         page = AutoPage(

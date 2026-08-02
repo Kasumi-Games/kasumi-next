@@ -192,6 +192,17 @@ def test_game_handlers_fetch_the_cached_avatar_for_every_identity():
             assert "avatar=" in call, (relative, call)
 
 
+def test_game_preview_surfaces_keep_the_player_identity_strip():
+    """The visual census must exercise the same identity-bearing shape as live games."""
+
+    source = (ROOT / "scripts" / "preview_renderers.py").read_text(encoding="utf-8")
+    assert 'PlayerIdentity(nickname="香澄", level=42)' in source
+    assert "generate_hand(\n        dealer,\n        second_card_back=True,\n        identity=identity," in source
+    assert "generate_table(\n        dealer,\n        player,\n        dealer_card_back=True,\n        identity=identity," in source
+    assert "field_module.render(\n        field,\n        kit=_kit(kit_name),\n        identity=identity," in source
+    assert "graph_module.render(\n        session,\n        kit=_kit(kit_name),\n        identity=identity," in source
+
+
 def test_blackjack_renderer_is_pinned_per_game_not_shared_globally():
     """Two waiting blackjack games must not overwrite each other's theme."""
 

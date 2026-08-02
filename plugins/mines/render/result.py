@@ -155,6 +155,8 @@ def result_page(
         kit,
         title="探险",
         subtitle=f"{_SUBTITLE_VERBS[data.outcome]} · {data.net:+d} Pt",
+        article_title="RESULT",
+        show_subtitle=False,
         body=VStack(sections, gap=24, align="stretch"),
         owner_name=identity.nickname if identity is not None else None,
     )

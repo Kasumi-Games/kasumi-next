@@ -164,6 +164,7 @@ def profile_page(data: ProfileData, kit: BaseKit | None = None) -> AutoPage:
         kit,
         title="资料",
         subtitle="个人资料" if isinstance(kit, BanGDreamKit) else data.season_name,
+        article_title="个人资料",
         body=body,
         footer=_footer(kit),
         owner_name=data.identity.nickname,

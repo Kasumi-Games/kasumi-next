@@ -33,6 +33,7 @@ from plugins.render.kits.minimal.components import MinimalText
 from plugins.render.kits.minimal.components import MinimalImage
 from plugins.render.kits.minimal.components import MinimalPanel
 from plugins.render.kits.bangdream.components import BanGDreamImage
+from plugins.render.kits.atoms import rounded_clip
 
 
 def _font_text_width(text: str, font) -> int:
@@ -52,6 +53,17 @@ class SlowRenderBox:
 
 
 class RenderLayoutTest(unittest.TestCase):
+    def test_rounded_clip_preserves_transparent_pixels_inside_the_mask(self) -> None:
+        source = Image.new("RGBA", (20, 20), (18, 24, 36, 0))
+        for x in range(7, 13):
+            for y in range(7, 13):
+                source.putpixel((x, y), (255, 80, 160, 255))
+
+        clipped = rounded_clip(source, 4)
+
+        self.assertEqual(clipped.getpixel((5, 5))[3], 0)
+        self.assertEqual(clipped.getpixel((10, 10))[3], 255)
+
     def test_fill_requires_bounded_axis(self) -> None:
         with self.assertRaises(LayoutError):
             HStack([Spacer(width=Fill(), height=Fixed(10))]).measure(

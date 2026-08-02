@@ -145,6 +145,8 @@ def stats_page(data: StatsCardData, kit: BaseKit | None = None) -> AutoPage:
         kit,
         title="黑香澄",
         subtitle=f"战绩 · {data.total_games} 局",
+        article_title="STATISTICS",
+        show_subtitle=False,
         body=VStack(
             [
                 game_identity(kit, data.identity, width=CONTENT_WIDTH),

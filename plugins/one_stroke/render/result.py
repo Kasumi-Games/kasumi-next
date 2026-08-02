@@ -157,7 +157,8 @@ def result_page(
     return cards.card_page(
         kit,
         title="一笔画",
-        subtitle=f"挑战结算 · {data.difficulty}",
+        subtitle=data.difficulty,
+        article_title="RESULT",
         body=VStack(sections, gap=24, align="stretch"),
         owner_name=identity.nickname if identity is not None else None,
     )

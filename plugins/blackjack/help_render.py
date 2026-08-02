@@ -22,6 +22,7 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 _ROW_GAP = 18
 _SECTION_GAP = 24
@@ -38,10 +39,13 @@ def help_page(kit: BaseKit | None = None) -> AutoPage:
     """Build the BlackKasumi rules card without rendering it."""
 
     kit = kit or BanGDreamKit()
+    section_gap = 18 if isinstance(kit, MewtypeKit) else _SECTION_GAP
     return card_page(
         kit,
         title="黑香澄",
         subtitle="规则与指令",
+        article_title="HOW TO PLAY",
+        show_subtitle=False,
         body=VStack(
             [
                 _getting_started_panel(kit),
@@ -49,7 +53,7 @@ def help_page(kit: BaseKit | None = None) -> AutoPage:
                 _special_rules_panel(kit),
                 _card_values_panel(kit),
             ],
-            gap=_SECTION_GAP,
+            gap=section_gap,
             align="stretch",
         ),
     )

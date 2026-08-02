@@ -14,6 +14,7 @@ from plugins.render import PlayerIdentity
 from plugins.render.kits.bangdream import BG_DIR
 from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.kasumi import KasumiKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 from ..models import Field
 from ..models import BlockType
@@ -23,12 +24,17 @@ BOARD_WIDTH = 786
 
 
 def generate_unrevealed_field(index: int, kit: BaseKit) -> Component:
+    is_mewtype = isinstance(kit, MewtypeKit)
     return kit.panel(
         Frame(
             kit.text(
                 str(index),
                 font_size=80,
-                color=(255, 255, 255, 255),
+                color=(
+                    (169, 205, 245, 255)
+                    if is_mewtype
+                    else (255, 255, 255, 255)
+                ),
                 align="center",
                 max_lines=1,
             ),
@@ -37,7 +43,7 @@ def generate_unrevealed_field(index: int, kit: BaseKit) -> Component:
         ),
         width=Fixed(120),
         height=Fixed(120),
-        fill=(223, 223, 223, 255),
+        fill=kit.paper_fill if is_mewtype else (223, 223, 223, 255),
         radius=16,
     )
 
@@ -45,6 +51,12 @@ def generate_unrevealed_field(index: int, kit: BaseKit) -> Component:
 def generate_revealed_field(
     stamp_path: Path, background_color: tuple[int, int, int], kit: BaseKit
 ) -> Component:
+    frame_color = None
+    if isinstance(kit, MewtypeKit):
+        is_mine = background_color[2] > background_color[0]
+        background_color = (255, 232, 248) if is_mine else (228, 248, 255)
+        frame_color = kit.accent if is_mine else kit.primary
+    panel_kwargs = {"frame_color": frame_color} if frame_color is not None else {}
     return kit.panel(
         Frame(
             kit.image(stamp_path, width=Fixed(110), height=Fixed(110)),
@@ -55,6 +67,7 @@ def generate_revealed_field(
         height=Fixed(120),
         fill=background_color + (255,),
         radius=16,
+        **panel_kwargs,
     )
 
 
@@ -72,6 +85,12 @@ def _title_bar(
     width: int,
     height: int,
 ):
+    if isinstance(kit, MewtypeKit):
+        return kit.compact_header(
+            "EXPLORATION",
+            "ARISA'S WAREHOUSE",
+            width=BOARD_WIDTH,
+        )
     if isinstance(kit, KasumiKit):
         return kit.game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):
@@ -99,6 +118,20 @@ def _title_bar(
 
 
 def _board_panel(kit: BaseKit, child):
+    if isinstance(kit, MewtypeKit):
+        return kit.panel(
+            Frame(
+                child,
+                width=Fixed(786),
+                height=Fixed(786),
+                padding=50,
+                align_x="stretch",
+                align_y="stretch",
+                aspect_ratio=1,
+            ),
+            width=Fixed(786),
+            height=Fixed(786),
+        )
     return kit.panel(
         Frame(
             child,

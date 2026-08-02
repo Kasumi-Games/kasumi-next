@@ -114,6 +114,8 @@ def mail_page(
         kit,
         title="邮件",
         subtitle=subtitle,
+        article_title="邮件",
+        show_page_title=False,
         body=VStack(sections, gap=32, align="stretch"),
         footer=_footer(kit),
     )

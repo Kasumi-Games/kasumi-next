@@ -217,6 +217,28 @@ class BaseKit(ABC):
 
         ...
 
+    def page_title(self, text: str, *, font_size: int = 40) -> Component:
+        """Create the primary title used at the top of standard card pages.
+
+        Most kits use their ordinary text atom. Kits with a distinctive title
+        treatment can override this without teaching every card renderer about
+        a concrete kit type.
+
+        Args:
+            text: Short page title.
+            font_size: Requested logical font size.
+
+        Returns:
+            Title component.
+        """
+
+        return self.text(
+            text,
+            font_size=font_size,
+            wrap=False,
+            max_lines=1,
+        )
+
     def game_identity(
         self,
         identity: PlayerIdentity,

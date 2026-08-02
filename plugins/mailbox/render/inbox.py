@@ -23,6 +23,7 @@ from typing import Sequence
 from PIL import Image
 
 from utils.cards import BODY_SIZE
+from utils.cards import CONTENT_WIDTH
 from utils.cards import LABEL_SIZE
 from utils.cards import INNER_WIDTH
 from utils.cards import SUBTITLE_SIZE
@@ -35,11 +36,13 @@ from plugins.render import Fill
 from plugins.render import Fixed
 from plugins.render import Frame
 from plugins.render import HStack
+from plugins.render import Insets
 from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 from ..models import ServiceMail
 from .rewards import attachment_summary
@@ -104,7 +107,8 @@ def inbox_page(
         return card_page(
             kit,
             title="邮箱",
-            subtitle="0 封",
+            subtitle=None,
+            article_title="收件箱",
             body=panel_section(
                 kit,
                 empty_state(kit, "邮箱是空的\n有新邮件时这里会出现提醒"),
@@ -122,11 +126,25 @@ def inbox_page(
     if len(mails) > MAX_ROWS:
         rows.append(_overflow_row(kit, len(mails) - len(shown)))
 
+    list_panel = panel_section(
+        kit, VStack(rows, gap=ROW_GAP, align="stretch")
+    )
+    subtitle: str | None = _subtitle(mails, unclaimed)
+    body: Component = list_panel
+    if isinstance(kit, MewtypeKit):
+        subtitle = None
+        body = VStack(
+            [_mewtype_summary(kit, mails, unclaimed), list_panel],
+            gap=18,
+            align="stretch",
+        )
+
     return card_page(
         kit,
         title="邮箱",
-        subtitle=_subtitle(mails, unclaimed),
-        body=panel_section(kit, VStack(rows, gap=ROW_GAP, align="stretch")),
+        subtitle=subtitle,
+        article_title="收件箱",
+        body=body,
         footer=_footer(kit, bool(unclaimed)),
     )
 
@@ -144,6 +162,67 @@ def _subtitle(
         parts.append(f"{len(notices)} 封通知未读")
     parts.append(f"共 {len(mails)} 封")
     return " · ".join(parts)
+
+
+def _mewtype_summary(
+    kit: MewtypeKit,
+    mails: Sequence[ServiceMail],
+    unclaimed: Sequence[ServiceMail],
+) -> Component:
+    """Actionable mailbox state, separate from the page-title hierarchy."""
+
+    unread_notices = sum(
+        1 for mail in mails if not mail.is_read and not mail.attachments
+    )
+    metrics = (
+        ("未领取", len(unclaimed)),
+        ("未读通知", unread_notices),
+        ("全部邮件", len(mails)),
+    )
+    children: list[Component] = []
+    for index, (label, value) in enumerate(metrics):
+        if index:
+            children.append(
+                kit.separator(
+                    orientation="vertical",
+                    length=Fixed(62),
+                    thickness=2,
+                )
+            )
+        children.append(
+            Frame(
+                VStack(
+                    [
+                        kit.text(
+                            str(value),
+                            font_size=34,
+                            color=kit.text_color,
+                            wrap=False,
+                            max_lines=1,
+                            font="display",
+                        ),
+                        kit.text(
+                            label,
+                            font_size=LABEL_SIZE,
+                            color=kit.text_color,
+                            wrap=False,
+                            max_lines=1,
+                        ),
+                    ],
+                    gap=3,
+                    align="center",
+                ),
+                width=Fill(),
+                height=Fixed(70),
+                align_x="center",
+                align_y="center",
+            )
+        )
+    return kit.panel(
+        HStack(children, gap=18, align="center"),
+        width=Fixed(CONTENT_WIDTH),
+        padding=Insets.only(left=24, top=18, right=28, bottom=22),
+    )
 
 
 def _footer(kit: BaseKit, claimable: bool) -> Component:

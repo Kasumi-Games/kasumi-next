@@ -44,6 +44,7 @@ class InventoryListData:
     rows: tuple[InventoryListRow, ...]
     subtitle: str = ""
     equipped_summary: str = ""
+    panel_footer: str = ""
     footer: str = ""
 
 
@@ -69,6 +70,18 @@ def inventory_list_page(
         )
         children.append(kit.separator(length=Fill()))
     children.extend(_row(kit, row) for row in data.rows)
+    if data.panel_footer:
+        children.append(kit.separator(length=Fill()))
+        children.append(
+            kit.text(
+                data.panel_footer,
+                font_size=LABEL_SIZE,
+                color=kit.muted_text_color,
+                align="center",
+                wrap=False,
+                max_lines=1,
+            )
+        )
     body = panel_section(
         kit,
         VStack(children, gap=14, align="stretch"),
@@ -77,6 +90,8 @@ def inventory_list_page(
         kit,
         title=data.title,
         subtitle=data.subtitle or f"第 {data.page}/{data.total_pages} 页",
+        article_title=data.title,
+        wordmark_title="INVENTORY",
         body=body,
         footer=(
             kit.text(data.footer, font_size=LABEL_SIZE, wrap=False, max_lines=1)

@@ -40,6 +40,7 @@ from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render.types import ImageSource
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 #: Jacket display size. Bestdori jackets are square; 280px leaves a
 #: 416px text column inside the 720px panel for the song identity.
@@ -166,7 +167,12 @@ def reveal_page(
     return card_page(
         kit,
         title="猜谱面",
-        subtitle=_subtitle(data),
+        subtitle=(
+            _mewtype_detail(data)
+            if isinstance(kit, MewtypeKit)
+            else _subtitle(data)
+        ),
+        article_title="ANSWER",
         body=VStack(sections, gap=18, align="stretch"),
         owner_name=data.owner_name,
     )
@@ -187,6 +193,14 @@ def _subtitle(data: GuessChartRevealData) -> str:
     if data.outcome == "timeout":
         return "没有人猜中"
     return "要再试一次吗"
+
+
+def _mewtype_detail(data: GuessChartRevealData) -> str | None:
+    """Keep only result metadata not already stated by the headline or body."""
+
+    if data.outcome != "win":
+        return None
+    return f"{data.hints_used} 条提示" if data.hints_used else "无提示"
 
 
 def _song_panel(kit: BaseKit, data: GuessChartRevealData) -> Component:

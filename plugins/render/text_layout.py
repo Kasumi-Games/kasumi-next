@@ -255,7 +255,7 @@ def _grapheme_boundaries(text: str) -> list[int]:
 def _cached_text_width(text: str, font, cache: dict[str, int]) -> int:
     width = cache.get(text)
     if width is None:
-        if _has_wide_character(text):
+        if _has_wide_character(text) and not getattr(font, "letter_spacing", 0):
             width = sum(_cached_char_width(char, font, cache) for char in text)
         else:
             width = text_width(text, font)

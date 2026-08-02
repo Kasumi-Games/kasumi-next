@@ -10,11 +10,13 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.kasumi import KasumiKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 LeaderboardRows = list[tuple[str, float]]
 
 _ROW_HEIGHT = 44
 _ROW_GAP = 14
+_TIME_WIDTH = 84
 
 
 def _ranking_rows(kit: BaseKit, rows: LeaderboardRows):
@@ -57,7 +59,7 @@ def _ranking_rows(kit: BaseKit, rows: LeaderboardRows):
                                 wrap=False,
                                 max_lines=1,
                             ),
-                            width=Fixed(72),
+                            width=Fixed(_TIME_WIDTH),
                             align_x="stretch",
                             align_y="center",
                         ),
@@ -122,12 +124,19 @@ def _ranking_panel(kit: BaseKit, title: str, rows: LeaderboardRows):
             main_radius=48,
             main_fill=(255, 255, 255, 208),
         )
-    return kit.panel(
+    display_title = title
+    if isinstance(kit, MewtypeKit):
+        display_title = {
+            "简单": "EASY",
+            "普通": "NORMAL",
+            "困难": "HARD",
+        }.get(title, title)
+    panel = kit.panel(
         VStack(
             [
                 Frame(
                     kit.text(
-                        title,
+                        display_title,
                         font_size=40,
                         align="center",
                         max_lines=1,
@@ -145,11 +154,12 @@ def _ranking_panel(kit: BaseKit, title: str, rows: LeaderboardRows):
             gap=8,
             align="stretch",
         ),
-        width=Fixed(360),
+        width=Fill(),
         height=Fixed(759),
         padding=Insets.only(left=20, top=18, right=20, bottom=24),
-        radius=48,
+        radius=None if isinstance(kit, MewtypeKit) else 48,
     )
+    return panel
 
 
 def _title_bar(
@@ -160,6 +170,15 @@ def _title_bar(
     width: int,
     height: int,
 ):
+    if isinstance(kit, MewtypeKit):
+        return VStack(
+            [
+                kit.page_title("ONE STROKE"),
+                kit.article_header("SPEED RANKING", width=1140),
+            ],
+            gap=14,
+            align="stretch",
+        )
     if isinstance(kit, KasumiKit):
         return kit.game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):

@@ -15,6 +15,7 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from PIL import Image
+from PIL import ImageChops
 from PIL import ImageDraw
 from PIL import ImageFilter
 
@@ -64,10 +65,12 @@ class KitText:
     max_lines: int | None = None
     overflow: Overflow = "ellipsis"
     line_height: int | None = None
+    letter_spacing: int = 0
+    center_glyphs_in_line: bool = False
 
     def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
         lines, font_size = self._layout_text(constraints)
-        font = load_font(font_size, self.font)
+        font = self._load_font(font_size)
         line_height = self.line_height or round(font_size * 1.35)
         width = max((_text_width(line, font) for line in lines), default=0)
         if ctx.pixel_ratio > 1:
@@ -77,7 +80,10 @@ class KitText:
             # render() draws on a rect-sized layer at ``pixel_ratio`` scale,
             # clipping the last glyph. Measure at draw size too and keep the
             # safer width.
-            draw_font = load_font(font_size * ctx.pixel_ratio, self.font)
+            draw_font = self._load_font(
+                font_size * ctx.pixel_ratio,
+                letter_spacing=self.letter_spacing * ctx.pixel_ratio,
+            )
             draw_width = max(
                 (_text_width(line, draw_font) for line in lines), default=0
             )
@@ -93,7 +99,10 @@ class KitText:
             Constraints(max_width=rect.width, max_height=rect.height)
         )
         lines, font_size = self._layout_text(constraints)
-        font = load_font(max(1, ctx.scale_px(font_size)), self.font)
+        font = self._load_font(
+            max(1, ctx.scale_px(font_size)),
+            letter_spacing=ctx.scale_px(self.letter_spacing),
+        )
         line_height = ctx.scale_px(self.line_height or round(font_size * 1.35))
         layer = Image.new("RGBA", (rect.width, rect.height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(layer)
@@ -101,6 +110,12 @@ class KitText:
         for line in lines:
             if y >= rect.height:
                 break
+            draw_y = y
+            if self.center_glyphs_in_line:
+                bbox = font.getbbox(line)
+                glyph_height = max(0, bbox[3] - bbox[1])
+                line_box_height = min(line_height, rect.height - y)
+                draw_y += max(0, (line_box_height - glyph_height) // 2) - bbox[1]
             line_width = _display_text_width(line, font, rect.width)
             if self.align == "center":
                 x = max(0, (rect.width - line_width) // 2)
@@ -108,14 +123,24 @@ class KitText:
                 x = max(0, rect.width - line_width)
             else:
                 x = 0
-            _draw_text_line(
-                draw,
-                (x, y),
-                line,
-                font,
-                normalize_color(self.color),
-                max_width=line_width,
-            )
+            if isinstance(font, _TrackedFont):
+                _draw_tracked_font_line(
+                    draw,
+                    (x, draw_y),
+                    line,
+                    font,
+                    normalize_color(self.color),
+                    max_width=line_width,
+                )
+            else:
+                _draw_text_line(
+                    draw,
+                    (x, draw_y),
+                    line,
+                    font,
+                    normalize_color(self.color),
+                    max_width=line_width,
+                )
             y += line_height
         alpha_composite_paste(canvas, layer, (rect.x, rect.y))
 
@@ -125,7 +150,7 @@ class KitText:
             constraints.max_width is not None or constraints.max_height is not None
         ):
             while font_size > 8:
-                font = load_font(font_size, self.font)
+                font = self._load_font(font_size)
                 line_height = self.line_height or round(font_size * 1.35)
                 lines = _wrap_text(
                     self.text, font, constraints.max_width if self.wrap else None
@@ -141,7 +166,7 @@ class KitText:
                 if width_fits and height_fits:
                     break
                 font_size -= 1
-        font = load_font(font_size, self.font)
+        font = self._load_font(font_size)
         line_height = self.line_height or round(font_size * 1.35)
         lines = _wrap_text(
             self.text, font, constraints.max_width if self.wrap else None
@@ -167,6 +192,81 @@ class KitText:
         ):
             lines = [_ellipsis(line, font, constraints.max_width) for line in lines]
         return lines or [""], font_size
+
+    def _load_font(
+        self,
+        font_size: int,
+        *,
+        letter_spacing: int | None = None,
+    ):
+        primary = load_font(font_size, self.font)
+        tracking = self.letter_spacing if letter_spacing is None else letter_spacing
+        if tracking <= 0:
+            return primary
+        return _TrackedFont(
+            primary,
+            letter_spacing=tracking,
+        )
+
+
+@dataclass(frozen=True)
+class _TrackedFont:
+    """PIL font facade that adds tracking without changing typefaces."""
+
+    primary: object
+    letter_spacing: int = 0
+
+    def getbbox(self, text: str, *args, **kwargs) -> tuple[int, int, int, int]:
+        if not text:
+            return self.primary.getbbox(text, *args, **kwargs)
+        boxes = [self.primary.getbbox(char, *args, **kwargs) for char in text]
+        width = sum(box[2] - box[0] for box in boxes)
+        width += max(0, len(text) - 1) * self.letter_spacing
+        return (0, min(box[1] for box in boxes), width, max(box[3] for box in boxes))
+
+    def draw(self, draw: ImageDraw.ImageDraw, xy, text: str, fill) -> None:
+        x, y = xy
+        for character in text:
+            draw.text((x, y), character, font=self.primary, fill=fill)
+            x += _text_width(character, self.primary) + self.letter_spacing
+
+
+def _draw_tracked_font_line(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    text: str,
+    font: _TrackedFont,
+    fill,
+    *,
+    max_width: int | None = None,
+) -> None:
+    """Draw one tracked line while preserving hanging punctuation."""
+
+    width = _text_width(text, font)
+    if max_width is None or width <= max_width:
+        font.draw(draw, xy, text, fill)
+        return
+    suffix_start = len(text)
+    while suffix_start > 0 and text[suffix_start - 1] in ",.;:!?，。！？、；：…":
+        suffix_start -= 1
+    if suffix_start == len(text):
+        font.draw(draw, xy, text, fill)
+        return
+    prefix = text[:suffix_start]
+    suffix = text[suffix_start:]
+    overrun = width - max_width
+    suffix_width = _text_width(suffix, font)
+    if overrun > suffix_width:
+        font.draw(draw, xy, text, fill)
+        return
+    x, y = xy
+    font.draw(draw, (x, y), prefix, fill)
+    font.draw(
+        draw,
+        (x + _text_width(prefix, font) - overrun, y),
+        suffix,
+        fill,
+    )
 
 
 @dataclass(frozen=True)
@@ -493,7 +593,10 @@ def rounded_clip(image: Image.Image, radius: int) -> Image.Image:
         (0, 0, image.width, image.height), radius=radius, fill=255
     )
     result = image.copy()
-    result.putalpha(mask)
+    # A clip constrains the source alpha; it must not replace it. Replacing the
+    # channel turns fully transparent pixels inside the rounded rectangle
+    # opaque, exposing their otherwise irrelevant RGB values as a black box.
+    result.putalpha(ImageChops.multiply(result.getchannel("A"), mask))
     return result
 
 

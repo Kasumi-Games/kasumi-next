@@ -239,7 +239,9 @@ def season_trend_page(
     return card_page(
         kit,
         title=data.season_name,
-        subtitle="赛季趋势 · Pt 门槛",
+        subtitle=data.season_name,
+        article_title="Pt 门槛趋势",
+        wordmark_title="TREND",
         body=panel_section(kit, VStack(rows, gap=18, align="stretch")),
         footer=_footer(kit, data),
         owner_name=data.owner_name,

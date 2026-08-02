@@ -19,6 +19,8 @@ PREVIEW_DATA_DIR = ROOT / ".cache" / "render-preview-data"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from plugins.render import PlayerIdentity
+
 
 def _ensure_package(name: str, path: Path) -> None:
     package = sys.modules.get(name)
@@ -113,6 +115,7 @@ def preview_blackjack(kit_name: str, output_dir: Path) -> list[Path]:
     renderer.get_font = lambda size: ImageFont.truetype(
         str(ROOT / "plugins" / "blackjack" / "recourses" / "old.ttf"), size
     )
+    identity = PlayerIdentity(nickname="香澄", level=42)
 
     def card(rank: str, suit: str, fill: tuple[int, int, int, int]):
         item = models_module.Card(suit, rank)
@@ -132,8 +135,19 @@ def preview_blackjack(kit_name: str, output_dir: Path) -> list[Path]:
         output_dir / f"blackjack-hand-{kit_name}.png",
         output_dir / f"blackjack-table-{kit_name}.png",
     ]
-    renderer.generate_hand(dealer, second_card_back=True).save(outputs[0])
-    renderer.generate_table(dealer, player, dealer_card_back=True).save(outputs[1])
+    renderer.generate_hand(
+        dealer,
+        second_card_back=True,
+        identity=identity,
+        detail="庄家回合 · 押注 120 Pt",
+    ).save(outputs[0])
+    renderer.generate_table(
+        dealer,
+        player,
+        dealer_card_back=True,
+        identity=identity,
+        detail="押注 120 Pt · 玩家 15 点",
+    ).save(outputs[1])
     return outputs
 
 
@@ -152,7 +166,13 @@ def preview_mines(kit_name: str, output_dir: Path) -> list[Path]:
     field.reveal_all_mines()
 
     output = output_dir / f"mines-{kit_name}.png"
-    field_module.render(field, kit=_kit(kit_name)).save(output)
+    identity = PlayerIdentity(nickname="香澄", level=42)
+    field_module.render(
+        field,
+        kit=_kit(kit_name),
+        identity=identity,
+        detail="押注 120 Pt · 剩 4 雷",
+    ).save(output)
     return [output]
 
 
@@ -206,7 +226,13 @@ def preview_one_stroke(kit_name: str, output_dir: Path) -> list[Path]:
 
     board_output = output_dir / f"one-stroke-{kit_name}.png"
     leaderboard_output = output_dir / f"one-stroke-leaderboard-{kit_name}.png"
-    graph_module.render(session, kit=_kit(kit_name)).save(board_output)
+    identity = PlayerIdentity(nickname="香澄", level=42)
+    graph_module.render(
+        session,
+        kit=_kit(kit_name),
+        identity=identity,
+        detail="难度 普通 · 奖励 120 Pt",
+    ).save(board_output)
     leaderboard_module.render_leaderboard(
         [("kasumi", 12.34), ("arisa", 16.78), ("tae", 20.12)],
         [("a very very long player name", 23.45), ("rimi", 25.67)],
