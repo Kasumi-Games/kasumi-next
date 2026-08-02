@@ -1,4 +1,4 @@
-"""Generate replaceable placeholder avatar frames for 流星堂."""
+"""Generate the 星屑玻璃 avatar frame sold by 流星堂."""
 
 import math
 from pathlib import Path
@@ -63,62 +63,8 @@ def stardust() -> None:
     _save(image, "frame_shop_stardust")
 
 
-def greenhouse() -> None:
-    image = _canvas()
-    draw = ImageDraw.Draw(image)
-    _ring(draw, (235, 247, 220, 255), width=8, inset=7)
-    _ring(draw, (101, 166, 124, 255), width=13, inset=18)
-    for angle in (136, 154, 172, 316, 334, 352):
-        rad = math.radians(angle)
-        radius = AVATAR_RADIUS + 25 * SS
-        x = CENTER + math.cos(rad) * radius
-        y = CENTER + math.sin(rad) * radius
-        tangent = rad + math.pi / 2
-        length = 22 * SS
-        width = 10 * SS
-        points = [
-            (x + math.cos(tangent) * length, y + math.sin(tangent) * length),
-            (x + math.cos(tangent + 1.7) * width, y + math.sin(tangent + 1.7) * width),
-            (x - math.cos(tangent) * length, y - math.sin(tangent) * length),
-            (x + math.cos(tangent - 1.7) * width, y + math.sin(tangent - 1.7) * width),
-        ]
-        draw.polygon(points, fill=(132, 190, 130, 245))
-    _save(image, "frame_shop_greenhouse")
-
-
-def neon_record() -> None:
-    image = _canvas()
-    for color, inset, width, blur in (
-        ((255, 43, 159, 150), 20, 20, 12),
-        ((35, 239, 255, 135), 7, 14, 9),
-    ):
-        glow = _canvas()
-        _ring(ImageDraw.Draw(glow), color, width=width, inset=inset)
-        image.alpha_composite(glow.filter(ImageFilter.GaussianBlur(blur * SS)))
-    draw = ImageDraw.Draw(image)
-    _ring(draw, (255, 64, 174, 255), width=10, inset=20)
-    _ring(draw, (61, 239, 255, 255), width=6, inset=7)
-    for angle in range(0, 360, 30):
-        rad = math.radians(angle)
-        inner = AVATAR_RADIUS + 11 * SS
-        outer = AVATAR_RADIUS + 28 * SS
-        draw.line(
-            (
-                CENTER + math.cos(rad) * inner,
-                CENTER + math.sin(rad) * inner,
-                CENTER + math.cos(rad) * outer,
-                CENTER + math.sin(rad) * outer,
-            ),
-            fill=(246, 240, 255, 235),
-            width=3 * SS,
-        )
-    _save(image, "frame_shop_neon_record")
-
-
 def main() -> None:
     stardust()
-    greenhouse()
-    neon_record()
 
 
 if __name__ == "__main__":

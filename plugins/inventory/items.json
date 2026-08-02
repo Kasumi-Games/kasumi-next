@@ -513,8 +513,8 @@
     {
       "item_id": "frame_shop_stardust",
       "category": "cosmetic",
-      "name": "流星堂·星屑玻璃",
-      "description": "流星堂常驻头像框。试制品，可在后续版本替换美术。",
+      "name": "星屑玻璃",
+      "description": "澄蓝玻璃般的双层光环，四枚星芒在边缘错落闪烁。",
       "stackable": false,
       "visible": true,
       "sort_order": 231,
@@ -527,35 +527,19 @@
       }
     },
     {
-      "item_id": "frame_shop_greenhouse",
+      "item_id": "frame_shop_azure_rhythm",
       "category": "cosmetic",
-      "name": "流星堂·玻璃花房",
-      "description": "流星堂常驻头像框。试制品，可在后续版本替换美术。",
+      "name": "舞萌DX",
+      "description": "青蓝与银白交替的节拍圆环，藏着一对俏皮的熊耳轮廓。",
       "stackable": false,
       "visible": true,
       "sort_order": 232,
       "cosmetic": {
         "cosmetic_type": "avatar_frame",
-        "rarity": 4
-      },
-      "metadata": {
-        "art": "plugins/inventory/resources/items/avatar_frames/frame_shop_greenhouse.png"
-      }
-    },
-    {
-      "item_id": "frame_shop_neon_record",
-      "category": "cosmetic",
-      "name": "流星堂·霓虹唱片",
-      "description": "流星堂常驻精品头像框。试制品，可在后续版本替换美术。",
-      "stackable": false,
-      "visible": true,
-      "sort_order": 233,
-      "cosmetic": {
-        "cosmetic_type": "avatar_frame",
         "rarity": 5
       },
       "metadata": {
-        "art": "plugins/inventory/resources/items/avatar_frames/frame_shop_neon_record.png"
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_shop_azure_rhythm.png"
       }
     }
   ]

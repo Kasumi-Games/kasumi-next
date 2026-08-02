@@ -1,21 +1,25 @@
 """Interaction regressions for the player-facing 流星堂 command."""
 
-from unittest.mock import AsyncMock
 from unittest.mock import Mock
+from unittest.mock import AsyncMock
 
 import pytest
-from nonebot.adapters.satori import Message
 from nonebot.exception import FinishedException
+from nonebot.adapters.satori import Message
 
 import plugins.ryuseido as ryuseido
+from plugins.inventory.render import InventoryListRow
+from plugins.ryuseido.service import ShopOffer
 from plugins.ryuseido.service import PurchaseResult
 from plugins.ryuseido.service import SeasonPullStatus
-from plugins.ryuseido.service import ShopOffer
-from plugins.inventory.render import InventoryListRow
 
 
 class FinishingMatcher:
+    def __init__(self) -> None:
+        self.calls = []
+
     async def finish(self, message=None, **kwargs) -> None:
+        self.calls.append((message, kwargs))
         raise FinishedException()
 
 
@@ -40,7 +44,73 @@ async def test_buying_an_offer_is_a_single_step(
         )
 
     buy.assert_called_once_with("user", "A01")
-    assert send_section.await_args.kwargs["notice"].startswith("已购入")
+    assert send_section.await_args.kwargs["notice"] == "已购入 A01"
+    assert "余额" not in send_section.await_args.kwargs["notice"]
+
+
+async def test_bonus_pull_is_a_single_step(
+    monkeypatch: pytest.MonkeyPatch,
+    make_satori_event,
+) -> None:
+    status = SeasonPullStatus(0, 5, 400, 1, "测试季")
+    send_home = AsyncMock(side_effect=FinishedException())
+    send_bonus_pull = AsyncMock(side_effect=FinishedException())
+    monkeypatch.setattr(ryuseido, "season_pull_status", lambda user_id: status)
+    monkeypatch.setattr(ryuseido, "_send_home", send_home)
+    monkeypatch.setattr(ryuseido, "_send_bonus_pull", send_bonus_pull)
+
+    with pytest.raises(FinishedException):
+        await ryuseido.handle_shop(
+            FinishingMatcher(),
+            make_satori_event("/流星堂 加抽"),
+            Message("加抽"),
+        )
+
+    send_bonus_pull.assert_awaited_once()
+    send_home.assert_not_awaited()
+
+
+async def test_bonus_pull_error_is_returned_without_shop_name_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+    make_satori_event,
+) -> None:
+    matcher = FinishingMatcher()
+    status = SeasonPullStatus(0, 5, 400, 1, "测试季")
+    monkeypatch.setattr(ryuseido, "season_pull_status", lambda user_id: status)
+    monkeypatch.setattr(ryuseido, "_send_home", AsyncMock())
+    monkeypatch.setattr(
+        ryuseido,
+        "_send_bonus_pull",
+        AsyncMock(side_effect=ValueError("盆栽不足，需要 400 盆")),
+    )
+
+    with pytest.raises(FinishedException):
+        await ryuseido.handle_shop(
+            matcher,
+            make_satori_event("/流星堂 加抽"),
+            Message("加抽"),
+        )
+
+    reply = str(matcher.calls[0][0])
+    assert "盆栽不足，需要 400 盆" in reply
+    assert "流星堂：" not in reply
+
+
+async def test_usage_error_has_no_redundant_shop_name_prefix(
+    make_satori_event,
+) -> None:
+    matcher = FinishingMatcher()
+
+    with pytest.raises(FinishedException):
+        await ryuseido.handle_shop(
+            matcher,
+            make_satori_event("/流星堂 购买"),
+            Message("购买"),
+        )
+
+    reply = str(matcher.calls[0][0])
+    assert reply.startswith("用法：/流星堂 购买")
+    assert "流星堂：" not in reply
 
 
 async def test_theme_category_opens_the_paginated_listing(
@@ -82,7 +152,6 @@ async def test_theme_listing_explains_preview_and_direct_purchase(
             show_art_slot=False,
         ),
     )
-    monkeypatch.setattr(ryuseido, "_subtitle", lambda user_id: "盆栽 1200 盆")
     monkeypatch.setattr(ryuseido, "_send_page", send_page)
 
     await ryuseido._send_section(
@@ -96,6 +165,9 @@ async def test_theme_listing_explains_preview_and_direct_purchase(
     assert send_page.await_args.kwargs["footer"] == (
         "/流星堂 预览 <编号> · /流星堂 购买 <编号>"
     )
+    assert send_page.await_args.kwargs["title"] == "流星堂"
+    assert send_page.await_args.kwargs["subtitle"] == "主题"
+    assert send_page.await_args.kwargs["panel_footer"] == "第 1/1 页"
 
 
 async def test_shop_home_rows_have_only_one_leading_badge(
@@ -113,7 +185,6 @@ async def test_shop_home_rows_have_only_one_leading_badge(
         "season_pull_status",
         lambda user_id: SeasonPullStatus(0, 5, 400, 1, "测试季"),
     )
-    monkeypatch.setattr(ryuseido, "_subtitle", lambda user_id: "盆栽 1200 盆")
     monkeypatch.setattr(ryuseido, "_send_page", send_page)
 
     await ryuseido._send_home(
@@ -126,3 +197,6 @@ async def test_shop_home_rows_have_only_one_leading_badge(
     assert len(rows) == 4
     assert all(row.show_art_slot is False for row in rows)
     assert all(row.show_trailing is False for row in rows)
+    assert send_page.await_args.kwargs["title"] == "流星堂"
+    assert send_page.await_args.kwargs["subtitle"] == "旧藏流转"
+    assert "盆栽" not in send_page.await_args.kwargs["subtitle"]

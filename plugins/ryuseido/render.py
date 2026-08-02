@@ -27,7 +27,6 @@ class ThemePreviewData:
     name: str
     description: str
     price: int
-    balance: int
     owned: bool = False
     notice: str = ""
     footer: str = ""
@@ -131,12 +130,17 @@ def theme_preview_page(data: ThemePreviewData, kit: BaseKit) -> AutoPage:
     footer_text = data.footer or (
         f"已拥有 · /装扮 装备 {data.name}"
         if data.owned
-        else f"/流星堂 购买 {data.sku} · 余额 {data.balance} 盆"
+        else f"/流星堂 购买 {data.sku}"
     )
+    subtitle = f"主题 · {data.name}"
+    if data.notice:
+        subtitle += f" · {data.notice}"
     return card_page(
         kit,
-        title=data.name,
-        subtitle=data.notice or "流星堂主题实机预览",
+        title="流星堂",
+        subtitle=subtitle,
+        article_title="主题预览",
+        wordmark_title="SHOP",
         body=body,
         footer=kit.text(
             footer_text,

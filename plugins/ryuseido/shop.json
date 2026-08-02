@@ -111,13 +111,7 @@
     {
       "sku": "F02",
       "section": "avatar_frame",
-      "item_id": "frame_shop_greenhouse",
-      "price": 1200
-    },
-    {
-      "sku": "F03",
-      "section": "avatar_frame",
-      "item_id": "frame_shop_neon_record",
+      "item_id": "frame_shop_azure_rhythm",
       "price": 1800
     },
     {

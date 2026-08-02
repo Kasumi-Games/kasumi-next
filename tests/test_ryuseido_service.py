@@ -56,14 +56,28 @@ class RyuseidoServiceTest(unittest.TestCase):
     def test_catalog_sells_current_permanent_art_but_no_season_theme(self) -> None:
         offers = list_offers()
         art = [offer for offer in offers if offer.section == "standing_art"]
+        frames = [offer for offer in offers if offer.section == "avatar_frame"]
         themes = [offer for offer in offers if offer.section == "theme"]
 
         self.assertEqual(len(art), 17)
         self.assertEqual({offer.price for offer in art}, {500, 900, 1400})
+        self.assertEqual(
+            [(offer.sku, offer.item_id, offer.price) for offer in frames],
+            [
+                ("F01", "frame_shop_stardust", 1200),
+                ("F02", "frame_shop_azure_rhythm", 1800),
+            ],
+        )
         self.assertEqual([offer.item_id for offer in themes], ["theme_sakura"])
         from plugins.inventory.service import get_item
         from utils.theming import kit_name_for_item
 
+        stardust = get_item("frame_shop_stardust")
+        azure_rhythm = get_item("frame_shop_azure_rhythm")
+        self.assertEqual(stardust.name, "星屑玻璃")
+        self.assertEqual(azure_rhythm.name, "舞萌DX")
+        self.assertNotIn("试制品", stardust.description)
+        self.assertNotIn("试制品", azure_rhythm.description)
         self.assertEqual(kit_name_for_item(get_item("theme_sakura")), "sakura")
         self.assertNotIn(
             "theme_kasumi_starbeat",
@@ -84,6 +98,18 @@ class RyuseidoServiceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "已经拥有"):
             buy_offer("u1", "A01")
         self.assertEqual(get_quantity("u1", BONSAI_ITEM_ID), 0)
+
+    def test_standing_art_offer_keeps_its_image_slot(self) -> None:
+        from plugins.ryuseido import _offer_row
+
+        offer = next(
+            offer
+            for offer in list_offers("standing_art")
+            if offer.sku == "A01"
+        )
+        row = _offer_row("u1", offer)
+
+        self.assertTrue(row.show_art_slot)
 
     def test_bonus_pull_costs_400_counts_pity_and_stops_at_five(self) -> None:
         grant_item("u1", BONSAI_ITEM_ID, 2000, "test")
@@ -201,7 +227,7 @@ def test_shop_sku_renders_in_inventory_listing() -> None:
     from plugins.inventory.render import inventory_list_page
     from plugins.render.kits.minimal import MinimalKit
 
-    image = inventory_list_page(
+    page = inventory_list_page(
         InventoryListData(
             title="流星堂",
             page=1,
@@ -215,13 +241,53 @@ def test_shop_sku_renders_in_inventory_listing() -> None:
                     rarity=3,
                 ),
             ),
-            subtitle="盆栽 500 盆",
+            subtitle="立绘",
+            panel_footer="第 1/1 页",
         ),
         MinimalKit(),
-    ).render()
+    )
+    image = page.render()
 
     assert image.width > 0
     assert image.height > 0
+    text = " ".join(_component_text(page.child))
+    assert "流星堂" in text
+    assert "立绘" in text
+    assert "第 1/1 页" in text
+    assert "余额" not in text
+
+
+def test_mewtype_shop_listing_uses_shop_wordmark() -> None:
+    from plugins.inventory.render import InventoryListData
+    from plugins.inventory.render import InventoryListRow
+    from plugins.inventory.render import inventory_list_page
+    from plugins.render.kits.mewtype import MewtypeKit
+
+    page = inventory_list_page(
+        InventoryListData(
+            title="流星堂",
+            subtitle="立绘",
+            page=1,
+            total_pages=1,
+            rows=(
+                InventoryListRow(
+                    index="A01",
+                    name="角色立绘",
+                    detail="500 盆栽",
+                    kind="立绘",
+                    rarity=3,
+                ),
+            ),
+            panel_footer="第 1/1 页",
+            wordmark_title="SHOP",
+        ),
+        MewtypeKit(),
+    )
+
+    texts = _component_text(page.child)
+    assert "SHOP" in texts
+    assert "INVENTORY" not in texts
+    assert page.render().width == 864
 
 
 def test_theme_preview_is_rendered_by_the_theme_it_sells() -> None:
@@ -235,7 +301,6 @@ def test_theme_preview_is_rendered_by_the_theme_it_sells() -> None:
             name="樱色",
             description="奶油底色、樱粉点缀与飘落花瓣。",
             price=3000,
-            balance=1280,
         ),
         SakuraKit(),
     )
@@ -251,6 +316,7 @@ def test_theme_preview_is_rendered_by_the_theme_it_sells() -> None:
     assert "排行榜" in text
     assert "3000 盆栽" in text
     assert "/流星堂 购买 T01" in text
+    assert "余额" not in text
 
 
 def _component_text(component) -> list[str]:

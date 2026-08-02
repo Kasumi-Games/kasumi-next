@@ -233,7 +233,7 @@ The shop is controlled by the git-tracked
 `plugins/ryuseido/shop.json`. Its first permanent catalog contains:
 
 - the existing ★★★–★★★★★ normal-pool standing art
-- three replaceable placeholder avatar frames
+- two finished avatar frames: `星屑玻璃` and `舞萌DX`
 - the previously unissued `樱色` theme
 - up to five current-banner bonus pulls per player and season
 

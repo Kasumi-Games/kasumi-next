@@ -13,7 +13,6 @@ from nonebot.adapters.satori import MessageEvent
 from utils import PassiveGenerator
 from utils.images import image_segment_async
 from utils.theming import kit_for_user
-from plugins.inventory.models import BONSAI_ITEM_ID
 from plugins.inventory.render import InventoryListData
 from plugins.inventory.render import InventoryListRow
 from plugins.inventory.render import inventory_list_page
@@ -102,14 +101,14 @@ async def handle_shop(
             offer = get_offer(parts[1])
             if offer is None:
                 raise ValueError("没有这个商品编号")
-            purchase = buy_offer(user_id, offer.sku)
+            buy_offer(user_id, offer.sku)
             if offer.section == "theme":
                 await _send_theme_preview(
                     matcher,
                     user_id,
                     offer,
                     passive,
-                    notice=f"已购入 · 余额 {purchase.balance_after} 盆",
+                    notice="已购入",
                 )
             await _send_section(
                 matcher,
@@ -117,24 +116,14 @@ async def handle_shop(
                 offer.section,
                 _offer_page(offer),
                 passive,
-                notice=f"已购入 {offer.sku} · 余额 {purchase.balance_after} 盆",
+                notice=f"已购入 {offer.sku}",
             )
 
         if parts[0] in {"加抽", "抽卡", "pull"}:
-            status = season_pull_status(user_id)
-            if len(parts) < 2 or parts[1] not in {"确认", "confirm"}:
-                if status.season_id is None:
-                    raise ValueError("当前没有开放的限定卡池")
-                await _send_home(
-                    matcher,
-                    user_id,
-                    passive,
-                    notice=(
-                        f"本季加抽 {status.used}/{status.limit} · "
-                        f"本次 {status.price} 盆栽"
-                    ),
-                    footer="/流星堂 加抽 确认",
-                )
+            if len(parts) > 1 and (
+                len(parts) != 2 or parts[1] not in {"确认", "confirm"}
+            ):
+                raise ValueError("用法：/流星堂 加抽")
             await _send_bonus_pull(matcher, user_id, passive)
 
         raise ValueError(
@@ -144,7 +133,7 @@ async def handle_shop(
         raise
     except Exception as error:
         await matcher.finish(
-            f"流星堂：{error}" + passive.element,
+            str(error) + passive.element,
             referrer=passive.event.referrer,
         )
 
@@ -203,8 +192,8 @@ async def _send_home(
         tuple(rows),
         passive,
         title="流星堂",
-        subtitle=_subtitle(user_id),
-        summary=notice or "旧藏流转 · 盆栽换收藏",
+        subtitle="旧藏流转",
+        summary=notice,
         footer=footer or "/流星堂 立绘 · 头像框 · 主题 · 加抽",
     )
 
@@ -240,9 +229,10 @@ async def _send_section(
         user_id,
         rows,
         passive,
-        title=f"流星堂 · {SECTION_NAMES[section]}",
-        subtitle=f"{_subtitle(user_id)} · 第 {page}/{total_pages} 页",
+        title="流星堂",
+        subtitle=SECTION_NAMES[section],
         summary=notice,
+        panel_footer=f"第 {page}/{total_pages} 页",
         footer=page_footer,
         page=page,
         total_pages=total_pages,
@@ -280,6 +270,7 @@ async def _send_page(
     subtitle: str,
     summary: str,
     footer: str,
+    panel_footer: str = "",
     page: int = 1,
     total_pages: int = 1,
 ) -> None:
@@ -290,7 +281,9 @@ async def _send_page(
         rows=rows,
         subtitle=subtitle,
         equipped_summary=summary,
+        panel_footer=panel_footer,
         footer=footer,
+        wordmark_title="SHOP",
     )
     image = await inventory_list_page(data, kit_for_user(user_id)).render_async()
     await matcher.finish(
@@ -354,13 +347,11 @@ async def _send_theme_preview(
     if not kit_name:
         raise ValueError("主题预览配置缺失")
     owned = get_quantity(user_id, offer.item_id) > 0
-    balance = get_quantity(user_id, BONSAI_ITEM_ID)
     data = ThemePreviewData(
         sku=offer.sku,
         name=item.name,
         description=item.description,
         price=offer.price,
-        balance=balance,
         owned=owned,
         notice=notice,
         footer=footer,
@@ -384,9 +375,3 @@ def _parse_page(parts: list[str]) -> int:
 def _offer_page(offer: ShopOffer) -> int:
     offers = list_offers(offer.section)
     return next(index // PAGE_SIZE + 1 for index, row in enumerate(offers) if row == offer)
-
-
-def _subtitle(user_id: str) -> str:
-    from plugins.inventory.service import get_quantity
-
-    return f"盆栽 {get_quantity(user_id, BONSAI_ITEM_ID)} 盆"

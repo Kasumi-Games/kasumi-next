@@ -21,6 +21,7 @@ from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render.types import ImageSource
 from plugins.render.kits.bangdream import BanGDreamKit
+from plugins.render.kits.mewtype import MewtypeKit
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,7 @@ class InventoryListData:
     equipped_summary: str = ""
     panel_footer: str = ""
     footer: str = ""
+    wordmark_title: str = "INVENTORY"
 
 
 def render_inventory_list(
@@ -69,9 +71,16 @@ def inventory_list_page(
             )
         )
         children.append(kit.separator(length=Fill()))
-    children.extend(_row(kit, row) for row in data.rows)
+    if isinstance(kit, MewtypeKit):
+        for index, row in enumerate(data.rows):
+            if index:
+                children.append(kit.separator(length=Fill()))
+            children.append(_row(kit, row, transparent=True))
+    else:
+        children.extend(_row(kit, row) for row in data.rows)
     if data.panel_footer:
-        children.append(kit.separator(length=Fill()))
+        if not isinstance(kit, MewtypeKit):
+            children.append(kit.separator(length=Fill()))
         children.append(
             kit.text(
                 data.panel_footer,
@@ -91,7 +100,7 @@ def inventory_list_page(
         title=data.title,
         subtitle=data.subtitle or f"第 {data.page}/{data.total_pages} 页",
         article_title=data.title,
-        wordmark_title="INVENTORY",
+        wordmark_title=data.wordmark_title,
         body=body,
         footer=(
             kit.text(data.footer, font_size=LABEL_SIZE, wrap=False, max_lines=1)
@@ -101,7 +110,12 @@ def inventory_list_page(
     )
 
 
-def _row(kit: BaseKit, row: InventoryListRow) -> Component:
+def _row(
+    kit: BaseKit,
+    row: InventoryListRow,
+    *,
+    transparent: bool = False,
+) -> Component:
     art_slot: Component
     if row.art is not None:
         art_slot = kit.image(
@@ -179,11 +193,22 @@ def _row(kit: BaseKit, row: InventoryListRow) -> Component:
     if row.show_trailing:
         row_children.append(VStack(right_rows, gap=4, align="end"))
 
+    content = HStack(row_children, gap=16, align="center")
+    padding = Insets.only(left=12, top=10, right=16, bottom=10)
+    if transparent:
+        return Frame(
+            content,
+            width=Fixed(INNER_WIDTH),
+            height=Fixed(92),
+            padding=padding,
+            align_x="stretch",
+            align_y="center",
+        )
     return kit.panel(
-        HStack(row_children, gap=16, align="center"),
+        content,
         width=Fixed(INNER_WIDTH),
         height=Fixed(92),
-        padding=Insets.only(left=12, top=10, right=16, bottom=10),
+        padding=padding,
     )
 
 
