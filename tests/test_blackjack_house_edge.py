@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from collections import defaultdict
-from functools import lru_cache
 from types import SimpleNamespace
+from functools import lru_cache
+from collections import defaultdict
 
 import pytest
 from nonebot.adapters.satori import Message
-
 
 CARD_PROBABILITIES = (
     (1, 1 / 13),
@@ -346,10 +345,10 @@ async def test_surrender_after_a_hit_is_rejected(monkeypatch):
 async def test_dealer_opening_blackjack_ends_the_game_before_player_action(
     monkeypatch,
 ):
-    from plugins.blackjack.handlers import gens
-    from plugins.blackjack.handlers import handle_initial_blackjack
     from plugins.blackjack.models import GameResult
     from plugins.blackjack.session import GameSession
+    from plugins.blackjack.handlers import gens
+    from plugins.blackjack.handlers import handle_initial_blackjack
 
     class Renderer:
         def generate_table(self, *args, **kwargs):
@@ -414,3 +413,12 @@ def test_optimal_strategy_has_a_house_edge():
 
     assert edge == pytest.approx(-0.00412385962, abs=1e-10)
     assert edge < -0.0035
+
+
+def test_ev_analysis_matches_the_independent_exact_calculation():
+    from scripts.analyze_blackjack_ev import exact_optimal_result
+
+    edge, expected_stake = exact_optimal_result()
+
+    assert edge == pytest.approx(_optimal_player_edge(), abs=1e-12)
+    assert expected_stake == pytest.approx(1.1162074157, abs=1e-10)

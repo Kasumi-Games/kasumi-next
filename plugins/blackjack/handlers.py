@@ -15,13 +15,13 @@ from utils.passive_generator import PassiveGenerator as PG
 from utils.passive_generator import generators as gens
 
 from .. import monetary
+from .rules import can_surrender
 from .utils import get_action
 from .models import Hand
 from .models import GameResult
 from .session import GameManager
 from .session import GameSession
 from .messages import Messages
-from .rules import can_surrender
 
 require("daily_task")
 
@@ -121,9 +121,11 @@ async def handle_player_bust(
     latest_message_id: str,
     matcher: Matcher,
     game_manager: GameManager,
+    settle_game: bool = True,
 ) -> None:
     """处理玩家爆牌的情况"""
-    game_manager.end_game(user_id, GameResult.BUST, winnings=-bet_amount)
+    if settle_game:
+        game_manager.end_game(user_id, GameResult.BUST, winnings=-bet_amount)
     await matcher.send(
         Messages.BUST_LOSE.format(amount=bet_amount)
         + (
@@ -145,11 +147,13 @@ async def handle_surrender(
     matcher: Matcher,
     game_manager: GameManager,
     identity: Optional[PlayerIdentity] = None,
+    settle_game: bool = True,
 ) -> None:
     """处理玩家投降的情况"""
     renderer = game_manager.renderer_for(user_id)
     loss_amount = (bet_amount / 2).__ceil__()
-    game_manager.end_game(user_id, GameResult.SURRENDER, winnings=-loss_amount)
+    if settle_game:
+        game_manager.end_game(user_id, GameResult.SURRENDER, winnings=-loss_amount)
     await matcher.send(
         await _render_jpeg_segment(
             renderer.generate_table,
@@ -182,6 +186,7 @@ async def play_player_turn(
     hand_name: str = "",
     show_initial_message: bool = True,
     identity: Optional[PlayerIdentity] = None,
+    defer_settlement: bool = False,
 ) -> tuple[str, bool, int]:
     """
     处理玩家回合逻辑
@@ -275,6 +280,7 @@ async def play_player_turn(
                             latest_message_id,
                             matcher,
                             game_manager,
+                            settle_game=not defer_settlement,
                         )
                         return latest_message_id, True, bet_amount
                     if player_hand.value == 21:
@@ -334,6 +340,7 @@ async def play_player_turn(
                             latest_message_id,
                             matcher,
                             game_manager,
+                            settle_game=not defer_settlement,
                         )
                         return latest_message_id, True, bet_amount
                     playing = False
@@ -356,6 +363,7 @@ async def play_player_turn(
                         matcher,
                         game_manager,
                         identity=identity,
+                        settle_game=not defer_settlement,
                     )
                     return latest_message_id, True, bet_amount
 
@@ -630,6 +638,7 @@ async def handle_split_game(
                 game_manager,
                 hand_name=f"【第 {idx + 1} 幅牌】",
                 identity=identity,
+                defer_settlement=True,
             )
             game_ended_map[idx + 1] = game_ended
 
@@ -647,13 +656,27 @@ async def handle_split_game(
 
     total_winnings = 0
     for idx, hand in enumerate([session.player_hand, session.split_hand]):
-        winnings, hand_result = evaluate_hand_result(
-            hand,
-            session.dealer_hand,
-            bet_amount // 2,
-            f"第 {idx + 1} 幅牌",
-        )
-        total_winnings += winnings if not game_ended_map[idx + 1] else 0
+        hand_bet = bet_amount // 2
+        hand_name = f"第 {idx + 1} 幅牌"
+        if game_ended_map[idx + 1]:
+            prefix = f"【{hand_name}】"
+            if hand.value > 21:
+                winnings = -hand_bet
+                hand_result = prefix + Messages.BUST_LOSE.format(amount=hand_bet)
+            else:
+                loss_amount = (hand_bet / 2).__ceil__()
+                winnings = -loss_amount
+                hand_result = prefix + Messages.SURRENDER_LOSE.format(
+                    amount=loss_amount
+                )
+        else:
+            winnings, hand_result = evaluate_hand_result(
+                hand,
+                session.dealer_hand,
+                hand_bet,
+                hand_name,
+            )
+        total_winnings += winnings
         result_messages += hand_result + "\n"
 
     if total_winnings > 0:
@@ -662,8 +685,6 @@ async def handle_split_game(
         split_result = GameResult.PUSH
     else:
         split_result = GameResult.BUST
-
-    game_manager.set_split_state(event.get_user_id(), 0)
 
     actual_winnings = game_manager.end_game(
         event.get_user_id(),

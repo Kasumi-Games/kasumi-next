@@ -125,8 +125,7 @@ class GameManager:
             return winnings
 
         bet_amount = self._player_bets.get(user_id, 0)
-        if self._player_split_state[user_id] > 0:
-            bet_amount //= 2
+        is_split = self._player_split_state[user_id] > 0
 
         total_return = bet_amount + winnings
         if total_return > 0:
@@ -137,18 +136,13 @@ class GameManager:
             bet_amount=bet_amount,
             result=result,
             winnings=winnings,
-            is_split=self._player_split_state[user_id] > 0,
+            is_split=is_split,
         )
 
-        if self._player_split_state[user_id] == 0:
-            self._active_players.discard(user_id)
-            self._player_bets.pop(user_id, None)
-            self.remove_session(user_id)
-
-        if self._player_split_state[user_id] > 0:
-            self._player_split_state[user_id] -= 1
-            if user_id in self._player_bets:
-                self._player_bets[user_id] //= 2
+        self._active_players.discard(user_id)
+        self._player_bets.pop(user_id, None)
+        self._player_split_state.pop(user_id, None)
+        self.remove_session(user_id)
 
         return winnings
 
@@ -162,6 +156,7 @@ class GameManager:
 
         self._active_players.discard(user_id)
         self._player_bets.pop(user_id, None)
+        self._player_split_state.pop(user_id, None)
         self.remove_session(user_id)
 
     def refund_half_game(self, user_id: str) -> None:
@@ -174,6 +169,7 @@ class GameManager:
 
         self._active_players.discard(user_id)
         self._player_bets.pop(user_id, None)
+        self._player_split_state.pop(user_id, None)
         self.remove_session(user_id)
 
     def get_player_bet(self, user_id: str) -> int:
