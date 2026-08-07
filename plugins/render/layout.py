@@ -56,7 +56,7 @@ class Page:
             The rendered page image.
         """
 
-        ctx = ctx or RenderContext()
+        ctx = (ctx or RenderContext()).for_root_render()
         render_ctx = ctx.activate_pixel_ratio()
         page_size = Size(*self.size)
         render_size = render_ctx.scale_size(page_size)
@@ -132,7 +132,7 @@ class AutoPage:
             The rendered page image.
         """
 
-        ctx = ctx or RenderContext()
+        ctx = (ctx or RenderContext()).for_root_render()
         padding = as_insets(self.padding)
         constraints = Constraints(
             min_width=max(0, self.min_width - padding.horizontal),
@@ -144,7 +144,7 @@ class AutoPage:
             if self.max_height is None
             else max(0, self.max_height - padding.vertical),
         )
-        child_size = self.child.measure(ctx, constraints)
+        child_size = ctx.measure(self.child, constraints)
         page_size = Constraints(
             self.min_width,
             self.max_width,
@@ -307,7 +307,7 @@ class Frame:
             ),
         )
         child_size = (
-            self.child.measure(ctx, child_constraints)
+            ctx.measure(self.child, child_constraints)
             if self.child is not None
             else Size(0, 0)
         )
@@ -620,7 +620,7 @@ class Overlay:
             Overlay size.
         """
 
-        sizes = [child.measure(ctx, constraints) for child in self.children]
+        sizes = [ctx.measure(child, constraints) for child in self.children]
         return constraints.clamp(
             Size(
                 max((size.width for size in sizes), default=0),
@@ -789,10 +789,10 @@ def _measure_stack_children(
         child_constraints = constraints
         axis_value = _component_axis_size_value(child, axis)
         if isinstance(axis_value, Fill):
-            sizes.append(child.measure(ctx, child_constraints))
+            sizes.append(ctx.measure(child, child_constraints))
             fill_count += 1
             continue
-        sizes.append(child.measure(ctx, child_constraints))
+        sizes.append(ctx.measure(child, child_constraints))
     if fill_count:
         if axis == "vertical":
             constraints.require_height("VStack with Fill children")
@@ -907,7 +907,7 @@ def _measure_child_for_render(
     logical_constraints = ctx.unscale_constraints(
         Constraints(max_width=max_width, max_height=max_height)
     )
-    return ctx.scale_size(child.measure(ctx, logical_constraints))
+    return ctx.scale_size(ctx.measure(child, logical_constraints))
 
 
 def _component_axis_size_value(
@@ -1019,7 +1019,7 @@ def _fit_track_size(
         else:
             if column_count is None or child_index // column_count != index:
                 continue
-        measured = child.measure(ctx, Constraints())
+        measured = ctx.measure(child, Constraints())
         sizes.append(measured.width if axis == "columns" else measured.height)
     return max(sizes, default=0)
 

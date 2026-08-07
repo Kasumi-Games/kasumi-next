@@ -170,6 +170,9 @@ class RenderContext:
     debug: bool = False
     pixel_ratio: int = 2
     _render_ratio: int = field(default=1, repr=False, compare=False)
+    _measure_cache: dict[tuple[int, Constraints], tuple[object, Size]] | None = field(
+        default=None, repr=False, compare=False
+    )
 
     def __post_init__(self) -> None:
         if type(self.pixel_ratio) is not int or self.pixel_ratio < 1:
@@ -187,6 +190,26 @@ class RenderContext:
         """Return a context whose draw-time scale matches ``pixel_ratio``."""
 
         return replace(self, _render_ratio=self.pixel_ratio)
+
+    def for_root_render(self) -> "RenderContext":
+        """Return a logical context with an empty render-scoped measure cache."""
+
+        return replace(self, _render_ratio=1, _measure_cache={})
+
+    def measure(self, component: "Component", constraints: Constraints) -> Size:
+        """Measure a component once per constraint set during a root render."""
+
+        if self._measure_cache is None:
+            return component.measure(self, constraints)
+        key = (id(component), constraints)
+        cached = self._measure_cache.get(key)
+        if cached is not None and cached[0] is component:
+            return cached[1]
+        size = component.measure(self, constraints)
+        # Retaining the component alongside the id prevents object-id reuse
+        # from aliasing transient Frame instances during the same render.
+        self._measure_cache[key] = (component, size)
+        return size
 
     def scale_px(self, value: int | float) -> int:
         """Scale a logical pixel value into current render pixels."""

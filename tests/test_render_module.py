@@ -24,7 +24,10 @@ from plugins.render import LayoutError
 from plugins.render import RenderContext
 from plugins.render.kit import BaseKit
 from plugins.render.primitives import load_font
+from plugins.render.primitives import alpha_composite_paste
 from plugins.render.image_cache import ImageCache
+from plugins.render.text_layout import wrap_text
+from plugins.render.text_layout import _cached_wrap_text
 from plugins.render.kits.minimal import MinimalKit
 from plugins.render.kits.bangdream import CHINESE_FONT
 from plugins.render.kits.bangdream import DISPLAY_FONT
@@ -53,6 +56,34 @@ class SlowRenderBox:
 
 
 class RenderLayoutTest(unittest.TestCase):
+    def test_load_font_reuses_font_within_worker_thread(self) -> None:
+        self.assertIs(load_font(20), load_font(20))
+        self.assertIsNot(load_font(20), load_font(21))
+
+    def test_wrap_text_cache_uses_stable_font_identity(self) -> None:
+        font = load_font(20)
+        _cached_wrap_text.cache_clear()
+
+        first = wrap_text("alpha beta gamma", font, 80)
+        second = wrap_text("alpha beta gamma", font, 80)
+
+        self.assertEqual(first, second)
+        self.assertEqual(_cached_wrap_text.cache_info().misses, 1)
+        self.assertEqual(_cached_wrap_text.cache_info().hits, 1)
+
+    def test_alpha_composite_paste_clips_without_changing_pixels(self) -> None:
+        dest = Image.new("RGBA", (4, 4), (10, 20, 30, 255))
+        source = Image.new("RGBA", (4, 4), (210, 110, 10, 128))
+
+        alpha_composite_paste(dest, source, (-2, -1))
+
+        expected = Image.alpha_composite(
+            Image.new("RGBA", (2, 3), (10, 20, 30, 255)),
+            source.crop((2, 1, 4, 4)),
+        )
+        self.assertEqual(dest.crop((0, 0, 2, 3)).tobytes(), expected.tobytes())
+        self.assertEqual(dest.getpixel((3, 3)), (10, 20, 30, 255))
+
     def test_rounded_clip_preserves_transparent_pixels_inside_the_mask(self) -> None:
         source = Image.new("RGBA", (20, 20), (18, 24, 36, 0))
         for x in range(7, 13):

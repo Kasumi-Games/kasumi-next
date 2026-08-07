@@ -1,4 +1,6 @@
 from pathlib import Path
+from threading import local
+from collections import OrderedDict
 
 from PIL import Image
 from PIL import ImageDraw
@@ -9,6 +11,9 @@ from .color import rgba
 from .color import normalize_color
 
 ImageTarget = Image.Image | ImageDraw.ImageDraw
+
+_FONT_CACHE_MAX_ITEMS = 64
+_FONT_CACHE_LOCAL = local()
 
 
 def resolve_image(target: ImageTarget) -> Image.Image:
@@ -42,12 +47,30 @@ def load_font(
         Loaded PIL font.
     """
 
+    cache: OrderedDict[
+        tuple[str | None, int], ImageFont.FreeTypeFont | ImageFont.ImageFont
+    ] = getattr(_FONT_CACHE_LOCAL, "items", None)
+    if cache is None:
+        cache = OrderedDict()
+        _FONT_CACHE_LOCAL.items = cache
+
+    key = (None if font is None else str(font), size)
+    cached = cache.get(key)
+    if cached is not None:
+        cache.move_to_end(key)
+        return cached
+
     if font is None:
-        return ImageFont.load_default(size)
-    try:
-        return ImageFont.truetype(str(font), size)
-    except OSError:
-        return ImageFont.load_default()
+        loaded = ImageFont.load_default(size)
+    else:
+        try:
+            loaded = ImageFont.truetype(str(font), size)
+        except OSError:
+            loaded = ImageFont.load_default()
+    cache[key] = loaded
+    while len(cache) > _FONT_CACHE_MAX_ITEMS:
+        cache.popitem(last=False)
+    return loaded
 
 
 def alpha_composite_paste(
@@ -72,7 +95,12 @@ def alpha_composite_paste(
     if x1 >= x2 or y1 >= y2:
         return
 
-    crop = source.crop((x1 - x, y1 - y, x2 - x, y2 - y))
+    source_box = (x1 - x, y1 - y, x2 - x, y2 - y)
+    if dest.mode == "RGBA":
+        dest.alpha_composite(source, dest=(x1, y1), source=source_box)
+        return
+
+    crop = source.crop(source_box)
     base = dest.crop((x1, y1, x2, y2)).convert("RGBA")
     dest.paste(Image.alpha_composite(base, crop), (x1, y1))
 

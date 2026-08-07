@@ -1,4 +1,5 @@
 from math import inf
+from functools import lru_cache
 from dataclasses import dataclass
 from unicodedata import east_asian_width
 
@@ -11,9 +12,6 @@ from uniseg.graphemecluster import (
 FORBIDDEN_LINE_START = set(",.;:!?)]}，。！？、；：）】》」』〉〕］｝〗〙〛…")
 FORBIDDEN_LINE_END = set("([{（【《「『〈〔［｛〖〘〚")
 HANGING_LINE_END = set(",.;:!?，。！？、；：…")
-_WRAP_CACHE: dict[tuple[str, int, int], list[str]] = {}
-
-
 @dataclass(frozen=True)
 class _BreakCandidate:
     line: str
@@ -27,19 +25,28 @@ def wrap_text(text: str, font, max_width: int | None) -> list[str]:
         return text.splitlines() or [text]
     if max_width <= 0:
         return text.splitlines() or [text]
-    cache_key = (text, id(font), max_width)
-    cached = _WRAP_CACHE.get(cache_key)
-    if cached is not None:
-        return cached.copy()
-    lines = [
+    try:
+        hash(font)
+    except TypeError:
+        # Third-party font facades are not required to be hashable. They still
+        # receive correct wrapping, just without cross-call caching.
+        return _wrap_text_uncached(text, font, max_width)
+    return list(_cached_wrap_text(text, font, max_width))
+
+
+@lru_cache(maxsize=512)
+def _cached_wrap_text(text: str, font, max_width: int) -> tuple[str, ...]:
+    """Cache wrapping against the font object, retaining its identity safely."""
+
+    return tuple(_wrap_text_uncached(text, font, max_width))
+
+
+def _wrap_text_uncached(text: str, font, max_width: int) -> list[str]:
+    return [
         line
         for raw_line in text.splitlines() or [text]
         for line in _wrap_raw_line(raw_line, font, max_width)
     ]
-    if len(_WRAP_CACHE) > 256:
-        _WRAP_CACHE.clear()
-    _WRAP_CACHE[cache_key] = lines
-    return lines.copy()
 
 
 def max_lines_for_height(max_height: int, line_height: int) -> int:

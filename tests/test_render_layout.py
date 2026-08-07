@@ -77,6 +77,23 @@ def _resolve_test_axis(
 
 
 class PageLayoutTest(unittest.TestCase):
+    def test_auto_page_reuses_measurements_during_paint(self) -> None:
+        child = RecordingBox("child", Size(40, 20), width=Fill(), height=Fill())
+        page = AutoPage(VStack([child]), max_width=100, max_height=20)
+
+        page.render(RenderContext(pixel_ratio=2))
+
+        self.assertEqual(len(child.measures), 1)
+
+    def test_measurement_cache_is_fresh_for_each_root_render(self) -> None:
+        child = RecordingBox("child", Size(40, 20), width=Fill(), height=Fill())
+        page = AutoPage(VStack([child]), max_width=100, max_height=20)
+
+        page.render(RenderContext())
+        page.render(RenderContext())
+
+        self.assertEqual(len(child.measures), 2)
+
     def test_page_renders_child_inside_padding_rect(self) -> None:
         child = RecordingBox("child", Size(10, 20))
 
