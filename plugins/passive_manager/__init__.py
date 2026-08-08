@@ -40,9 +40,7 @@ async def _(bot: Bot, api: str, data: Dict[str, Any]):
         passive_data = passive_manager.get_available_data(api, data)
 
         if passive_data is None:
-            logger.warning(
-                f"No available passive data, failed to send passive message: {data}"
-            )
+            logger.warning("No available passive data for API '{}'; send blocked", api)
             raise Exception("No available passive data")
 
         # 注入 referrer 以支持 Satori 标准回复协议（仅在未显式传入时）

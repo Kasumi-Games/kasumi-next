@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from unittest.mock import AsyncMock
 
+import pytest
 from PIL import Image
+from loguru import logger
 
 
 def test_passive_generator_survives_an_evicted_sequence_counter(
@@ -134,16 +137,107 @@ def test_alconna_ignores_satori_file_segments_without_src():
         nonebot.require("nonebot_plugin_alconna")
     assert nonebot.get_plugin("nonebot_plugin_alconna") is not None
 
+    from nonebot_plugin_alconna.uniseg.adapters import BUILDER_MAPPING
     from nonebot_plugin_alconna.uniseg.adapters.satori.builder import (
         SatoriMessageBuilder,
     )
 
     from utils.alconna_compat import install_satori_file_segment_guard
 
+    # Make the production ordering deterministic even when another test caused
+    # the adapter registry to initialize before Satori was registered.
+    BUILDER_MAPPING.setdefault("Satori", SatoriMessageBuilder())
     install_satori_file_segment_guard()
 
-    result = SatoriMessageBuilder().generate(
+    # Production uses Alconna's cached builder, which may have been created
+    # before the compatibility guard was installed.
+    result = BUILDER_MAPPING["Satori"].generate(
         Message([File(type="file", data={"size": "39219"})])
     )
 
     assert len(result) == 1
+
+
+async def test_guess_chart_cleans_session_when_song_info_fetch_fails(
+    make_satori_event,
+    monkeypatch,
+):
+    import plugins.guess_chart as module
+    from plugins.guess_chart.store import GamersStore
+
+    class UpstreamFailure(RuntimeError):
+        pass
+
+    class FakeSong:
+        async def get_info_async(self):
+            raise UpstreamFailure("502 Bad Gateway")
+
+    class FakeChart:
+        def count(self):
+            return object()
+
+    async def fake_chart(*_args, **_kwargs):
+        return FakeChart()
+
+    async def fake_image_task(*_args, **_kwargs):
+        return Image.new("RGB", (1, 1))
+
+    async def fake_finish(*_args, **_kwargs):
+        raise RuntimeError("matcher-finished")
+
+    store = GamersStore()
+    monkeypatch.setattr(module, "gamers_store", store)
+    monkeypatch.setattr(module, "flatten_song_data", lambda _data: [{"song_id": "1", "difficulty": "expert"}])
+    monkeypatch.setattr(module, "sort_by_difficulty", lambda _data: {"expert": [1]})
+    monkeypatch.setattr(module.songs, "Song", lambda _song_id: FakeSong())
+    monkeypatch.setattr(module.Chart, "get_chart_async", fake_chart)
+    monkeypatch.setattr(module, "run_image_task", fake_image_task)
+    monkeypatch.setattr(module.game_start, "send", AsyncMock())
+    monkeypatch.setattr(module.game_start, "finish", fake_finish)
+    monkeypatch.setattr(module, "handle_error", lambda *_args, **_kwargs: "KSM-TEST")
+
+    event = make_satori_event(channel_id="game-channel")
+    with pytest.raises(RuntimeError, match="matcher-finished"):
+        await module.handle_start(
+            event=event,
+            arg=module.Message(""),
+            song_data={},
+            band_data={},
+            game_difficulty="hard",
+            song_raw_data={},
+        )
+
+    assert "game-channel" not in store.get()
+
+
+def test_log_error_uses_the_supplied_exception_traceback():
+    from utils.error_handler import log_error
+
+    messages: list[str] = []
+    sink = logger.add(messages.append, format="{message}\n{exception}")
+    try:
+        error = RuntimeError("outside-except")
+        log_error("KSM-TEST", error, context="test")
+    finally:
+        logger.remove(sink)
+
+    rendered = "".join(messages)
+    assert "RuntimeError: outside-except" in rendered
+    assert "NoneType: None" not in rendered
+
+
+def test_persistent_log_filter_drops_messages_and_redacts_tokens():
+    from utils.error_handler import persistent_log_filter
+
+    message_record = {
+        "message": "Satori qq:bot | [message-created]: private words",
+    }
+    assert persistent_log_filter(message_record) is False
+
+    secret_record = {
+        "message": "token='server-secret' auth_token=reply-secret ROBOT1.0_abcdef!",
+    }
+    assert persistent_log_filter(secret_record) is True
+    assert "server-secret" not in secret_record["message"]
+    assert "reply-secret" not in secret_record["message"]
+    assert "ROBOT1.0_abcdef" not in secret_record["message"]

@@ -1,5 +1,7 @@
 import os
+import re
 import string
+import hashlib
 import secrets
 from pathlib import Path
 
@@ -12,6 +14,33 @@ _ERROR_CODE_LENGTH = 6
 _LOG_DIR_DEFAULT = "logs"
 _LOG_RETENTION_DAYS = 30
 
+_TOKEN_RE = re.compile(
+    r"(?i)(\b(?:auth_)?token\b\s*[=:]\s*['\"]?)([^'\"\s,\]\}]+)"
+)
+_MESSAGE_ID_RE = re.compile(r"ROBOT1\.0_[^\s'\"]+")
+_OPAQUE_QQ_ID_RE = re.compile(r"\b[A-F0-9]{32}\b")
+
+
+def persistent_log_filter(record: dict) -> bool:
+    """Drop message bodies and redact credentials from persistent logs."""
+
+    message = str(record["message"])
+    if "[message-created]" in message:
+        return False
+
+    message = _TOKEN_RE.sub(r"\1<redacted>", message)
+    message = _MESSAGE_ID_RE.sub("<message-id>", message)
+    message = _OPAQUE_QQ_ID_RE.sub("<qq-id>", message)
+    record["message"] = message
+    return True
+
+
+def _user_reference(user_id: str) -> str:
+    """Return a stable, non-reversible identifier for log correlation."""
+
+    digest = hashlib.sha256(user_id.encode("utf-8")).hexdigest()[:12]
+    return f"user_hash={digest}"
+
 
 def setup_logging() -> None:
     """Configure persistent log file output.
@@ -22,7 +51,7 @@ def setup_logging() -> None:
     left intact.
     """
     log_dir = Path(os.getenv("LOG_DIR", _LOG_DIR_DEFAULT))
-    log_level = os.getenv("LOG_LEVEL", "DEBUG")
+    log_level = os.getenv("LOG_FILE_LEVEL", "INFO")
 
     log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -33,6 +62,10 @@ def setup_logging() -> None:
         retention=f"{_LOG_RETENTION_DAYS} days",
         encoding="utf-8",
         enqueue=True,
+        compression="gz",
+        backtrace=False,
+        diagnose=False,
+        filter=persistent_log_filter,
         format="[{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<7} | {name}] {message}",
     )
 
@@ -62,10 +95,10 @@ def log_error(
     if context:
         parts.append(context)
     if user_id:
-        parts.append(f"user={user_id}")
+        parts.append(_user_reference(user_id))
     parts.append(str(exception))
 
-    logger.opt(exception=True).error(" | ".join(parts))
+    logger.opt(exception=exception).error(" | ".join(parts))
 
 
 def handle_error(

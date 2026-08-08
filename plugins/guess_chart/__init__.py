@@ -282,6 +282,32 @@ async def handle_start(
         chart_difficulty = song["difficulty"]
         chart = await Chart.get_chart_async(song_id, chart_difficulty)
         chart_statistics = chart.count()
+
+        if game_difficulty in ["easy", "normal"]:
+            img = await run_image_task(lambda: render_chart(chart))
+        else:
+            img = await run_image_task(render_to_slices, chart, game_difficulty)
+
+        diff: str = chart_difficulty
+        song_info = await song_detail.get_info_async()
+        level = (
+            song_info.get("difficulty", {})
+            .get(diff_num[diff], {})
+            .get("playLevel")
+        )
+        song_name = song["song_name"]
+
+        # The note count no longer needs to stay hidden: the reveal card shows it
+        # once the round is over (the chart image itself remains the only in-round
+        # source).
+        note_num = int(chart_statistics.notes)
+
+        band_id: int = song_info["bandId"]
+        band_name = get_value_from_list(band_data[str(band_id)]["bandName"])
+
+        jacket_image = await get_jacket_image(int(song_id), song_info)
+        jacket_pil = await run_image_task(_decode_jacket, jacket_image)
+        main_bpm = int(chart_statistics.main_bpm)
     except Exception as e:
         gamers_store.remove(event.channel.id)
         code = handle_error(e, context="guess_chart", user_id=event.get_user_id())
@@ -291,35 +317,7 @@ async def handle_start(
             referrer=current_pg.event.referrer,
         )
 
-    try:
-        if game_difficulty in ["easy", "normal"]:
-            img = await run_image_task(lambda: render_chart(chart))
-        else:
-            img = await run_image_task(
-                render_to_slices, chart, game_difficulty
-            )
-    except MemoryError:
-        gamers_store.remove(event.channel.id)
-        await game_start.finish(
-            "发生谱面渲染错误！重新开一把吧" + current_pg.element,
-            referrer=current_pg.event.referrer,
-        )
-
     correct_chart_id: str = str(song_id)
-    diff: str = chart_difficulty
-    song_info = await song_detail.get_info_async()
-    level = song_info.get("difficulty", {}).get(diff_num[diff], {}).get("playLevel")
-    song_name = song["song_name"]
-
-    # The note count no longer needs to stay hidden: the reveal card shows it
-    # once the round is over (the chart image itself remains the only in-round
-    # source).
-    note_num = int(chart_statistics.notes)
-
-    band_id: int = song_info["bandId"]
-    band_name = get_value_from_list(band_data[str(band_id)]["bandName"])
-
-    jacket_image = await get_jacket_image(int(song_id), song_info)
 
     tips: List[str] = [
         f"这首曲子是 {level} 级的哦",
@@ -328,9 +326,6 @@ async def handle_start(
     ]
 
     logger.debug(f"谱面：{song_name} {diff.upper()} LV.{level}")
-
-    jacket_pil = await run_image_task(_decode_jacket, jacket_image)
-    main_bpm = int(chart_statistics.main_bpm)
 
     def _reveal_data(outcome: str, **kwargs) -> GuessChartRevealData:
         return GuessChartRevealData(
