@@ -19,6 +19,8 @@ setup_logging()
 driver = nonebot.get_driver()
 driver.register_adapter(Adapter)
 
+nonebot.require("nonebot_plugin_alconna")
+
 from utils.alconna_compat import install_satori_file_segment_guard  # noqa: E402
 
 install_satori_file_segment_guard()
