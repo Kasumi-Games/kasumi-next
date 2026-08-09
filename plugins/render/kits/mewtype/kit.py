@@ -178,7 +178,7 @@ class MewtypeKit(BaseKit):
         translated = _ENGLISH_PAGE_TITLES.get(label)
         if translated is not None:
             return translated
-        if "卡池" in label:
+        if "卡池" in label or "招募" in label:
             return "GACHA"
         if "赛季" in label:
             return "SEASON"

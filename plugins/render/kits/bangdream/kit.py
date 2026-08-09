@@ -71,7 +71,7 @@ class BanGDreamKit(BaseKit):
     primary = rgba(234, 78, 116, 255)
     text_color = rgba(80, 80, 80, 255)
     muted_text_color = rgba(130, 130, 145, 255)
-    panel_fill = rgba(255, 255, 255, 208)
+    panel_fill = rgba(255, 255, 255, 255)
 
     def background(self, *, source: ImageSource | None = None, **props) -> Background:
         """Create a BanG Dream! background.
@@ -194,7 +194,7 @@ class BanGDreamKit(BaseKit):
         fill: ColorLike | None = None,
         radius: int | None = None,
     ) -> Component:
-        """Create a translucent rounded panel for grouping content."""
+        """Create an opaque rounded panel for grouping content."""
 
         return BanGDreamPanel(
             child,

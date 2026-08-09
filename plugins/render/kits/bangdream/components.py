@@ -217,10 +217,10 @@ class BanGDreamImage:
 
 @dataclass(frozen=True)
 class BanGDreamPanel:
-    """Rounded translucent panel that stretches and renders an optional child."""
+    """Rounded opaque panel that stretches and renders an optional child."""
 
     child: Component | None = None
-    fill: ColorLike = (255, 255, 255, 208)
+    fill: ColorLike = (255, 255, 255, 255)
     radius: int = 48
     padding: InsetsLike = 0
     width: SizeValue | int | None = None

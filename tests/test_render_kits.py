@@ -73,6 +73,12 @@ class KitRegistryTest(unittest.TestCase):
                     color = getattr(kit, attribute)
                     self.assertEqual(len(tuple(color)), 4, attribute)
 
+    def test_bangdream_panels_are_opaque_by_default(self) -> None:
+        kit = KITS["bangdream"]()
+
+        self.assertEqual(kit.panel_fill, (255, 255, 255, 255))
+        self.assertEqual(kit.panel().fill, (255, 255, 255, 255))
+
     def test_mewtype_uses_the_common_yumemita_subpage_palette(self) -> None:
         kit = KITS["mewtype"]()
 
