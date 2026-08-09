@@ -123,6 +123,22 @@ def _render_gallery(
         lambda: render_season_trend(season_trend["_data"](), kit),
     )
 
+    season_info = _test_namespace("test_season_info_render.py")
+    from plugins.inventory.render import render_season_info
+
+    emit(
+        "season-info",
+        lambda: render_season_info(season_info["_active_data"](), kit),
+    )
+
+    listing = _test_namespace("test_inventory_listing_render.py")
+    from plugins.inventory.render import render_inventory_list
+
+    emit(
+        "inventory-listing",
+        lambda: render_inventory_list(listing["_data"](), kit),
+    )
+
     # Help census and command detail.
     help_test = _test_namespace("test_help_render.py")
     from plugins.help import HELP_ENTRIES
@@ -421,6 +437,65 @@ def _render_gallery(
             games["_guess_chart_loss_data"](
                 "timeout",
                 jacket=games["_jacket"](),
+            ),
+            kit,
+        ),
+    )
+
+    # Tour surfaces: rules, in-progress state, and settlement.
+    # ``plugins.tour`` calls ``require("daily_task")`` while importing.
+    import importlib
+
+    importlib.import_module("plugins.daily_task")
+    importlib.import_module("plugins.tour")
+    from plugins.tour.models import TourOutcome
+    from plugins.tour.render import TourRenderData
+    from plugins.tour.render import TourResultData
+    from plugins.tour.render import render_help as render_tour_help
+    from plugins.tour.render import render_result as render_tour_result
+    from plugins.tour.render import render_state as render_tour_state
+    from plugins.tour.rules import DIFFICULTIES
+    from plugins.tour.session import TourSession
+
+    tour_snapshot = TourSession("preview", DIFFICULTIES["初级"], seed=13).snapshot()
+    emit("tour-help", lambda: render_tour_help(kit))
+    emit(
+        "tour-state",
+        lambda: render_tour_state(TourRenderData(tour_snapshot), kit),
+    )
+    emit(
+        "tour-result",
+        lambda: render_tour_result(
+            TourResultData(
+                snapshot=tour_snapshot,
+                outcome=TourOutcome.WIN,
+                reward_pt=24,
+                balance=100,
+                elapsed_seconds=42,
+                base_reward_pt=12,
+                birthday_names=("香澄",),
+                multiplier=2,
+                task_name="巡演开场",
+                task_reward=80,
+            ),
+            kit,
+        ),
+    )
+
+    # Ryuseido shop's theme preview card.
+    from plugins.ryuseido.render import ThemePreviewData
+    from plugins.ryuseido.render import render_theme_preview
+
+    emit(
+        "shop-theme-preview",
+        lambda: render_theme_preview(
+            ThemePreviewData(
+                sku="theme_kasumi",
+                name="星之鼓动",
+                description="星之鼓动赛季主题：头像框、名片版式与专属立绘。",
+                price=120,
+                notice="赛季结束后下架",
+                footer="/流星堂 购买 theme_kasumi",
             ),
             kit,
         ),
