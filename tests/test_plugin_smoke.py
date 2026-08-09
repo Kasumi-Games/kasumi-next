@@ -21,6 +21,7 @@ PLUGIN_MODULES = [
     "plugins.monetary",
     "plugins.nickname",
     "plugins.one_stroke",
+    "plugins.tour",
     "plugins.passive_manager",
     "plugins.red_envelope",
     "plugins.render",
@@ -35,6 +36,7 @@ PLUGIN_DEPENDENCIES = {
     "plugins.guess_chart": ["plugins.daily_task"],
     "plugins.mines": ["plugins.daily_task"],
     "plugins.one_stroke": ["plugins.daily_task"],
+    "plugins.tour": ["plugins.daily_task"],
 }
 
 

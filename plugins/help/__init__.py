@@ -4,10 +4,10 @@ from nonebot.adapters import Message
 from nonebot.adapters.satori import MessageEvent
 
 from utils import PassiveGenerator
-from utils.content_safety import ContentSafetyError
-from utils.content_safety import ensure_safe_text
 from utils.images import image_segment_async
 from utils.theming import kit_for_user
+from utils.content_safety import ContentSafetyError
+from utils.content_safety import ensure_safe_text
 
 from .render import board_page
 from .render import detail_page
@@ -206,6 +206,19 @@ plugin_data = {
             "/探险统计": "查看统计信息",
         },
         "examples": ["/探险", "/探险 10", "/探险 10 3", "/探险 -f", "/探险统计"],
+    },
+    "巡演": {
+        "description": "管理体力、乐器和食物的巡演小游戏",
+        "usage": {
+            "/巡演|tour|xy [难度:初级|中级|高级|超级]": "开始巡演；无参数默认初级",
+            "/巡演 -h": "查看主题化玩法说明",
+            "/巡演 -f": "强制退出巡演",
+            "1-4": "选择手牌；支持连续输入最多 6 个 0-4",
+            "0": "装备/卸下乐器；超级难度为丢弃乐器",
+            "5": "休息一天",
+            "q": "放弃本局",
+        },
+        "examples": ["/巡演", "/巡演 中级", "/巡演 -h", "/巡演 -f", "243"],
     },
     "tts": {
         "description": "文本转BanG Dream! & 少女歌剧角色语音(trained by Bilibili@Mahiroshi)",

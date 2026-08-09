@@ -85,8 +85,10 @@ TILE_RADIUS = 20
 #: budget, so it flips to compact.
 COMPACT_THRESHOLD = 27
 
-#: Compact tile: one BODY_SIZE line, vertically centred.
-COMPACT_TILE_HEIGHT = 60
+#: Compact tile: one BODY_SIZE line, vertically centred.  The tour surface
+#: adds several in-game action rows to the help detail, so keep the census
+#: board just under its 1700px density budget once those commands are present.
+COMPACT_TILE_HEIGHT = 57
 COMPACT_TILE_PADDING = Insets.only(left=20, right=20)
 
 HEADER_HEIGHT = 38

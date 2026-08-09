@@ -48,6 +48,14 @@
         {"field": "difficulty", "op": "==", "value": "普通"},
         {"field": "time", "op": "<=", "value": 60}
       ]
+    },
+    {
+      "id": "tour_clear",
+      "name": "巡演开场",
+      "description": "完成任意难度的一次巡演",
+      "reward": 80,
+      "type": "tour_clear",
+      "conditions": []
     }
   ]
 }
