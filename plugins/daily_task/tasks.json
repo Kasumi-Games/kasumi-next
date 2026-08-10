@@ -52,10 +52,14 @@
     {
       "id": "tour_clear",
       "name": "巡演开场",
-      "description": "完成任意难度的一次巡演",
+      "description": "单局巡演完成15场演出或撑过10天",
       "reward": 80,
-      "type": "tour_clear",
-      "conditions": []
+      "type": "tour_progress",
+      "condition_mode": "any",
+      "conditions": [
+        {"field": "tours_completed", "op": ">=", "value": 15},
+        {"field": "day", "op": ">=", "value": 10}
+      ]
     }
   ]
 }

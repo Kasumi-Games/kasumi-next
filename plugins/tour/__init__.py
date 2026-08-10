@@ -44,18 +44,22 @@ from .models import TourDisplayMode  # noqa: E402
 from .render import render_help  # noqa: E402
 from .render import render_state  # noqa: E402
 from .render import render_result  # noqa: E402
+from .render import render_leaderboard  # noqa: E402
 from .service import record_result  # noqa: E402
+from .service import get_leaderboard  # noqa: E402
 from .service import get_display_mode  # noqa: E402
 from .service import set_display_mode  # noqa: E402
 from .session import TourSession  # noqa: E402
 from .session import TourGameManager  # noqa: E402
 from .database import init_database  # noqa: E402
 from .messages import Messages  # noqa: E402
+from ..nickname import get as get_nickname  # noqa: E402
 from ..daily_task import check_progress  # noqa: E402
 from ..daily_task import get_today_task  # noqa: E402
 from .render.state import TourRenderData  # noqa: E402
 from .render.result import TourResultData  # noqa: E402
 from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
+from ..inventory.season_service import get_current_season_bounds  # noqa: E402
 
 game_manager = TourGameManager()
 
@@ -81,6 +85,13 @@ tour_start = on_command(
     priority=10,
     block=True,
     rule=not_in_game,
+)
+
+leaderboard_cmd = on_command(
+    "巡演排行榜",
+    aliases={"巡演排行", "xyr", "tourrank"},
+    priority=10,
+    block=True,
 )
 
 
@@ -136,6 +147,57 @@ def _mode_confirmation_text(mode: TourDisplayMode) -> str:
         else "之后的巡演局面和结算将直接使用文本发送。"
     )
     return f"已切换为巡演{_mode_label(mode)}模式。{detail}"
+
+
+def _mask_user_id(user_id: str) -> str:
+    if len(user_id) <= 6:
+        return user_id
+    return f"{user_id[:4]}..."
+
+
+def _leaderboard_rows(
+    difficulty: str,
+    season_bounds: tuple[int, int],
+) -> list[tuple[str, float]]:
+    records = get_leaderboard(
+        difficulty,
+        limit=10,
+        start_time=season_bounds[0],
+        end_time=season_bounds[1],
+    )
+    return [
+        (
+            get_nickname(record.user_id) or _mask_user_id(record.user_id),
+            record.elapsed_seconds,
+        )
+        for record in records
+    ]
+
+
+@leaderboard_cmd.handle()
+async def handle_leaderboard(event: MessageEvent) -> None:
+    pg = _plain(event)
+    season_bounds = get_current_season_bounds()
+    if season_bounds is None:
+        await leaderboard_cmd.finish(
+            "当前赛季尚未开启，巡演赛季排行榜会在开季后开始统计。"
+            + pg.element,
+            referrer=pg.event.referrer,
+        )
+        return
+    rows_by_difficulty = {
+        difficulty: _leaderboard_rows(difficulty, season_bounds)
+        for difficulty in ("初级", "中级", "高级", "超级")
+    }
+    image = await render_image_segment(
+        render_leaderboard,
+        rows_by_difficulty,
+        kit=kit_for_user(event.get_user_id()),
+    )
+    await leaderboard_cmd.finish(
+        image + pg.element,
+        referrer=pg.event.referrer,
+    )
 
 
 def _state_data(session: TourSession) -> TourRenderData:
@@ -263,7 +325,13 @@ async def _settle(
             multiplier=session.settlement_multiplier,
         )
 
-    base_reward = session.config.reward_pt if outcome.value == "win" else 0
+    base_reward = (
+        session.config.reward_pt
+        if outcome is TourOutcome.WIN
+        else session.tour_played_count
+        if outcome in {TourOutcome.STAMINA, TourOutcome.TIMEOUT}
+        else 0
+    )
     birthday_names = tuple(get_today_birthday()) if outcome.value == "win" else ()
     multiplier = 2 if birthday_names else 1
     reward = base_reward * multiplier
@@ -278,29 +346,37 @@ async def _settle(
     task_reward = 0
     old_level = monetary.get_level(session.user_id)
     new_level = old_level
-    if outcome.value == "win":
+    if reward:
         monetary.add(
             session.user_id,
             reward,
             "tour",
             idempotency_key=f"tour:{session.run_id}:pt",
         )
+    if outcome is TourOutcome.WIN:
         try:
             await monetary.add_xp(session.user_id, reward)
             new_level = monetary.get_level(session.user_id)
         except Exception:
             logger.opt(exception=True).warning("巡演经验结算失败")
-        try:
-            task_msg = await check_progress(session.user_id, "tour_clear", {})
-            if task_msg:
-                try:
-                    task_config = get_today_task(session.user_id)
-                    task_name = task_config.name
-                    task_reward = task_config.reward
-                except Exception:
-                    task_name = "每日任务"
-        except Exception:
-            logger.opt(exception=True).warning("巡演每日任务结算失败")
+    try:
+        task_msg = await check_progress(
+            session.user_id,
+            "tour_progress",
+            {
+                "tours_completed": session.tour_played_count,
+                "day": session.day,
+            },
+        )
+        if task_msg:
+            try:
+                task_config = get_today_task(session.user_id)
+                task_name = task_config.name
+                task_reward = task_config.reward
+            except Exception:
+                task_name = "每日任务"
+    except Exception:
+        logger.opt(exception=True).warning("巡演每日任务结算失败")
 
     result_data = TourResultData(
         snapshot=session.snapshot(),
@@ -320,6 +396,43 @@ async def _settle(
         else 0,
     )
     return result_data
+
+
+async def _finish_result(
+    session: TourSession,
+    outcome: TourOutcome,
+    *,
+    pg: PG,
+    display_mode: TourDisplayMode,
+    kit=None,
+    identity=None,
+) -> None:
+    result_data = await _settle(session, outcome)
+    if display_mode is TourDisplayMode.TEXT:
+        await tour_start.finish(
+            Messages.result_text(result_data) + pg.element,
+            referrer=pg.event.referrer,
+        )
+        return
+    try:
+        image = await image_segment_async(
+            render_result(
+                result_data,
+                kit=kit,
+                identity=identity,
+            )
+        )
+    except Exception:
+        logger.opt(exception=True).warning("tour result render failed")
+        await tour_start.finish(
+            Messages.result_text(result_data) + pg.element,
+            referrer=pg.event.referrer,
+        )
+        return
+    await tour_start.finish(
+        image + pg.element,
+        referrer=pg.event.referrer,
+    )
 
 
 @tour_start.handle()
@@ -413,10 +526,13 @@ async def handle_start(
             if resp is None:
                 session.mark_terminal("timeout")
                 game_manager.end(session.user_id)
-                record_result(session, session.outcome, 0)
-                await tour_start.finish(
-                    Messages.TIMEOUT + pg.element,
-                    referrer=pg.event.referrer,
+                await _finish_result(
+                    session,
+                    TourOutcome.TIMEOUT,
+                    pg=pg,
+                    display_mode=display_mode,
+                    kit=kit,
+                    identity=identity,
                 )
 
             pg = _plain(resp)
@@ -477,36 +593,34 @@ async def handle_start(
             result = session.apply(text)
             if result.terminal:
                 outcome = result.outcome
+                assert outcome is not None
                 game_manager.end(session.user_id)
-                if outcome.value == "win" or outcome.value == "stamina":
-                    result_data = await _settle(session, outcome)
-                    if display_mode is TourDisplayMode.TEXT:
-                        await tour_start.finish(
-                            Messages.result_text(result_data) + pg.element,
-                            referrer=pg.event.referrer,
-                        )
-                        return
-                    try:
-                        image = await image_segment_async(
-                            render_result(
-                                result_data,
-                                kit=kit,
-                                identity=identity,
-                            )
-                        )
-                    except Exception:
-                        logger.opt(exception=True).warning("tour result render failed")
-                        await tour_start.finish(
-                            Messages.result_text(result_data) + pg.element,
-                            referrer=pg.event.referrer,
-                        )
-                        return
-                    await tour_start.finish(
-                        image + pg.element,
-                        referrer=pg.event.referrer,
-                    )
+                await _finish_result(
+                    session,
+                    outcome,
+                    pg=pg,
+                    display_mode=display_mode,
+                    kit=kit,
+                    identity=identity,
+                )
+
+            task_notice = ""
+            if result.changed:
+                try:
+                    task_notice = await check_progress(
+                        session.user_id,
+                        "tour_progress",
+                        {
+                            "tours_completed": session.tour_played_count,
+                            "day": session.day,
+                        },
+                    ) or ""
+                except Exception:
+                    logger.opt(exception=True).warning("巡演每日任务进度检查失败")
 
             notice = _status_text(session, result)
+            if task_notice:
+                notice = "\n".join(part for part in (notice, task_notice) if part)
             if not result.changed:
                 await tour_start.send(
                     (notice or Messages.INVALID_INPUT) + pg.element,

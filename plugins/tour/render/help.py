@@ -75,6 +75,11 @@ def _getting_started_panel(kit: BaseKit) -> Component:
                 "显示模式",
                 "/巡演 模式 [图片|文本]；按用户保存，默认为图片。",
             ),
+            _rule(
+                kit,
+                "赛季竞速榜",
+                "/巡演排行榜；按当前赛季、各难度分别记录最快通关时间。",
+            ),
         ],
     )
 
@@ -134,7 +139,12 @@ def _rules_and_rewards_panel(kit: BaseKit) -> Component:
             _rule(
                 kit,
                 "通关奖励",
-                "初级 12 Pt + 12 XP；中级 18 Pt + 18 XP；高级 24 Pt + 24 XP；超级 30 Pt + 30 XP。",
+                "初级 20 Pt；中级 40 Pt；高级 60 Pt；超级 80 Pt，并获得等量 XP。",
+            ),
+            _rule(
+                kit,
+                "失败奖励",
+                "体力耗尽或超时时，按已完成演出场数发放 Pt：每场 1 Pt。",
             ),
             _rule(
                 kit,

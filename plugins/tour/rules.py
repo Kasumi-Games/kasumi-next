@@ -54,10 +54,10 @@ class DisplayModeRequest:
 
 
 DIFFICULTIES = {
-    "初级": TourDifficultyConfig("初级", 99, 12, True),
-    "中级": TourDifficultyConfig("中级", 30, 18, True),
-    "高级": TourDifficultyConfig("高级", 20, 24, True),
-    "超级": TourDifficultyConfig("超级", 20, 30, False),
+    "初级": TourDifficultyConfig("初级", 99, 20, True),
+    "中级": TourDifficultyConfig("中级", 30, 40, True),
+    "高级": TourDifficultyConfig("高级", 20, 60, True),
+    "超级": TourDifficultyConfig("超级", 20, 80, False),
 }
 
 DIFFICULTY_ALIASES = {

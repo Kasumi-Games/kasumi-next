@@ -128,6 +128,30 @@ async def test_daily_task_completes_matching_config(sqlite_session, monkeypatch)
     assert service.get_today_task("u1").is_completed is True
 
 
+def test_daily_task_any_condition_supports_tour_progress() -> None:
+    from plugins.daily_task.service import DailyTaskService
+
+    service = DailyTaskService()
+    config = {
+        "type": "tour_progress",
+        "condition_mode": "any",
+        "conditions": [
+            {"field": "tours_completed", "op": ">=", "value": 15},
+            {"field": "day", "op": ">=", "value": 10},
+        ],
+    }
+
+    assert not service._match(
+        config, "tour_progress", {"tours_completed": 14, "day": 9}
+    )
+    assert service._match(
+        config, "tour_progress", {"tours_completed": 15, "day": 3}
+    )
+    assert service._match(
+        config, "tour_progress", {"tours_completed": 4, "day": 10}
+    )
+
+
 def test_mailbox_send_read_cleanup_and_scheduled_processing(sqlite_session, monkeypatch):
     from plugins.mailbox import database
     from plugins.mailbox.models import Base

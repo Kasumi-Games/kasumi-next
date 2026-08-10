@@ -131,8 +131,10 @@ class DailyTaskService:
                 return False
 
     def _match(self, cfg: dict, event_type: str, data: dict) -> bool:
-        """Match task type and all conditions."""
+        """Match task type and its configured all/any condition set."""
         if cfg["type"] != event_type:
             return False
         conditions = cfg.get("conditions", [])
+        if cfg.get("condition_mode") == "any":
+            return any(self._evaluate_condition(c, data) for c in conditions)
         return all(self._evaluate_condition(c, data) for c in conditions)

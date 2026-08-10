@@ -54,6 +54,7 @@ def test_command_aliases_and_action_parser_match_the_public_contract() -> None:
     assert parse_action("6").kind == "invalid"
     assert parse_action("q").kind == "quit"
     assert set(DIFFICULTIES) == {"初级", "中级", "高级", "超级"}
+    assert [config.reward_pt for config in DIFFICULTIES.values()] == [20, 40, 60, 80]
 
 
 def test_display_mode_argument_parser_supports_query_and_both_modes() -> None:
@@ -418,7 +419,7 @@ async def test_text_mode_state_skips_image_rendering(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_settlement_rewards_only_wins_and_completes_the_daily_task(
+async def test_settlement_uses_clear_ladder_and_performance_rewards(
     sqlite_session, monkeypatch
 ) -> None:
     _load_plugin()
@@ -463,22 +464,101 @@ async def test_settlement_rewards_only_wins_and_completes_the_daily_task(
     duplicate = await tour._settle(win, TourOutcome.WIN)
 
     loss = TourSession("u1", DIFFICULTIES["高级"], seed=15, run_id="loss")
+    loss.tour_played_count = 7
     loss.mark_terminal(TourOutcome.STAMINA)
     failed = await tour._settle(loss, TourOutcome.STAMINA)
 
-    assert result.reward_pt == 48
-    assert result.base_reward_pt == 24
+    timeout = TourSession("u1", DIFFICULTIES["高级"], seed=16, run_id="timeout")
+    timeout.tour_played_count = 5
+    timeout.mark_terminal(TourOutcome.TIMEOUT)
+    timed_out = await tour._settle(timeout, TourOutcome.TIMEOUT)
+
+    assert result.reward_pt == 120
+    assert result.base_reward_pt == 60
     assert result.birthday_names == ("香澄",)
     assert result.multiplier == 2
     assert result.task_name == "巡演开场"
     assert result.task_reward == 80
     assert duplicate.task_name is None
-    assert failed.reward_pt == 0
-    assert added == [("u1", 48, "tour", "tour:win:pt")]
-    assert xp_added == [("u1", 48)]
-    assert task_events == [("u1", "tour_clear", {})]
-    assert db.query(TourGameRecord).count() == 2
-    assert db.query(TourGameRecord).filter_by(outcome="stamina").one().reward_pt == 0
+    assert failed.reward_pt == 7
+    assert failed.base_reward_pt == 7
+    assert timed_out.reward_pt == 5
+    assert timed_out.base_reward_pt == 5
+    assert added == [
+        ("u1", 120, "tour", "tour:win:pt"),
+        ("u1", 7, "tour", "tour:loss:pt"),
+        ("u1", 5, "tour", "tour:timeout:pt"),
+    ]
+    assert xp_added == [("u1", 120)]
+    assert task_events == [
+        ("u1", "tour_progress", {"tours_completed": 0, "day": 1}),
+        ("u1", "tour_progress", {"tours_completed": 7, "day": 1}),
+        ("u1", "tour_progress", {"tours_completed": 5, "day": 1}),
+    ]
+    assert db.query(TourGameRecord).count() == 3
+    assert db.query(TourGameRecord).filter_by(outcome="stamina").one().reward_pt == 7
+
+
+def test_tour_leaderboard_keeps_fastest_season_clear_per_player(
+    sqlite_session,
+) -> None:
+    _load_plugin()
+    from plugins.tour import database
+    from plugins.tour.models import Base
+    from plugins.tour.models import TourGameRecord
+    from plugins.tour.service import get_leaderboard
+
+    db = sqlite_session(database, Base)
+    rows = [
+        ("a-older", "u1", "win", 19.0, 110),
+        ("a-fast", "u1", "win", 12.0, 120),
+        ("b", "u2", "win", 14.0, 130),
+        ("loss", "u3", "stamina", 5.0, 140),
+        ("old", "u4", "win", 1.0, 90),
+        ("other", "u5", "win", 2.0, 150),
+    ]
+    for run_id, user_id, outcome, elapsed, timestamp in rows:
+        db.add(
+            TourGameRecord(
+                run_id=run_id,
+                user_id=user_id,
+                difficulty="初级" if run_id != "other" else "中级",
+                outcome=outcome,
+                tours_completed=26 if outcome == "win" else 10,
+                day=10,
+                action_count=30,
+                rest_count=0,
+                stamina_remaining=1,
+                elapsed_seconds=elapsed,
+                reward_pt=20,
+                seed=1,
+                timestamp=timestamp,
+            )
+        )
+    db.commit()
+
+    result = get_leaderboard("初级", start_time=100, end_time=200)
+
+    assert [(row.user_id, row.elapsed_seconds) for row in result] == [
+        ("u1", 12.0),
+        ("u2", 14.0),
+    ]
+
+
+def test_tour_leaderboard_renders_all_four_difficulties() -> None:
+    _load_plugin()
+    from plugins.render.kits import KITS
+    from plugins.tour.render import render_leaderboard
+
+    rows = {
+        "初级": [("香澄", 12.34)],
+        "中级": [("有咲", 23.45)],
+        "高级": [("多惠", 34.56)],
+        "超级": [("里美", 45.67)],
+    }
+    for factory in KITS.values():
+        image = render_leaderboard(rows, factory())
+        assert image.width > 0 and image.height > 0
 
 
 def test_tour_surfaces_render_without_identity_in_every_theme() -> None:
