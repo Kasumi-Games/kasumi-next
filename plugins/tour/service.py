@@ -6,6 +6,8 @@ import time
 
 from .models import TourOutcome
 from .models import TourGameRecord
+from .models import TourPreference
+from .models import TourDisplayMode
 from .session import TourSession
 from .database import get_session
 
@@ -41,3 +43,38 @@ def record_result(
     db.add(record)
     db.commit()
     return record
+
+
+def get_display_mode(user_id: str) -> TourDisplayMode:
+    db = get_session()
+    preference = (
+        db.query(TourPreference)
+        .filter(TourPreference.user_id == user_id)
+        .first()
+    )
+    if preference is None:
+        return TourDisplayMode.IMAGE
+    try:
+        return TourDisplayMode(preference.display_mode)
+    except ValueError:
+        return TourDisplayMode.IMAGE
+
+
+def set_display_mode(
+    user_id: str,
+    mode: TourDisplayMode | str,
+) -> TourDisplayMode:
+    db = get_session()
+    resolved = TourDisplayMode(mode)
+    preference = (
+        db.query(TourPreference)
+        .filter(TourPreference.user_id == user_id)
+        .first()
+    )
+    if preference is None:
+        preference = TourPreference(user_id=user_id, display_mode=resolved.value)
+        db.add(preference)
+    else:
+        preference.display_mode = resolved.value
+    db.commit()
+    return resolved

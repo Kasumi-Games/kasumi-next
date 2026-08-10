@@ -56,6 +56,48 @@ def test_command_aliases_and_action_parser_match_the_public_contract() -> None:
     assert set(DIFFICULTIES) == {"初级", "中级", "高级", "超级"}
 
 
+def test_display_mode_argument_parser_supports_query_and_both_modes() -> None:
+    _load_plugin()
+    from plugins.tour.rules import parse_display_mode_request
+    from plugins.tour.models import TourDisplayMode
+
+    assert parse_display_mode_request("").kind == "none"
+    assert parse_display_mode_request("模式").kind == "query"
+    assert parse_display_mode_request("mode").kind == "query"
+    assert parse_display_mode_request("模式 图片").mode is TourDisplayMode.IMAGE
+    assert parse_display_mode_request("mode text").mode is TourDisplayMode.TEXT
+    assert parse_display_mode_request("/巡演 模式 文本").mode is TourDisplayMode.TEXT
+    assert parse_display_mode_request("/tour mode image").mode is TourDisplayMode.IMAGE
+    assert parse_display_mode_request("图片模式").mode is TourDisplayMode.IMAGE
+    assert parse_display_mode_request("文本模式").mode is TourDisplayMode.TEXT
+    assert parse_display_mode_request("模式 语音").kind == "invalid"
+
+
+def test_instrument_prompt_matches_difficulty_and_equipment_state() -> None:
+    _load_plugin()
+    from plugins.tour.rules import DIFFICULTIES
+    from plugins.tour.models import CardType
+    from plugins.tour.session import TourSession
+    from plugins.tour.messages import Messages
+
+    normal = TourSession("u1", DIFFICULTIES["高级"], seed=2)
+    assert "0 " not in Messages.prompt(normal.snapshot())
+
+    normal.instrument = _card(CardType.INSTRUMENT, 7, "乐器")
+    normal.instrument_equipped = True
+    assert "0 卸下装备" in Messages.prompt(normal.snapshot())
+    assert "0 卸下装备" in Messages.compact_prompt(normal.snapshot())
+
+    normal.instrument_equipped = False
+    assert "0 穿上装备" in Messages.prompt(normal.snapshot())
+    assert "0 穿上装备" in Messages.compact_prompt(normal.snapshot())
+
+    super_session = TourSession("u2", DIFFICULTIES["超级"], seed=2)
+    assert "0 丢弃乐器" in Messages.prompt(super_session.snapshot())
+    assert "0 丢弃乐器" in Messages.compact_prompt(super_session.snapshot())
+    assert "超级难度为丢弃" not in Messages.prompt(super_session.snapshot())
+
+
 def test_food_is_consumed_but_only_the_first_food_restores_each_day() -> None:
     _load_plugin()
     from plugins.tour.rules import DIFFICULTIES
@@ -279,6 +321,102 @@ def test_terminal_records_are_idempotent(sqlite_session) -> None:
     assert first.outcome == "win"
 
 
+def test_display_mode_is_user_scoped_and_persisted(sqlite_session) -> None:
+    _load_plugin()
+    from plugins.tour import database
+    from plugins.tour.models import Base
+    from plugins.tour.models import TourPreference
+    from plugins.tour.models import TourDisplayMode
+    from plugins.tour.service import get_display_mode
+    from plugins.tour.service import set_display_mode
+
+    db = sqlite_session(database, Base)
+
+    assert get_display_mode("u1") is TourDisplayMode.IMAGE
+    assert get_display_mode("u2") is TourDisplayMode.IMAGE
+
+    set_display_mode("u1", TourDisplayMode.TEXT)
+    db.expire_all()
+
+    assert get_display_mode("u1") is TourDisplayMode.TEXT
+    assert get_display_mode("u2") is TourDisplayMode.IMAGE
+    assert db.query(TourPreference).count() == 1
+
+    set_display_mode("u1", TourDisplayMode.IMAGE)
+    db.expire_all()
+
+    assert get_display_mode("u1") is TourDisplayMode.IMAGE
+    assert db.query(TourPreference).count() == 1
+
+
+def test_display_mode_survives_database_session_restart(tmp_path, monkeypatch) -> None:
+    _load_plugin()
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from plugins.tour import database
+    from plugins.tour.models import Base
+    from plugins.tour.models import TourDisplayMode
+    from plugins.tour.service import get_display_mode
+    from plugins.tour.service import set_display_mode
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'tour.db'}")
+    Base.metadata.create_all(engine)
+    first_session = sessionmaker(bind=engine)()
+    monkeypatch.setattr(database, "session", first_session)
+
+    set_display_mode("u1", TourDisplayMode.TEXT)
+    first_session.close()
+
+    second_session = sessionmaker(bind=engine)()
+    monkeypatch.setattr(database, "session", second_session)
+
+    assert get_display_mode("u1") is TourDisplayMode.TEXT
+
+    second_session.close()
+    engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_text_mode_state_skips_image_rendering(monkeypatch) -> None:
+    _load_plugin()
+    import plugins.tour as tour
+    from plugins.tour.rules import DIFFICULTIES
+    from plugins.tour.models import CardType
+    from plugins.tour.models import TourDisplayMode
+    from plugins.tour.session import TourSession
+
+    session = TourSession("u1", DIFFICULTIES["高级"], seed=2)
+    session.instrument = _card(CardType.INSTRUMENT, 7, "乐器")
+    session.instrument_equipped = True
+    sent = []
+
+    class Matcher:
+        async def send(self, message, **kwargs):
+            sent.append(message)
+
+    class Plain:
+        element = ""
+
+    async def unexpected_render(*args, **kwargs):
+        raise AssertionError("text mode must not render an image")
+
+    monkeypatch.setattr(tour, "render_image_segment", unexpected_render)
+
+    await tour._send_state(
+        Matcher(),
+        session,
+        pg=Plain(),
+        notice="已操作",
+        display_mode=TourDisplayMode.TEXT,
+    )
+
+    message = str(sent[0])
+    assert "已操作" in message
+    assert "体力：" in message
+    assert "0 卸下装备" in message
+
+
 @pytest.mark.asyncio
 async def test_settlement_rewards_only_wins_and_completes_the_daily_task(
     sqlite_session, monkeypatch
@@ -379,6 +517,74 @@ def test_tour_surfaces_render_without_identity_in_every_theme() -> None:
         assert help_image.width > 0 and help_image.height > 0
 
 
+def test_tour_hand_cells_and_grid_rows_fit_their_content_in_every_theme() -> None:
+    _load_plugin()
+    from plugins.render import Constraints
+    from plugins.render import RenderContext
+    from plugins.tour.rules import DIFFICULTIES
+    from plugins.render.kits import KITS
+    from plugins.tour.session import TourSession
+    from plugins.render.spacing import as_insets
+    from plugins.tour.render.state import _hand_panel
+
+    snapshot = TourSession("u1", DIFFICULTIES["初级"], seed=13).snapshot()
+    ctx = RenderContext(pixel_ratio=2).for_root_render()
+
+    for factory in KITS.values():
+        panel = _hand_panel(factory(), snapshot)
+        grid = panel.child.children[1]
+        cell_sizes = []
+        for cell in grid.children:
+            cell_size = ctx.measure(cell, Constraints())
+            padding = as_insets(cell.padding)
+            content_size = ctx.measure(
+                cell.child.child,
+                Constraints(max_width=cell_size.width - padding.horizontal),
+            )
+            assert cell_size.height >= content_size.height + padding.vertical
+            cell_sizes.append(cell_size)
+
+        row_gap = grid.gap[1] if isinstance(grid.gap, tuple) else grid.gap
+        natural_grid_height = (
+            max(size.height for size in cell_sizes[:2])
+            + max(size.height for size in cell_sizes[2:])
+            + row_gap
+        )
+        assert ctx.measure(grid, Constraints()).height >= natural_grid_height
+
+
+def test_tour_status_panel_leads_with_stamina_and_keeps_progress_secondary() -> None:
+    _load_plugin()
+    from plugins.tour.rules import DIFFICULTIES
+    from plugins.render.kits import MinimalKit
+    from plugins.tour.session import TourSession
+    from plugins.tour.render.state import _status_panel
+
+    snapshot = TourSession("u1", DIFFICULTIES["初级"], seed=13).snapshot()
+    texts: list[str] = []
+
+    def collect_text(component) -> None:
+        text = getattr(component, "text", None)
+        if isinstance(text, str):
+            texts.append(text)
+        for name in ("children", "child"):
+            value = getattr(component, name, None)
+            if isinstance(value, (list, tuple)):
+                for child in value:
+                    collect_text(child)
+            elif value is not None:
+                collect_text(value)
+
+    collect_text(_status_panel(MinimalKit(), snapshot))
+
+    assert texts == [
+        "体力",
+        f"{snapshot.stamina}/{snapshot.max_stamina}",
+        f"第 {snapshot.day} 天 · 今日行动 {snapshot.selection_count}/3",
+        f"已完成 {snapshot.tour_played_count}/26 场",
+    ]
+
+
 def test_state_card_handles_long_instrument_names_in_every_theme() -> None:
     _load_plugin()
     from plugins.tour.rules import DIFFICULTIES
@@ -407,7 +613,16 @@ def test_state_card_handles_long_instrument_names_in_every_theme() -> None:
 def test_tour_help_omits_legacy_compatibility_notes_and_removed_action() -> None:
     _load_plugin()
     from plugins.help import plugin_data
+    from plugins.tour.messages import Messages
 
     usage = plugin_data["巡演"]["usage"]
     assert "6" not in usage
     assert all("兼容" not in meaning for meaning in usage.values())
+    assert usage["/巡演 模式 [图片|文本]"] == "查看或切换用户独立的巡演显示模式"
+    assert usage["0"] == (
+        "超级难度：0 丢弃乐器；其他难度：已装备时 0 卸下装备，"
+        "未装备时 0 穿上装备"
+    )
+    assert "超级难度：0 丢弃乐器" in Messages.HELP
+    assert "已装备时 0 卸下装备" in Messages.HELP
+    assert "未装备时 0 穿上装备" in Messages.HELP

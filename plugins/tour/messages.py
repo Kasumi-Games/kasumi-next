@@ -9,7 +9,6 @@ from .models import TourSnapshot
 
 class Messages:
     START = "巡演开始！管理体力、乐器和食物，完成 26 场演出即可通关。"
-    PROMPT = "请输入 1-4 选择手牌，0 操作乐器（超级难度为丢弃），5 休息，或 q 退出。"
     ALREADY_IN_GAME = "你已经在进行巡演了，先把这一局完成吧。"
     GIVE_UP = "已放弃本局巡演。"
     TIMEOUT = "巡演超时（10 分钟未操作），本局已结束。"
@@ -20,9 +19,39 @@ class Messages:
         "目标：完成 26 场演出。每天最多选择 3 次行动。\n"
         "巡演牌消耗体力；装备乐器可按底力减少消耗；食物每天第一张才恢复体力。\n"
         "发送 5 休息会把当天手牌排到日程末尾，但不能连续休息两天。\n"
-        "支持 0-4 连续输入；普通输入 0 可装备/卸下乐器，超级难度的 0 会丢弃乐器。\n"
-        "指令：巡演 [初级|中级|高级|超级]，巡演 -f 强制退出。"
+        "支持 0-4 连续输入；超级难度：0 丢弃乐器；其他难度："
+        "已装备时 0 卸下装备，未装备时 0 穿上装备。\n"
+        "指令：巡演 [初级|中级|高级|超级]，巡演 -f 强制退出。\n"
+        "显示模式：巡演 模式 [图片|文本]。"
     )
+
+    @staticmethod
+    def instrument_action(snapshot: TourSnapshot) -> str | None:
+        if snapshot.difficulty == "超级":
+            return "0 丢弃乐器"
+        if snapshot.instrument is None:
+            return None
+        if snapshot.instrument_equipped:
+            return "0 卸下装备"
+        return "0 穿上装备"
+
+    @staticmethod
+    def prompt(snapshot: TourSnapshot) -> str:
+        actions = ["1-4 选择手牌"]
+        instrument_action = Messages.instrument_action(snapshot)
+        if instrument_action is not None:
+            actions.append(instrument_action)
+        actions.extend(["5 休息", "q 退出"])
+        return "请输入 " + "，".join(actions[:-1]) + "，或 " + actions[-1] + "。"
+
+    @staticmethod
+    def compact_prompt(snapshot: TourSnapshot) -> str:
+        actions = ["1-4 选择手牌"]
+        instrument_action = Messages.instrument_action(snapshot)
+        if instrument_action is not None:
+            actions.append(instrument_action)
+        actions.extend(["5 休息", "q 退出"])
+        return " · ".join(actions)
 
     @staticmethod
     def status_text(snapshot: TourSnapshot) -> str:

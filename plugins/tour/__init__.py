@@ -38,11 +38,15 @@ from nonebot_plugin_waiter import waiter  # noqa: E402
 from .. import monetary  # noqa: E402
 from .rules import difficulty_help  # noqa: E402
 from .rules import difficulty_for_command  # noqa: E402
+from .rules import parse_display_mode_request  # noqa: E402
 from .models import TourOutcome  # noqa: E402
+from .models import TourDisplayMode  # noqa: E402
 from .render import render_help  # noqa: E402
 from .render import render_state  # noqa: E402
 from .render import render_result  # noqa: E402
 from .service import record_result  # noqa: E402
+from .service import get_display_mode  # noqa: E402
+from .service import set_display_mode  # noqa: E402
 from .session import TourSession  # noqa: E402
 from .session import TourGameManager  # noqa: E402
 from .database import init_database  # noqa: E402
@@ -114,6 +118,26 @@ def _force_stop(text: str) -> bool:
     )
 
 
+def _mode_label(mode: TourDisplayMode) -> str:
+    return "图片" if mode is TourDisplayMode.IMAGE else "文本"
+
+
+def _mode_status_text(mode: TourDisplayMode) -> str:
+    return (
+        f"当前巡演显示模式：{_mode_label(mode)}。\n"
+        "使用「巡演 模式 图片」或「巡演 模式 文本」切换。"
+    )
+
+
+def _mode_confirmation_text(mode: TourDisplayMode) -> str:
+    detail = (
+        "之后的巡演局面和结算将使用图片发送。"
+        if mode is TourDisplayMode.IMAGE
+        else "之后的巡演局面和结算将直接使用文本发送。"
+    )
+    return f"已切换为巡演{_mode_label(mode)}模式。{detail}"
+
+
 def _state_data(session: TourSession) -> TourRenderData:
     return TourRenderData(snapshot=session.snapshot())
 
@@ -166,7 +190,20 @@ async def _send_state(
     kit=None,
     identity=None,
     referrer=None,
+    display_mode: TourDisplayMode = TourDisplayMode.IMAGE,
 ) -> None:
+    snapshot = session.snapshot()
+    if display_mode is TourDisplayMode.TEXT:
+        await matcher.send(
+            (notice + "\n" if notice else "")
+            + Messages.status_text(snapshot)
+            + "\n"
+            + Messages.prompt(snapshot)
+            + pg.element,
+            referrer=referrer,
+        )
+        return
+
     kit = kit or kit_for_user(session.user_id)
     identity = identity or identity_for(session.user_id)
     detail = (
@@ -184,7 +221,7 @@ async def _send_state(
         await matcher.send(
             image
             + MessageSegment.text(
-                (notice + "\n" if notice else "") + Messages.PROMPT
+                (notice + "\n" if notice else "") + Messages.prompt(snapshot)
             )
             + pg.element,
             referrer=referrer,
@@ -193,9 +230,9 @@ async def _send_state(
         logger.opt(exception=True).warning("tour state render failed")
         await matcher.send(
             (notice + "\n" if notice else "")
-            + Messages.status_text(session.snapshot())
+            + Messages.status_text(snapshot)
             + "\n"
-            + Messages.PROMPT
+            + Messages.prompt(snapshot)
             + pg.element,
             referrer=referrer,
         )
@@ -298,6 +335,28 @@ async def handle_start(
         await _send_help(tour_start, event, pg)
         return
 
+    mode_request = parse_display_mode_request(raw_arg)
+    if mode_request.kind != "none":
+        if mode_request.kind == "invalid":
+            await tour_start.finish(
+                "用法：巡演 模式 <图片|文本>。" + pg.element,
+                referrer=pg.event.referrer,
+            )
+            return
+        if mode_request.kind == "query":
+            current_mode = get_display_mode(event.get_user_id())
+            await tour_start.finish(
+                _mode_status_text(current_mode) + pg.element,
+                referrer=pg.event.referrer,
+            )
+            return
+        mode = set_display_mode(event.get_user_id(), mode_request.mode)
+        await tour_start.finish(
+            _mode_confirmation_text(mode) + pg.element,
+            referrer=pg.event.referrer,
+        )
+        return
+
     if _force_stop(command_text):
         await tour_start.finish(
             "当前没有进行中的巡演。" + pg.element,
@@ -330,10 +389,14 @@ async def handle_start(
     async def check(event_: MessageEvent) -> MessageEvent:
         return event_
 
-    kit = kit_for_user(event.get_user_id())
+    display_mode = get_display_mode(event.get_user_id())
+    kit = None
+    identity = None
     try:
-        avatar = await get_avatar(event.get_user_id())
-        identity = identity_for(event.get_user_id(), avatar=avatar)
+        if display_mode is TourDisplayMode.IMAGE:
+            kit = kit_for_user(event.get_user_id())
+            avatar = await get_avatar(event.get_user_id())
+            identity = identity_for(event.get_user_id(), avatar=avatar)
         await _send_state(
             tour_start,
             session,
@@ -342,6 +405,7 @@ async def handle_start(
             kit=kit,
             identity=identity,
             referrer=pg.event.referrer,
+            display_mode=display_mode,
         )
 
         while True:
@@ -357,6 +421,41 @@ async def handle_start(
 
             pg = _plain(resp)
             text = _text(resp)
+            mode_request = parse_display_mode_request(text)
+            if mode_request.kind != "none":
+                if mode_request.kind == "invalid":
+                    await tour_start.send(
+                        "用法：巡演 模式 <图片|文本>。" + pg.element,
+                        referrer=pg.event.referrer,
+                    )
+                    continue
+                if mode_request.kind == "query":
+                    await tour_start.send(
+                        _mode_status_text(display_mode) + pg.element,
+                        referrer=pg.event.referrer,
+                    )
+                    continue
+
+                display_mode = set_display_mode(
+                    session.user_id,
+                    mode_request.mode,
+                )
+                if display_mode is TourDisplayMode.IMAGE and kit is None:
+                    kit = kit_for_user(session.user_id)
+                    avatar = await get_avatar(session.user_id)
+                    identity = identity_for(session.user_id, avatar=avatar)
+                await _send_state(
+                    tour_start,
+                    session,
+                    pg=pg,
+                    notice=_mode_confirmation_text(display_mode),
+                    kit=kit,
+                    identity=identity,
+                    referrer=pg.event.referrer,
+                    display_mode=display_mode,
+                )
+                continue
+
             if _force_stop(text):
                 session.mark_terminal("quit")
                 game_manager.end(session.user_id)
@@ -381,6 +480,12 @@ async def handle_start(
                 game_manager.end(session.user_id)
                 if outcome.value == "win" or outcome.value == "stamina":
                     result_data = await _settle(session, outcome)
+                    if display_mode is TourDisplayMode.TEXT:
+                        await tour_start.finish(
+                            Messages.result_text(result_data) + pg.element,
+                            referrer=pg.event.referrer,
+                        )
+                        return
                     try:
                         image = await image_segment_async(
                             render_result(
@@ -416,6 +521,7 @@ async def handle_start(
                 kit=kit,
                 identity=identity,
                 referrer=pg.event.referrer,
+                display_mode=display_mode,
             )
     except MatcherException:
         game_manager.end(session.user_id)

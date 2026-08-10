@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from dataclasses import dataclass
+
+from .models import TourDisplayMode
 
 INSTRUMENT_NAMES = (
     "香澄的吉他", "多惠的吉他", "里美的贝斯", "沙绫的鼓", "有咲的键盘",
@@ -42,6 +45,12 @@ class TourDifficultyConfig:
 class ParsedAction:
     kind: str
     digits: str = ""
+
+
+@dataclass(frozen=True)
+class DisplayModeRequest:
+    kind: Literal["none", "query", "set", "invalid"]
+    mode: TourDisplayMode | None = None
 
 
 DIFFICULTIES = {
@@ -99,3 +108,40 @@ def parse_action(raw: str) -> ParsedAction:
     if 1 <= len(value) <= 6 and value.isdigit() and all(c in "01234" for c in value):
         return ParsedAction("sequence", value)
     return ParsedAction("invalid")
+
+
+def parse_display_mode_request(raw: str) -> DisplayModeRequest:
+    value = raw.strip().casefold()
+    for command in ("/巡演", "巡演", "/tour", "tour", "/xy", "xy"):
+        prefix = command + " "
+        if value.startswith(prefix):
+            value = value[len(prefix) :].strip()
+            break
+    direct = {
+        "图片模式": TourDisplayMode.IMAGE,
+        "文本模式": TourDisplayMode.TEXT,
+    }
+    if value in direct:
+        return DisplayModeRequest("set", direct[value])
+
+    parts = value.split()
+    if not parts or parts[0] not in {"模式", "mode"}:
+        return DisplayModeRequest("none")
+    if len(parts) == 1:
+        return DisplayModeRequest("query")
+    if len(parts) != 2:
+        return DisplayModeRequest("invalid")
+
+    aliases = {
+        "图片": TourDisplayMode.IMAGE,
+        "图": TourDisplayMode.IMAGE,
+        "image": TourDisplayMode.IMAGE,
+        "img": TourDisplayMode.IMAGE,
+        "文本": TourDisplayMode.TEXT,
+        "文字": TourDisplayMode.TEXT,
+        "text": TourDisplayMode.TEXT,
+    }
+    mode = aliases.get(parts[1])
+    if mode is None:
+        return DisplayModeRequest("invalid")
+    return DisplayModeRequest("set", mode)

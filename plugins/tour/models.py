@@ -25,6 +25,11 @@ class TourOutcome(StrEnum):
     TIMEOUT = "timeout"
 
 
+class TourDisplayMode(StrEnum):
+    IMAGE = "image"
+    TEXT = "text"
+
+
 @dataclass(frozen=True)
 class TourCard:
     type: CardType
@@ -77,6 +82,13 @@ class TourSnapshot:
 
 
 Base = declarative_base()
+
+
+class TourPreference(Base):
+    __tablename__ = "tour_preferences"
+
+    user_id = Column(String, primary_key=True)
+    display_mode = Column(String, nullable=False, default=TourDisplayMode.IMAGE.value)
 
 
 class TourGameRecord(Base):

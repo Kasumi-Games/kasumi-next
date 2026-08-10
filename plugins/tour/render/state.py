@@ -21,6 +21,7 @@ from plugins.render.kits.bangdream import BanGDreamKit
 from ..models import CardType
 from ..models import TourCard
 from ..models import TourSnapshot
+from ..messages import Messages
 
 BOARD_WIDTH = cards.CONTENT_WIDTH
 
@@ -63,7 +64,6 @@ def _card_cell(kit: BaseKit, index: int, card: TourCard | None) -> Component:
     return kit.panel(
         Frame(VStack(children, gap=8, align="start"), align_x="start", align_y="center"),
         width=Fixed(350),
-        height=Fixed(132),
         padding=18,
         radius=18,
     )
@@ -105,7 +105,6 @@ def _hand_panel(kit: BaseKit, snapshot: TourSnapshot) -> Component:
                     columns=2,
                     rows=2,
                     column_track=Fixed(350),
-                    row_track=Fixed(132),
                     gap=16,
                 ),
             ],
@@ -142,7 +141,7 @@ def _instrument_panel(kit: BaseKit, snapshot: TourSnapshot) -> Component:
                 [
                     kit.separator(orientation="vertical", length=Fixed(54), thickness=4),
                     kit.text(
-                        "抽到乐器后，用 0 装备。",
+                        "选择乐器牌后会自动装备。",
                         font_size=24,
                         color=kit.muted_text_color,
                         wrap=False,
@@ -213,6 +212,65 @@ def _instrument_panel(kit: BaseKit, snapshot: TourSnapshot) -> Component:
     )
 
 
+def _status_panel(kit: BaseKit, snapshot: TourSnapshot) -> Component:
+    return cards.panel_section(
+        kit,
+        VStack(
+            [
+                HStack(
+                    [
+                        kit.text("体力", font_size=28),
+                        Frame(
+                            kit.text(
+                                f"{snapshot.stamina}/{snapshot.max_stamina}",
+                                font_size=28,
+                                align="right",
+                            ),
+                            width=Fill(),
+                            align_x="end",
+                            align_y="center",
+                        ),
+                    ],
+                    gap=18,
+                    align="center",
+                ),
+                cards.meter(
+                    kit,
+                    value=snapshot.stamina,
+                    total=snapshot.max_stamina,
+                    width=BOARD_WIDTH - 64,
+                    height=22,
+                    label="",
+                ),
+                HStack(
+                    [
+                        kit.text(
+                            f"第 {snapshot.day} 天 · 今日行动 {snapshot.selection_count}/3",
+                            font_size=22,
+                            color=kit.muted_text_color,
+                        ),
+                        Frame(
+                            kit.text(
+                                f"已完成 {snapshot.tour_played_count}/26 场",
+                                font_size=22,
+                                color=kit.muted_text_color,
+                                align="right",
+                            ),
+                            width=Fill(),
+                            align_x="end",
+                            align_y="center",
+                        ),
+                    ],
+                    gap=18,
+                    align="center",
+                ),
+            ],
+            gap=16,
+            align="stretch",
+        ),
+    )
+
+
 def render_state(
     data: TourRenderData,
     kit: BaseKit | None = None,
@@ -226,42 +284,14 @@ def render_state(
         sections.append(cards.game_identity(kit, identity, width=BOARD_WIDTH, detail=detail))
     sections.extend(
         [
-            cards.panel_section(
-                kit,
-                VStack(
-                    [
-                        HStack(
-                            [
-                                kit.text(f"第 {snapshot.day} 天", font_size=28),
-                                kit.text(
-                                    f"完成 {snapshot.tour_played_count}/26 场",
-                                    font_size=28,
-                                    align="right",
-                                ),
-                            ],
-                            gap=18,
-                            align="center",
-                        ),
-                        cards.meter(
-                            kit,
-                            value=snapshot.stamina,
-                            total=snapshot.max_stamina,
-                            width=BOARD_WIDTH - 64,
-                            height=22,
-                            label=f"体力 {snapshot.stamina}/{snapshot.max_stamina}",
-                        ),
-                    ],
-                    gap=16,
-                    align="stretch",
-                ),
-            ),
+            _status_panel(kit, snapshot),
             _hand_panel(kit, snapshot),
             _instrument_panel(kit, snapshot),
             cards.panel_section(
                 kit,
                 kit.text(
-                    "1-4 选择手牌 · 0 操作乐器（超级难度丢弃） · 5 休息 · q 退出\n"
-                    "可连续输入最多 6 个 0-4；每天完成 3 次行动后进入下一天。",
+                    Messages.compact_prompt(snapshot)
+                    + "\n可连续输入最多 6 个 0-4；每天完成 3 次行动后进入下一天。",
                     font_size=22,
                     wrap=True,
                     max_lines=2,
