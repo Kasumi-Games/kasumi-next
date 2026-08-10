@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from PIL import Image
 
+from utils.cards import PANEL_PADDING
 from utils.cards import card_page
-from utils.cards import panel_section
 from plugins.render import Fill
+from plugins.render import Grid
 from plugins.render import Fixed
 from plugins.render import Frame
 from plugins.render import HStack
+from plugins.render import Insets
 from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
@@ -20,6 +22,7 @@ LeaderboardRows = list[tuple[str, float]]
 
 _ROW_HEIGHT = 40
 _TIME_WIDTH = 104
+_PANEL_HEIGHT = 640
 
 
 def _ranking_rows(kit: BaseKit, rows: LeaderboardRows):
@@ -84,8 +87,7 @@ def _ranking_panel(kit: BaseKit, difficulty: str, rows: LeaderboardRows):
             "高级": "HARD",
             "超级": "EXPERT",
         }[difficulty]
-    return panel_section(
-        kit,
+    return kit.panel(
         VStack(
             [
                 kit.text(title, font_size=30, align="center", max_lines=1),
@@ -95,6 +97,9 @@ def _ranking_panel(kit: BaseKit, difficulty: str, rows: LeaderboardRows):
             gap=14,
             align="stretch",
         ),
+        width=Fill(),
+        height=Fixed(_PANEL_HEIGHT),
+        padding=Insets.all(PANEL_PADDING),
     )
 
 
@@ -103,22 +108,22 @@ def leaderboard_page(
     kit: BaseKit | None = None,
 ) -> AutoPage:
     kit = kit or BanGDreamKit()
-    panels = [
+    panels = tuple(
         _ranking_panel(kit, difficulty, rows_by_difficulty.get(difficulty, []))
         for difficulty in ("初级", "中级", "高级", "超级")
-    ]
+    )
     return card_page(
         kit,
         title="巡演",
         subtitle="赛季竞速排行榜",
         article_title="SPEED RANKING",
-        body=VStack(
-            [
-                HStack(panels[:2], gap=24, align="stretch"),
-                HStack(panels[2:], gap=24, align="stretch"),
-            ],
+        body=Grid(
+            children=panels,
+            columns=2,
+            rows=2,
+            column_track=Fill(),
+            row_track=Fixed(_PANEL_HEIGHT),
             gap=24,
-            align="stretch",
         ),
         width=1180,
     )

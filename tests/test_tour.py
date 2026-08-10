@@ -561,6 +561,39 @@ def test_tour_leaderboard_renders_all_four_difficulties() -> None:
         assert image.width > 0 and image.height > 0
 
 
+def test_tour_leaderboard_layout_keeps_every_panel_inside_the_canvas(
+    monkeypatch,
+) -> None:
+    _load_plugin()
+    from plugins.render import Size
+    from plugins.render.kits import MinimalKit
+    from plugins.tour.render import leaderboard as leaderboard_render
+
+    rendered_rects = []
+
+    class WidePanel:
+        def measure(self, ctx, constraints):
+            return constraints.clamp(Size(700, 600))
+
+        def render(self, ctx, canvas, rect):
+            rendered_rects.append((rect, ctx.pixel_ratio))
+
+    monkeypatch.setattr(
+        leaderboard_render,
+        "_ranking_panel",
+        lambda kit, difficulty, rows: WidePanel(),
+    )
+
+    image = leaderboard_render.leaderboard_page({}, MinimalKit()).render()
+
+    assert len(rendered_rects) == 4
+    assert all(rect.x >= 0 for rect, _ratio in rendered_rects)
+    assert all(
+        rect.x + rect.width <= image.width * ratio
+        for rect, ratio in rendered_rects
+    ), (image.size, rendered_rects)
+
+
 def test_tour_surfaces_render_without_identity_in_every_theme() -> None:
     _load_plugin()
     from plugins.tour.rules import DIFFICULTIES
