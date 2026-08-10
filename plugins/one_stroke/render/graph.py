@@ -409,7 +409,7 @@ def _title_bar(
 
 def _board_panel(kit: BaseKit, child):
     if isinstance(kit, BanGDreamKit):
-        return kit.panel(
+        return kit.board_frame(
             child,
             radius=64,
             padding=50,

@@ -156,6 +156,14 @@ class MinesIdentityTest(unittest.TestCase):
             self.assertEqual(with_identity.width, plain.width)
             self.assertGreater(with_identity.height, plain.height)
 
+    def test_bangdream_board_panel_uses_the_board_fill(self) -> None:
+        _, field_module = self._modules()
+        kit = BanGDreamKit()
+
+        panel = field_module._board_panel(kit, kit.text("board"))
+
+        self.assertEqual(panel.fill, (255, 255, 255, 230))
+
 
 class OneStrokeIdentityTest(unittest.TestCase):
     def _session(self, models_module, session_module):
@@ -216,6 +224,14 @@ class OneStrokeIdentityTest(unittest.TestCase):
             self.assertEqual(kit.game_identity_calls, 1)
             self.assertEqual(with_identity.width, plain.width)
             self.assertGreater(with_identity.height, plain.height)
+
+    def test_bangdream_board_panel_uses_the_board_fill(self) -> None:
+        _, _, graph_module = self._modules()
+        kit = BanGDreamKit()
+
+        panel = graph_module._board_panel(kit, kit.text("board"))
+
+        self.assertEqual(panel.fill, (255, 255, 255, 230))
 
 
 class BlackjackIdentityTest(unittest.TestCase):

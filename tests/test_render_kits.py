@@ -79,6 +79,13 @@ class KitRegistryTest(unittest.TestCase):
         self.assertEqual(kit.panel_fill, (255, 255, 255, 255))
         self.assertEqual(kit.panel().fill, (255, 255, 255, 255))
 
+    def test_bangdream_board_panels_use_the_translucent_fill(self) -> None:
+        kit = KITS["bangdream"]()
+        board = kit.board_frame(kit.text("board"))
+
+        self.assertEqual(kit.board_panel_fill, (255, 255, 255, 230))
+        self.assertEqual(board.fill, (255, 255, 255, 230))
+
     def test_mewtype_uses_the_common_yumemita_subpage_palette(self) -> None:
         kit = KITS["mewtype"]()
 

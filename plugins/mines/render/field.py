@@ -118,6 +118,14 @@ def _title_bar(
 
 
 def _board_panel(kit: BaseKit, child):
+    if isinstance(kit, BanGDreamKit):
+        return kit.board_frame(
+            child,
+            width=Fixed(786),
+            height=Fixed(786),
+            padding=50,
+            radius=32,
+        )
     if isinstance(kit, MewtypeKit):
         return kit.panel(
             Frame(

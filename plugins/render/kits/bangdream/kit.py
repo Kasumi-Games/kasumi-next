@@ -72,6 +72,7 @@ class BanGDreamKit(BaseKit):
     text_color = rgba(80, 80, 80, 255)
     muted_text_color = rgba(130, 130, 145, 255)
     panel_fill = rgba(255, 255, 255, 255)
+    board_panel_fill = rgba(255, 255, 255, 230)
 
     def background(self, *, source: ImageSource | None = None, **props) -> Background:
         """Create a BanG Dream! background.
@@ -137,7 +138,7 @@ class BanGDreamKit(BaseKit):
             outer,
             width=width,
             height=height,
-            fill=fill,
+            fill=self.board_panel_fill if fill is None else fill,
             radius=radius,
         )
 
