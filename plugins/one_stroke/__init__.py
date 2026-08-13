@@ -115,7 +115,11 @@ async def handle_leaderboard(event: MessageEvent):
     normal_rows = _build_leaderboard_rows("普通", season_bounds)
     hard_rows = _build_leaderboard_rows("困难", season_bounds)
     image = await render_image_segment(
-        render_leaderboard, easy_rows, normal_rows, hard_rows
+        render_leaderboard,
+        easy_rows,
+        normal_rows,
+        hard_rows,
+        kit=kit_for_user(event.get_user_id()),
     )
     await leaderboard_cmd.finish(
         image + passive_generator.element,
