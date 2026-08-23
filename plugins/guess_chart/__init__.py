@@ -479,7 +479,6 @@ async def handle_start(
                     multiplier=multiplier,
                     task=_completed_task(user_id) if task_msg else None,
                     level=_level_gain(old_level, new_level),
-                    owner_name=winner.nickname,
                 ),
                 kit_for_user(user_id),
                 current_pg,

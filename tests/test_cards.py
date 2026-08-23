@@ -209,7 +209,6 @@ class CardPageTest(unittest.TestCase):
                     title="测试卡片",
                     subtitle="共享组件",
                     body=_sample_body(kit),
-                    owner_name="香澄",
                 )
                 self.assertEqual(image.mode, "RGBA")
                 self.assertGreater(image.height, 200)
@@ -244,35 +243,6 @@ class CardPageTest(unittest.TestCase):
         kit = KITS["fluent"]()
         image = asyncio.run(self._render_async(kit))
         self.assertGreater(image.width, 0)
-
-
-class SignatureTest(unittest.TestCase):
-    def test_signature_is_absent_for_kits_with_no_theme_item(self) -> None:
-        # bangdream ships no theme item, so it must render no credit line.
-        self.assertIsNone(cards.signature_for(KITS["bangdream"]()))
-
-    def test_sakura_theme_never_renders_a_signature(self) -> None:
-        # Sakura's petals and palette already identify it; the repeated
-        # bottom-right 「谁谁的主题 · 樱色」 credit only adds visual clutter.
-        self.assertIsNone(cards.signature_for(KITS["sakura"](), "香澄"))
-
-    def test_signature_present_for_a_catalogued_theme(self) -> None:
-        from utils import theming
-
-        theming.invalidate_catalog()
-        info = theming.all_themes().get("sailing")
-        if info is None:
-            self.skipTest("sailing theme is not in the catalog")
-        signature = cards.signature_for(KITS["sailing"](), "香澄")
-        self.assertIsNotNone(signature)
-
-    def test_signature_survives_a_broken_theming_layer(self) -> None:
-        from unittest import mock
-
-        from utils import theming
-
-        with mock.patch.object(theming, "theme_for_kit", side_effect=RuntimeError):
-            self.assertIsNone(cards.signature_for(KITS["sailing"]()))
 
 
 class TierADispatchTest(unittest.TestCase):

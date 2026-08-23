@@ -913,15 +913,12 @@ async def handle_season_trend(matcher: Matcher, event: MessageEvent):
             referrer=passive_generator.event.referrer,
         )
 
-    # Data, kit, and identity resolve on the event loop thread — the
-    # inventory session is process-global and not thread safe — and only the
-    # raster is offloaded. The avatar fetch is async and cached (utils.avatar).
-    avatar = await get_avatar(user_id)
+    # Data and kit resolve on the event loop thread — the inventory session is
+    # process-global and not thread safe — and only the raster is offloaded.
     try:
         data = season_trend_data(
             season,
             list_snapshots(season),
-            owner_name=identity_for(user_id, avatar=avatar).nickname,
         )
     except ValueError:
         await matcher.finish(

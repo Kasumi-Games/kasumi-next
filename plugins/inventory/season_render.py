@@ -130,20 +130,15 @@ class SeasonTrendData:
     Attributes:
         season_name: Player-facing season name (the page title).
         series: Rank series sorted by rank ascending; never empty.
-        owner_name: Requester's nickname for the theme signature on this
-            shared surface, or ``None`` to omit.
     """
 
     season_name: str
     series: tuple[TrendSeries, ...]
-    owner_name: str | None = None
 
 
 def season_trend_data(
     season: Season,
     snapshots: Sequence[SeasonRankSnapshot],
-    *,
-    owner_name: str | None = None,
 ) -> SeasonTrendData:
     """Map season snapshot rows onto the trend card's data.
 
@@ -153,7 +148,6 @@ def season_trend_data(
     Args:
         season: The season the snapshots belong to.
         snapshots: Snapshot rows in any order.
-        owner_name: Requester's nickname for the theme signature.
 
     Returns:
         Data ready for :func:`season_trend_page`.
@@ -184,7 +178,6 @@ def season_trend_data(
     return SeasonTrendData(
         season_name=season.name or season.season_key,
         series=series,
-        owner_name=owner_name,
     )
 
 
@@ -244,7 +237,6 @@ def season_trend_page(
         wordmark_title="TREND",
         body=panel_section(kit, VStack(rows, gap=18, align="stretch")),
         footer=_footer(kit, data),
-        owner_name=data.owner_name,
     )
 
 

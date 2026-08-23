@@ -65,7 +65,6 @@ def _cck_win_data():
         multiplier=4,
         task=TaskCompletion(name="一眼看穿", reward=80),
         level=LevelGain(old_level=12, new_level=13, stickers=120),
-        owner_name="zhaomaoniu",
     )
 
 
@@ -107,7 +106,6 @@ def _guess_chart_win_data():
         multiplier=2,
         task=TaskCompletion(name="太谱达人", reward=80),
         level=LevelGain(old_level=12, new_level=13, stickers=120),
-        owner_name="zhaomaoniu",
     )
 
 

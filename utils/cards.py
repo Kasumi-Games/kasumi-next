@@ -530,75 +530,6 @@ def empty_state(kit: BaseKit, message: str, *, width: int = INNER_WIDTH) -> Comp
     )
 
 
-def theme_signature(
-    kit: BaseKit, theme_name: str, owner_name: str | None = None
-) -> Component:
-    """A credit line naming the theme in play.
-
-    Reads as a photo credit rather than an advert, which is what lets it sit on
-    hundreds of images without becoming clutter.
-
-    Args:
-        kit: Active kit.
-        theme_name: Player-facing theme name.
-        owner_name: Whose theme it is, when the image is a shared surface.
-
-    Returns:
-        Signature component.
-    """
-
-    text = (
-        f"{owner_name} 的主题 · {theme_name}" if owner_name else f"主题 · {theme_name}"
-    )
-    return HStack(
-        [
-            kit.separator(orientation="vertical", length=Fixed(22), thickness=3),
-            kit.text(
-                text,
-                font_size=LABEL_SIZE,
-                color=kit.muted_text_color,
-                wrap=False,
-                max_lines=1,
-            ),
-        ],
-        gap=10,
-        align="center",
-    )
-
-
-def signature_for(kit: BaseKit, owner_name: str | None = None) -> Component | None:
-    """Return the theme signature, or ``None`` when this theme stays silent.
-
-    A theme marked ``starter`` in the catalog renders no signature, so the
-    presence of the line is itself the signal that a theme is worth having.
-    A kit may also explicitly set ``theme_signature_enabled = False`` when its
-    authored visual identity already carries the theme without a credit line.
-
-    Args:
-        kit: Active kit.
-        owner_name: Whose theme it is, when the image is a shared surface.
-
-    Returns:
-        Signature component, or ``None``.
-    """
-
-    if not kit.theme_signature_enabled:
-        return None
-
-    try:
-        from utils.theming import display_name
-        from utils.theming import theme_for_kit
-
-        info = theme_for_kit(kit)
-    except Exception:
-        return None
-    if info is None or info.starter:
-        return None
-    # The kit display name, not the item name: item names carry a 主题 suffix
-    # for inventory clarity, which would read as 「主题 · 星之鼓动主题」 here.
-    return theme_signature(kit, display_name(info.kit_name), owner_name)
-
-
 def card_page(
     kit: BaseKit,
     *,
@@ -610,7 +541,6 @@ def card_page(
     wordmark_title: str | None = None,
     show_subtitle: bool = True,
     footer: Component | None = None,
-    owner_name: str | None = None,
     width: int = CONTENT_WIDTH,
     background_source: object | None = None,
 ) -> AutoPage:
@@ -628,8 +558,7 @@ def card_page(
         show_page_title: Whether supporting kits should draw their large wordmark.
         wordmark_title: Optional short label for a kit-specific large wordmark.
         show_subtitle: Whether supporting kits should draw the annotation line.
-        footer: Optional footer content, placed above the theme signature.
-        owner_name: Whose card this is, for the signature on shared surfaces.
+        footer: Optional footer content.
         width: Content column width.
         background_source: Optional image passed to kits whose background
             accepts a source. Ignored by kits that do not.
@@ -652,16 +581,8 @@ def card_page(
         body,
     ]
 
-    tail: list[Component] = []
     if footer is not None:
-        tail.append(footer)
-    signature = signature_for(kit, owner_name)
-    if signature is not None:
-        tail.append(
-            Frame(signature, width=Fixed(width), align_x="end", align_y="center")
-        )
-    if tail:
-        sections.append(VStack(tail, gap=12, align="stretch"))
+        sections.append(footer)
 
     return AutoPage(
         VStack(sections, gap=24, align="stretch"),
@@ -683,7 +604,6 @@ def response_card(
     wordmark_title: str | None = None,
     show_subtitle: bool = True,
     footer: Component | None = None,
-    owner_name: str | None = None,
     width: int = CONTENT_WIDTH,
 ) -> Image.Image:
     """Render a standard response card.
@@ -698,7 +618,6 @@ def response_card(
         wordmark_title: Optional short label for a kit-specific large wordmark.
         show_subtitle: Whether supporting kits should draw the annotation line.
         footer: Optional footer content.
-        owner_name: Whose card this is, for the signature.
         width: Content column width.
 
     Returns:
@@ -715,7 +634,6 @@ def response_card(
         wordmark_title=wordmark_title,
         show_subtitle=show_subtitle,
         footer=footer,
-        owner_name=owner_name,
         width=width,
     ).render()
 

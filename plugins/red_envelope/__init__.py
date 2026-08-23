@@ -306,8 +306,8 @@ async def _send_completion_card(
 ):
     """渲染并发送红包结算卡片；渲染失败时退化为原文本播报。
 
-    卡片用创建者的主题渲染并署名（与创建卡同一条规则：红包是创建者的广播
-    面）。手气王只在这里出现——``EnvelopeCompletionInfo`` 只在最后一份被领取
+    卡片用创建者的主题渲染（与创建卡同一条规则：红包是创建者的广播面）。
+    手气王只在这里出现——``EnvelopeCompletionInfo`` 只在最后一份被领取
     时构建，中途标手气王会与终局矛盾（一致性评审 #15）。
     """
     creator_name = _display_name(info.creator_id)

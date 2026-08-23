@@ -139,7 +139,6 @@ def result_page(
         subtitle=_subtitle(data),
         article_title="RESULT",
         body=VStack(sections, gap=24, align="stretch"),
-        owner_name=identity.nickname if identity is not None else None,
     )
 
 

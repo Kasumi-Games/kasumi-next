@@ -67,7 +67,6 @@ class KasumiKit(BaseKit):
     panel_fill = rgba(255, 251, 252, 238)
     sky_top = rgba(242, 238, 255, 255)
     sky_bottom = rgba(255, 232, 226, 255)
-    theme_signature_enabled = False
 
     def background(
         self,

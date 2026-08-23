@@ -305,5 +305,4 @@ def render_state(
         subtitle=f"{snapshot.difficulty} · {snapshot.tour_played_count}/26",
         article_title="TOUR",
         body=VStack(sections, gap=20, align="stretch"),
-        owner_name=identity.nickname if identity is not None else None,
     ).render()

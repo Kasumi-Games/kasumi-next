@@ -594,70 +594,11 @@ And the anti-log-spam rule: failures 2–4 log per resolve, but a resolve only h
 
 ---
 
-## 5. The "yo where'd you get that" mechanic
+## 5. Theme discovery
 
-Two tiers, and the anti-clutter property comes from tier 1 being **conditional**.
+Themes are expressed by the complete page treatment only. Standard cards never append a textual theme credit or owner attribution. Players discover and manage themes through the explicit `/主题` surface.
 
-### Tier 1 — the signature line (passive, on the image)
-
-A single right-aligned footer line in the outermost card, `muted_text_color`, 22 px logical, preceded by a short vertical tick rule.
-
-**Exact wording:**
-
-- default form: `主题 · 霓虹街机`
-- when the image is a shared surface (leaderboard, group result, anything not obviously about one player): `香澄 的主题 · 霓虹街机`
-
-Nothing else. No command, no price, no "get yours". The line reads as a photo credit, which is what makes it survive being on hundreds of images without feeling like an ad.
-
-**The suppression rule is the whole design:**
-
-> The signature renders **only when the equipped theme is not a starter theme.**
-
-Players on `theme_default` or `theme_minimal` — which will be most players for a while — get no footer at all. Their images stay completely clean. That means *the presence of the line is itself the status signal*: an onlooker learns "this is a thing you can have" from the fact that most images don't have it and this one does. It inverts the ad problem — scarcity does the advertising, so the text doesn't have to.
-
-Second suppression rule, for latency and noise:
-
-> The signature renders on composed response cards (`response_card`) and final results. It does **not** render on interactive mid-game boards (blackjack table between hits, mines field between digs).
-
-Justification: on those surfaces the theme is already carried by the background and panels — repeating a credit line every turn is exactly the clutter the user is worried about. The theme is *more* visible there, not less.
-
-```python
-# utils/cards.py
-from plugins.render import Fixed, HStack
-from plugins.render.kit import BaseKit
-from plugins.render.core import Component
-
-
-def theme_signature(kit: BaseKit, theme_name: str, owner_name: str | None = None) -> Component:
-    """A credit line naming the theme in play. Right-align it in a card footer."""
-    text = f"{owner_name} 的主题 · {theme_name}" if owner_name else f"主题 · {theme_name}"
-    return HStack(
-        [
-            kit.separator(orientation="vertical", length=Fixed(22), thickness=3),
-            kit.text(text, font_size=22, color=kit.muted_text_color, wrap=False, max_lines=1),
-        ],
-        gap=10,
-        align="center",
-    )
-
-
-def signature_for(kit: BaseKit, owner_name: str | None = None) -> Component | None:
-    """Return the signature, or ``None`` when this theme should stay silent."""
-    from utils.theming import theme_for_kit
-
-    info = theme_for_kit(kit)
-    if info is None or info.starter:
-        return None
-    return theme_signature(kit, info.name, owner_name)
-```
-
-`response_card(...)` composes `footer` as `VStack([footer, signature_for(kit, owner)])` and simply omits the row when it is `None`.
-
-**Legibility:** 22 px logical is the floor named in the constraints, and it clears it — `RenderContext.pixel_ratio` defaults to `2` (`core.py:171`), so the line is drawn at 44 device px before the page downsamples, then downscaled again by the client. It reads; it does not compete with 44 px titles.
-
-**Manga degradation:** the signature is ink-black text plus a solid ink tick — no hue involved anywhere. It is arguably *most* legible in manga. In `midnight`/`neon`, `muted_text_color` is a light grey-violet on a dark panel (`(142,152,182)` on `(30,36,56)` and `(150,140,190)` on `(14,12,28)`) — both clear the ~4:1 contrast the rest of those kits already rely on. The vertical tick uses each kit's own `separator` default color, so it is never invisible on its own panel.
-
-### Tier 2 — `/主题` (active, on demand)
+### `/主题` (active, on demand)
 
 The onlooker types `/主题`. What comes back is the payoff, and it is the single place the whole design earns its images:
 
@@ -682,7 +623,7 @@ Cost: eight nested renders. Measured single-card renders are 25–101 ms, but th
 | `/主题 兑换 <name>` | buys with 盆栽, then behaves exactly like equip above | purchase and first-look collapse into one image |
 | `/主题 卸下` | text | see below |
 
-`/主题 <name>` resolving through `theme_by_token` means `霓虹`, `neon`, and `theme_neon` all work — the alias list exists precisely so an onlooker can type the Chinese name they just read off someone else's signature line.
+`/主题 <name>` resolving through `theme_by_token` means `霓虹`, `neon`, and `theme_neon` all work from the gallery name players can read directly.
 
 ### What stays text, and why
 
@@ -703,7 +644,6 @@ Rule of thumb to write into the module docstring: **an image is warranted when t
 | file | change |
 |---|---|
 | `utils/theming.py` | **new** — everything in §3 |
-| `utils/cards.py` | `theme_signature`, `signature_for`; `response_card` gains the conditional footer row |
 | `utils/__init__.py` | comment only: do **not** re-export `theming` (import cycle) |
 | `plugins/inventory/items.json` | 7 new theme entries; `theme_s1_sailing` gains `metadata`, `sort_order` 170→220 |
 | `plugins/inventory/service.py` | `_invalidate_theme_cache` + 2 call sites; `ensure_starter_cosmetics`; `_starter_item_ids`; extend `DUPLICATE_BONSAI_COMPENSATION["theme"]` to `{6:120, 5:60, 4:40, 3:0}` |

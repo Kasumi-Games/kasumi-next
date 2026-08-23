@@ -51,9 +51,7 @@ def _snapshots() -> list[SeasonRankSnapshot]:
 
 
 def _data(**overrides):
-    defaults = dict(owner_name="香澄")
-    defaults.update(overrides)
-    return season_trend_data(_season(), _snapshots(), **defaults)
+    return season_trend_data(_season(), _snapshots(), **overrides)
 
 
 def test_no_snapshots_raise_for_the_text_empty_state() -> None:
@@ -198,7 +196,7 @@ def _clustered_snapshots() -> list[SeasonRankSnapshot]:
 def test_worst_case_charts_keep_ink_off_every_canvas_edge(
     kit_cls, snapshots
 ) -> None:
-    data = season_trend_data(_season(), snapshots(), owner_name="香澄")
+    data = season_trend_data(_season(), snapshots())
     chart = _chart_image(data, kit_cls())
     assert chart.size == (1440, 720)
     _assert_edge_band_clean(chart)

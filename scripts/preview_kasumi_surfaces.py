@@ -9,12 +9,16 @@ from __future__ import annotations
 
 import argparse
 import os
+import random
 import runpy
 import sys
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -32,6 +36,169 @@ runpy.run_path(str(ROOT / "tests" / "conftest.py"))
 
 def _test_namespace(filename: str) -> dict[str, object]:
     return runpy.run_path(str(ROOT / "tests" / filename))
+
+
+def _preview_card(
+    label: str,
+    fill: tuple[int, int, int, int],
+) -> Image.Image:
+    """Create deterministic stand-in playing-card art for the game census."""
+
+    width, height = 640, 896
+    image = Image.new("RGBA", (width, height), (255, 255, 255, 0))
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((0, 0, width - 1, height - 1), radius=36, fill=fill)
+    draw.rounded_rectangle(
+        (18, 18, width - 19, height - 19),
+        radius=28,
+        outline=(255, 255, 255, 230),
+        width=8,
+    )
+    try:
+        font = ImageFont.truetype(
+            str(ROOT / "plugins" / "blackjack" / "recourses" / "old.ttf"),
+            120,
+        )
+    except OSError:
+        font = ImageFont.load_default()
+    bbox = draw.textbbox((0, 0), label, font=font)
+    draw.text(
+        (
+            (width - (bbox[2] - bbox[0])) // 2,
+            (height - (bbox[3] - bbox[1])) // 2 - bbox[1],
+        ),
+        label,
+        font=font,
+        fill=(255, 255, 255, 255),
+    )
+    return image
+
+
+def _preview_blackjack(kit_name: str, output_dir: Path) -> list[Path]:
+    from plugins.blackjack.models import Card
+    from plugins.blackjack.models import Hand
+    from plugins.blackjack.render import BlackjackRenderer
+    from plugins.render import PlayerIdentity
+    from plugins.render.kits import KITS
+
+    renderer = object.__new__(BlackjackRenderer)
+    renderer.kit = KITS[kit_name]()
+    renderer.card_back = _preview_card("?", (55, 55, 65, 255))
+    renderer.get_font = lambda size: ImageFont.truetype(
+        str(ROOT / "plugins" / "blackjack" / "recourses" / "old.ttf"), size
+    )
+    identity = PlayerIdentity(nickname="香澄", level=42)
+
+    def card(rank: str, suit: str, fill: tuple[int, int, int, int]) -> Card:
+        item = Card(suit, rank)
+        item._get_image = lambda ace_value=None: _preview_card(rank, fill)
+        return item
+
+    dealer = Hand()
+    dealer.add_card(card("A", "cool", (234, 78, 116, 255)))
+    dealer.add_card(card("10", "happy", (66, 133, 244, 255)))
+    dealer.add_card(card("K", "pure", (76, 175, 80, 255)))
+
+    player = Hand()
+    player.add_card(card("8", "powerful", (255, 124, 85, 255)))
+    player.add_card(card("7", "cool", (184, 130, 225, 255)))
+
+    outputs = [
+        output_dir / f"blackjack-hand-{kit_name}.png",
+        output_dir / f"blackjack-table-{kit_name}.png",
+    ]
+    renderer.generate_hand(
+        dealer,
+        second_card_back=True,
+        identity=identity,
+        detail="庄家回合 · 押注 120 Pt",
+    ).save(outputs[0])
+    renderer.generate_table(
+        dealer,
+        player,
+        dealer_card_back=True,
+        identity=identity,
+        detail="押注 120 Pt · 玩家 15 点",
+    ).save(outputs[1])
+    return outputs
+
+
+def _preview_mines(kit_name: str, output_dir: Path) -> list[Path]:
+    from plugins.mines.models import Field
+    from plugins.mines.render.field import render
+    from plugins.render import PlayerIdentity
+    from plugins.render.kits import KITS
+
+    random.seed(7)
+    field = Field(width=5, height=5, mines=4)
+    for index in (0, 3, 6, 12, 18):
+        field.reveal_block(index)
+    field.reveal_all_mines()
+
+    output = output_dir / f"mines-{kit_name}.png"
+    render(
+        field,
+        kit=KITS[kit_name](),
+        identity=PlayerIdentity(nickname="香澄", level=42),
+        detail="押注 120 Pt · 剩 4 雷",
+    ).save(output)
+    return [output]
+
+
+def _preview_one_stroke(kit_name: str, output_dir: Path) -> list[Path]:
+    from plugins.one_stroke.models import Graph
+    from plugins.one_stroke.render.graph import render
+    from plugins.one_stroke.render.leaderboard import render_leaderboard
+    from plugins.one_stroke.session import GameSession
+    from plugins.render import PlayerIdentity
+    from plugins.render.kits import KITS
+
+    nodes = {(row, column) for row in range(4) for column in range(4)}
+    path = [
+        (0, 0),
+        (0, 1),
+        (0, 2),
+        (0, 3),
+        (1, 3),
+        (1, 2),
+        (1, 1),
+        (1, 0),
+        (2, 0),
+        (2, 1),
+        (2, 2),
+        (2, 3),
+        (3, 3),
+    ]
+    edges = {frozenset((start, end)) for start, end in zip(path, path[1:])}
+    graph = Graph(rows=4, cols=4, nodes=nodes, edges=edges, start_node=path[0])
+    session = GameSession(
+        user_id="preview",
+        channel_id="preview",
+        difficulty_name="普通",
+        reward=120,
+        graph=graph,
+    )
+    for next_node in path[1:7]:
+        edge = frozenset((session.current_pos, next_node))
+        session.drawn_edges.add(edge)
+        session.current_pos = next_node
+        session.visited_nodes.add(next_node)
+
+    board_output = output_dir / f"one-stroke-{kit_name}.png"
+    leaderboard_output = output_dir / f"one-stroke-leaderboard-{kit_name}.png"
+    render(
+        session,
+        kit=KITS[kit_name](),
+        identity=PlayerIdentity(nickname="香澄", level=42),
+        detail="难度 普通 · 奖励 120 Pt",
+    ).save(board_output)
+    render_leaderboard(
+        [("kasumi", 12.34), ("arisa", 16.78), ("tae", 20.12)],
+        [("a very very long player name", 23.45), ("rimi", 25.67)],
+        [("saaya", 31.23)],
+        kit=KITS[kit_name](),
+    ).save(leaderboard_output)
+    return [board_output, leaderboard_output]
 
 
 def _render_gallery(
@@ -159,6 +326,13 @@ def _render_gallery(
     emit(
         "gacha-banner",
         lambda: render_banner(gacha_banner["_showcase_data"](), kit),
+    )
+    emit(
+        "gacha-banner-artless",
+        lambda: render_banner(
+            gacha_banner["_showcase_data"](featured_art=None),
+            kit,
+        ),
     )
 
     gacha = _test_namespace("test_gacha_render.py")
@@ -309,11 +483,10 @@ def _render_gallery(
     from plugins.blackjack.help_render import render_help as render_blackjack_help
     from plugins.blackjack.stats_render import render_stats as render_blackjack_stats
     from plugins.blackjack.stats_render import stats_card_data
-    from scripts.preview_renderers import preview_blackjack
 
     blackjack_stats = _test_namespace("test_blackjack_stats_render.py")
     emit("blackjack-help", lambda: render_blackjack_help(kit))
-    blackjack_paths = preview_blackjack(kit_name, output_dir)
+    blackjack_paths = _preview_blackjack(kit_name, output_dir)
     for slug, original in zip(
         ("blackjack-hand", "blackjack-table"), blackjack_paths, strict=True
     ):
@@ -334,10 +507,9 @@ def _render_gallery(
     from plugins.mines.models import GameResult
     from plugins.mines.render.result import render_result as render_mines_result
     from plugins.mines.render.stats import render_stats as render_mines_stats
-    from scripts.preview_renderers import preview_mines
 
     mines = _test_namespace("test_mines_render.py")
-    mines_paths = preview_mines(kit_name, output_dir)
+    mines_paths = _preview_mines(kit_name, output_dir)
     emit(
         "mines-board",
         lambda: Image.open(mines_paths[0]).convert("RGBA"),
@@ -383,9 +555,8 @@ def _render_gallery(
     # One-stroke in-progress board, leaderboard, and full settlement.
     from plugins.one_stroke.render.result import OneStrokeResultData
     from plugins.one_stroke.render.result import render_result as render_stroke_result
-    from scripts.preview_renderers import preview_one_stroke
 
-    stroke_paths = preview_one_stroke(kit_name, output_dir)
+    stroke_paths = _preview_one_stroke(kit_name, output_dir)
     for slug, original in zip(
         ("one-stroke-board", "one-stroke-leaderboard"),
         stroke_paths,
@@ -482,23 +653,187 @@ def _render_gallery(
         ),
     )
 
-    # Ryuseido shop's theme preview card.
+    # Ryuseido home, catalogs, theme states, and season bonus pull.
+    from plugins.inventory.render import InventoryListData
+    from plugins.inventory.render import InventoryListRow
+    from plugins.inventory.render import render_inventory_list
     from plugins.ryuseido.render import ThemePreviewData
     from plugins.ryuseido.render import render_theme_preview
 
+    shop_home = InventoryListData(
+        title="流星堂",
+        subtitle="旧藏流转",
+        page=1,
+        total_pages=1,
+        rows=(
+            InventoryListRow(
+                index="A",
+                name="立绘",
+                detail="17 件 · 500–1400 盆",
+                kind="立绘",
+                show_art_slot=False,
+                show_trailing=False,
+            ),
+            InventoryListRow(
+                index="F",
+                name="头像框",
+                detail="2 件 · 1200–1800 盆",
+                kind="头像框",
+                show_art_slot=False,
+                show_trailing=False,
+            ),
+            InventoryListRow(
+                index="T",
+                name="主题",
+                detail="1 件 · 3000 盆",
+                kind="主题",
+                show_art_slot=False,
+                show_trailing=False,
+            ),
+            InventoryListRow(
+                index="P",
+                name="本季加抽",
+                detail="400 盆/抽 · 本季 2/5",
+                kind="加抽",
+                show_art_slot=False,
+                show_trailing=False,
+            ),
+        ),
+        footer="/流星堂 立绘 · 头像框 · 主题 · 加抽",
+        wordmark_title="SHOP",
+    )
+    emit("shop-home", lambda: render_inventory_list(shop_home, kit))
+
+    shop_standing_art = InventoryListData(
+        title="流星堂",
+        subtitle="立绘",
+        page=1,
+        total_pages=3,
+        rows=(
+            InventoryListRow(
+                index="A01",
+                name="牛込里美 守望着的应援",
+                detail="500 盆栽",
+                kind="立绘",
+                rarity=3,
+                art=kasumi_art,
+            ),
+            InventoryListRow(
+                index="A03",
+                name="青叶摩卡 温暖的时刻",
+                detail="500 盆栽",
+                kind="立绘",
+                rarity=3,
+                art=kasumi_art,
+            ),
+            InventoryListRow(
+                index="A07",
+                name="高松灯 不可思议的小动物",
+                detail="已拥有",
+                kind="立绘",
+                rarity=4,
+                art=kasumi_art,
+                equipped=True,
+            ),
+        ),
+        equipped_summary="已购入 A07",
+        panel_footer="第 1/3 页",
+        footer="/流星堂 立绘 <页码> · /流星堂 购买 <编号>",
+        wordmark_title="SHOP",
+    )
+    emit(
+        "shop-standing-art",
+        lambda: render_inventory_list(shop_standing_art, kit),
+    )
+
+    frame_stardust = (
+        ROOT
+        / "plugins"
+        / "inventory"
+        / "resources"
+        / "items"
+        / "avatar_frames"
+        / "frame_shop_stardust.png"
+    )
+    frame_azure = frame_stardust.with_name("frame_shop_azure_rhythm.png")
+    shop_avatar_frames = InventoryListData(
+        title="流星堂",
+        subtitle="头像框",
+        page=1,
+        total_pages=1,
+        rows=(
+            InventoryListRow(
+                index="F01",
+                name="星屑玻璃",
+                detail="1200 盆栽",
+                kind="头像框",
+                rarity=4,
+                art=frame_stardust,
+            ),
+            InventoryListRow(
+                index="F02",
+                name="舞萌DX",
+                detail="1800 盆栽",
+                kind="头像框",
+                rarity=5,
+                art=frame_azure,
+            ),
+        ),
+        panel_footer="第 1/1 页",
+        footer="/流星堂 购买 <编号>",
+        wordmark_title="SHOP",
+    )
+    emit(
+        "shop-avatar-frame",
+        lambda: render_inventory_list(shop_avatar_frames, kit),
+    )
+
+    shop_themes = InventoryListData(
+        title="流星堂",
+        subtitle="主题",
+        page=1,
+        total_pages=1,
+        rows=(
+            InventoryListRow(
+                index="T01",
+                name="樱色",
+                detail="3000 盆栽",
+                kind="主题",
+                rarity=6,
+                show_art_slot=False,
+            ),
+        ),
+        panel_footer="第 1/1 页",
+        footer="/流星堂 预览 <编号> · /流星堂 购买 <编号>",
+        wordmark_title="SHOP",
+    )
+    emit("shop-theme-list", lambda: render_inventory_list(shop_themes, kit))
+
+    preview_data = ThemePreviewData(
+        sku="T01",
+        name="梦限大 Mewtype 主题",
+        description="淡紫方格纸、糖果色标记与青色像素切角组成的梦限大主题。",
+        price=3000,
+    )
     emit(
         "shop-theme-preview",
+        lambda: render_theme_preview(preview_data, kit),
+    )
+    emit(
+        "shop-theme-preview-owned",
         lambda: render_theme_preview(
-            ThemePreviewData(
-                sku="theme_kasumi",
-                name="星之鼓动",
-                description="星之鼓动赛季主题：头像框、名片版式与专属立绘。",
-                price=120,
-                notice="赛季结束后下架",
-                footer="/流星堂 购买 theme_kasumi",
-            ),
+            replace(preview_data, owned=True, notice="已购入"),
             kit,
         ),
+    )
+
+    bonus_pull = replace(
+        pull_page_data([featured], banner, item_art=pull_art),
+        banner_name=f"流星堂 · {banner.name}",
+    )
+    emit(
+        "shop-bonus-pull",
+        lambda: render_pull(bonus_pull, kit),
     )
 
     return outputs, failures

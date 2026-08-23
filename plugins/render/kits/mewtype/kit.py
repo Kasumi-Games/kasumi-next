@@ -61,6 +61,7 @@ _ENGLISH_PAGE_TITLES = {
     "一笔画": "ONE STROKE",
     "猜卡面": "CARD QUIZ",
     "猜谱面": "CHART QUIZ",
+    "巡演": "TOUR",
 }
 
 

@@ -8,10 +8,9 @@ the theme it ships is the thing being sold. The handler resolves that kit
 kit, falling back to the player's kit when any link is missing) and passes it
 in — kit resolution is data assembly and stays out of this module.
 
-No ``owner_name`` is passed to ``card_page`` on purpose: the season theme is
-the subject of this card, not any player's equipped cosmetic. Themes that keep
-the standard signature therefore render it without an owner; Starbeat itself
-suppresses the line because its authored visual identity already carries it.
+The season theme is the subject of this card, not any player's equipped
+cosmetic, so its complete page treatment carries the visual identity on its
+own.
 
 :func:`banner_page_data` is pure — the banner, the requester's pity count, and
 the season's bundle item ids are passed in, and item names/art come through the
@@ -53,7 +52,6 @@ from ..service import current_rates
 #: A contemporary gacha banner is one composed hero, not art stacked over
 #: another generic information panel.
 _HERO_HEIGHT = 500
-_ARTLESS_HERO_HEIGHT = 280
 _HERO_COPY_WIDTH = 340
 _FRAME_PREVIEW = 82
 _DETAIL_GAP = 16
@@ -236,7 +234,7 @@ def _showcase(kit: BaseKit, data: BannerPageData) -> Component | None:
     if not data.featured_name and data.featured_art is None and not data.bundle_names:
         return None
 
-    hero_height = _HERO_HEIGHT if data.featured_art is not None else _ARTLESS_HERO_HEIGHT
+    has_art = data.featured_art is not None
     copy_rows: list[Component] = [
         badge(kit, "LIMITED", width=112, height=34, font_size=18),
     ]
@@ -258,9 +256,10 @@ def _showcase(kit: BaseKit, data: BannerPageData) -> Component | None:
             ]
         )
     if data.bundle_names:
+        if has_art:
+            copy_rows.append(Frame(None, height=Fill()))
         copy_rows.extend(
             [
-                Frame(None, height=Fill()),
                 kit.separator(length=Fill()),
                 kit.text(
                     "首次入手加赠",
@@ -276,14 +275,14 @@ def _showcase(kit: BaseKit, data: BannerPageData) -> Component | None:
     copy = Frame(
         VStack(copy_rows, gap=14, align="start"),
         width=Fixed(
-            _HERO_COPY_WIDTH if data.featured_art is not None else CONTENT_WIDTH
+            _HERO_COPY_WIDTH if has_art else CONTENT_WIDTH
         ),
-        height=Fill(),
+        height=Fill() if has_art else None,
         align_x="stretch",
         align_y="stretch",
     )
     children: list[Component] = [copy]
-    if data.featured_art is not None:
+    if has_art:
         children.append(
             Frame(
                 kit.image(
@@ -302,7 +301,7 @@ def _showcase(kit: BaseKit, data: BannerPageData) -> Component | None:
     return kit.panel(
         HStack(children, gap=8, align="stretch"),
         width=Fixed(CONTENT_WIDTH),
-        height=Fixed(hero_height),
+        height=Fixed(_HERO_HEIGHT) if has_art else None,
         padding=Insets.only(left=30, top=28, right=18, bottom=24),
         radius=24,
     )

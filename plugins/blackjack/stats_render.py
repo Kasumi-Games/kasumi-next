@@ -157,7 +157,6 @@ def stats_page(data: StatsCardData, kit: BaseKit | None = None) -> AutoPage:
             align="stretch",
         ),
         footer=_footer(kit),
-        owner_name=data.identity.nickname,
     )
 
 

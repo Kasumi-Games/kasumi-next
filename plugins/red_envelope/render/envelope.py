@@ -7,9 +7,9 @@ images, not eleven near-identical ones. (The on-demand ``/红包列表`` card li
 in :mod:`.listing` and sits outside this budget: it renders only when a player
 explicitly asks.)
 
-Both cards render in the CREATOR's kit and carry the ``owner_name`` form of
-the theme signature: the envelope is the most social surface in the bot, and
-handing people currency inside your own theme is what makes themes visible.
+Both cards render in the CREATOR's kit: the envelope is the most social
+surface in the bot, and handing people currency inside your own visual style
+is what makes themes visible.
 The create card additionally embeds the Tier A ``game_identity`` strip so
 bespoke kits get their own treatment of the creator.
 
@@ -241,7 +241,6 @@ def create_page(data: EnvelopeCreateData, kit: BaseKit | None = None) -> AutoPag
             gap=24,
             align="stretch",
         ),
-        owner_name=creator.nickname,
     )
 
 
@@ -331,7 +330,6 @@ def completion_page(
         article_title="红包已抢完",
         show_page_title=False,
         body=VStack(completion_sections, gap=24, align="stretch"),
-        owner_name=creator_name,
     )
 
 

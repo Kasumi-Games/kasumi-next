@@ -108,7 +108,6 @@ class CckRevealData:
         multiplier: Birthday multiplier actually applied (1 / 2 / 4).
         task: Daily task completed by this win, when any.
         level: Level-up triggered by this win, when any.
-        owner_name: Whose theme the card renders in, for the signature.
     """
 
     outcome: str
@@ -127,7 +126,6 @@ class CckRevealData:
     multiplier: int = 1
     task: TaskCompletion | None = None
     level: LevelGain | None = None
-    owner_name: str | None = None
 
 
 def render_reveal(data: CckRevealData, kit: BaseKit | None = None) -> Image.Image:
@@ -195,7 +193,6 @@ def reveal_page(data: CckRevealData, kit: BaseKit | None = None) -> AutoPage:
         ),
         article_title="ANSWER",
         body=VStack(sections, gap=18, align="stretch"),
-        owner_name=data.owner_name,
     )
 
 

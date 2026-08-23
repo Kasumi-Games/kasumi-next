@@ -2,6 +2,7 @@
 
 from unittest.mock import Mock
 from unittest.mock import AsyncMock
+from types import SimpleNamespace
 
 import pytest
 from nonebot.exception import FinishedException
@@ -21,6 +22,53 @@ class FinishingMatcher:
     async def finish(self, message=None, **kwargs) -> None:
         self.calls.append((message, kwargs))
         raise FinishedException()
+
+
+async def test_theme_preview_uses_public_sku_and_catalog_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from utils import theming
+    from plugins.inventory import service as inventory_service
+
+    offer = ShopOffer("T01", "theme", "theme_sakura", 3000)
+    item = SimpleNamespace(
+        name="樱色",
+        description="奶油底色、樱粉点缀与飘落花瓣。",
+    )
+    captured = {}
+
+    class PreviewPage:
+        async def render_async(self):
+            return object()
+
+    def preview_page(data, kit):
+        captured["data"] = data
+        captured["kit"] = kit
+        return PreviewPage()
+
+    monkeypatch.setattr(inventory_service, "get_item", lambda item_id: item)
+    monkeypatch.setattr(inventory_service, "get_quantity", lambda user_id, item_id: 0)
+    monkeypatch.setattr(theming, "kit_name_for_item", lambda selected: "sakura")
+    monkeypatch.setattr(theming, "kit_by_name", lambda name: "sakura-kit")
+    monkeypatch.setattr(ryuseido, "theme_preview_page", preview_page)
+    monkeypatch.setattr(ryuseido, "image_segment_async", AsyncMock(return_value=Message()))
+
+    passive = SimpleNamespace(
+        element=Message(),
+        event=SimpleNamespace(referrer=None),
+    )
+    with pytest.raises(FinishedException):
+        await ryuseido._send_theme_preview(
+            FinishingMatcher(),
+            "user",
+            offer,
+            passive,
+        )
+
+    assert captured["data"].sku == "T01"
+    assert captured["data"].name == "樱色"
+    assert captured["data"].footer == ""
+    assert captured["kit"] == "sakura-kit"
 
 
 async def test_buying_an_offer_is_a_single_step(

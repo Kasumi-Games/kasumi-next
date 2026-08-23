@@ -185,7 +185,6 @@ class KasumiSurfaceTest(unittest.TestCase):
             body=cards.panel_section(
                 self.kit, cards.pull_reveal(self.kit, PULLS, width=cards.INNER_WIDTH)
             ),
-            owner_name="香澄",
         )
         self.assertEqual(image.width, cards.CONTENT_WIDTH + cards.PAGE_PADDING * 2)
 
@@ -275,11 +274,6 @@ class KasumiCatalogTest(unittest.TestCase):
                 info = theming.theme_by_token(token)
                 self.assertIsNotNone(info, token)
                 self.assertEqual(info.kit_name, "kasumi")
-
-    def test_signature_is_suppressed_for_starbeat(self) -> None:
-        self.assertIsNone(cards.signature_for(KasumiKit(), "香澄"))
-        self.assertIsNone(cards.signature_for(KasumiKit()))
-
 
 def _collect_text(component) -> list[str]:
     texts = []

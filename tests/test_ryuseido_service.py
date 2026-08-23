@@ -1,5 +1,6 @@
 import copy
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from sqlalchemy import text
@@ -24,6 +25,26 @@ from plugins.ryuseido.service import buy_offer
 from plugins.ryuseido.service import buy_season_pull
 from plugins.ryuseido.service import list_offers
 from plugins.ryuseido.service import season_pull_status
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_visual_census_covers_ryuseido_surfaces_with_public_skus() -> None:
+    source = (ROOT / "scripts" / "preview_kasumi_surfaces.py").read_text(
+        encoding="utf-8"
+    )
+    for slug in (
+        "shop-home",
+        "shop-standing-art",
+        "shop-avatar-frame",
+        "shop-theme-list",
+        "shop-theme-preview",
+        "shop-theme-preview-owned",
+        "shop-bonus-pull",
+    ):
+        assert f'"{slug}"' in source
+    assert 'sku="T01"' in source
+    assert "theme_kasumi" not in source
 
 
 class RyuseidoServiceTest(unittest.TestCase):

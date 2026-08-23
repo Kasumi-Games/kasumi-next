@@ -167,7 +167,6 @@ def profile_page(data: ProfileData, kit: BaseKit | None = None) -> AutoPage:
         article_title="个人资料",
         body=body,
         footer=_footer(kit),
-        owner_name=data.identity.nickname,
         width=content_width,
     )
 

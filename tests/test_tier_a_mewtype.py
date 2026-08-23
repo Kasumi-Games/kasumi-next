@@ -48,6 +48,9 @@ class MewtypeRegistrationTest(unittest.TestCase):
                     getattr(BaseKit, surface),
                 )
 
+    def test_tour_uses_its_own_wordmark_instead_of_generic_contents(self) -> None:
+        self.assertEqual(MewtypeKit().display_title("巡演"), "TOUR")
+
 
 class MewtypeSurfaceTest(unittest.TestCase):
     def setUp(self) -> None:

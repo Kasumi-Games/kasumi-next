@@ -98,7 +98,6 @@ class GuessChartRevealData:
         multiplier: Birthday multiplier actually applied (1 / 2).
         task: Daily task completed by this win, when any.
         level: Level-up triggered by this win, when any.
-        owner_name: Whose theme the card renders in, for the signature.
     """
 
     outcome: str
@@ -118,7 +117,6 @@ class GuessChartRevealData:
     multiplier: int = 1
     task: TaskCompletion | None = None
     level: LevelGain | None = None
-    owner_name: str | None = None
 
 
 def render_reveal(
@@ -174,7 +172,6 @@ def reveal_page(
         ),
         article_title="ANSWER",
         body=VStack(sections, gap=18, align="stretch"),
-        owner_name=data.owner_name,
     )
 
 

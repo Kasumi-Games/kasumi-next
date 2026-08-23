@@ -101,7 +101,7 @@ one_stroke 每步一张 —— 游戏面板的主题曝光量是个人资料卡�
 - `plugins/render/kits/fonts.py` —— 共享字体路径（CJK 字体 + 展示字体）
 - `BaseKit` 增加调色板契约：`text_color` / `muted_text_color` / `panel_fill`（浅色默认值，深色 kit 覆盖）
 - 游戏渲染器（mines / one_stroke / blackjack）的硬编码浅色回退已改为读 kit 调色板
-- 预览：`uv run python scripts/preview_renderers.py all --kit all`（`--kit` 支持全部 8 个名字）
+- 预览：`uv run python scripts/preview_kasumi_surfaces.py --kit mewtype`
 
 ### 3.2 设计产出（留档）✅
 
@@ -110,7 +110,7 @@ one_stroke 每步一张 —— 游戏面板的主题曝光量是个人资料卡�
 | 文件 | 内容 |
 | --- | --- |
 | `00-house-style.md` | 现有渲染器的房屋风格：页面几何、字号、命名约定（实测数字） |
-| `01-theme-plumbing.md` | 主题解析设计：kit_for_user、失败降级链、署名机制、items.json 方案 |
+| `01-theme-plumbing.md` | 主题解析设计：kit_for_user、失败降级链、items.json 方案；其中旧署名提案已撤销 |
 | `10`–`15` | 六个插件簇共 **50 张图片版式**设计（含 ASCII 稿）、62 项交互改动、保留文本清单 |
 | `90-consistency-review.md` | 一致性评审：21 项跨簇冲突与对比度实测 |
 | `91-ambition-review.md` | 野心评审：结构性盲点（见下）与出货顺序建议 |
@@ -133,8 +133,8 @@ one_stroke 每步一张 —— 游戏面板的主题曝光量是个人资料卡�
 ### 3.4 Tier B 工具箱 ✅
 
 `utils/cards.py`：`emphasis` / `badge` / `stat_row` / `meter` / `ladder_rows` /
-`empty_state` / `panel_section` / `theme_signature` / `signature_for` /
-`card_page`（**全项目唯一的标题构造器** —— `kit.title_pill` 只有 BanGDreamKit 有，
+`empty_state` / `panel_section` / `card_page`（**全项目唯一的标题构造器** ——
+`kit.title_pill` 只有 BanGDreamKit 有，
 无保护调用会崩掉其余 7 个主题）/ `response_card`。
 
 ### 3.5 阶段 1：mailbox + help 图片化 ✅（已对抗式验收）
@@ -201,8 +201,7 @@ one_stroke 每步一张 —— 游戏面板的主题曝光量是个人资料卡�
 - **头像框**：规格文档 `docs/design/avatar-frame-spec.md`（512×512、中央 Ø416 透明圆、笔触下限、
   主题配色参考）；头像框现在是独立物品资源，**用户手绘稿覆盖
   `plugins/inventory/resources/items/avatar_frames/<item_id>.png` 即生效，零代码改动**。
-- **目录**：`theme_kasumi_starbeat` 已进 items.json（别名 香澄/kasumi/星之鼓动/starbeat），
-  署名读 kit 显示名（「香澄 的主题 · 星之鼓动」，修掉了「…主题·…主题」冗余）。
+- **目录**：`theme_kasumi_starbeat` 已进 items.json（别名 香澄/kasumi/星之鼓动/starbeat）。
 
 **阶段 3 余量（等用户）**：手绘头像框素材；主题的发放途径（归阶段 4 gacha）。
 
@@ -216,7 +215,7 @@ one_stroke 每步一张 —— 游戏面板的主题曝光量是个人资料卡�
   （sailing kit 的映射，暂无发放途径，留待复用）；星之鼓动奖励道具改用 `*_starbeat` 家族命名。
   `sync_seasons_config` 新增废案清理：配置中消失、仍为 planned、无任何玩家数据的赛季行自动删除
   （有历史数据的孤儿赛季永不自动删，各有测试）。
-- **S2 星之鼓动内容**：单 featured 户山香澄（立绘 = 卡面 425，`metadata.art` 指向 kit 资源）；
+- **S1 星之鼓动内容**：单 featured 户山香澄（立绘 = 卡面 425，`metadata.art` 指向 kit 资源）；
   首个 ★6 捆绑发放 立绘+六星头像框+**星之鼓动主题**；排名 1–3 也发主题（设计文档允许的双通道）；
   参与/排名奖励镜像 S1（鼓动系称号×5 + 排名头像框×3）；费用/保底/概率与 S1 一致；填充池复用占位道具。
 - **逐道具发放明细**（阶段 2 遗留的 `is_new` 精确化）：`GachaResult.grants: tuple[GrantDetail, ...]`；
@@ -267,7 +266,6 @@ one_stroke 每步一张 —— 游戏面板的主题曝光量是个人资料卡�
 | emoji 无字形 | `old.ttf` 无 emoji 覆盖：`daily/__init__.py:111` 的 🎉、blackjack/mines 统计文本的 🎴📊 等，进图片会变空框 | 图片化时顺手清理 |
 | 货币用语漂移 | 「Pt / 碎片 / 星之碎片」在各插件文案中不一致（一致性评审 §9） | 内容 |
 | 渲染性能 | 重卡片冷渲染最坏 0.67s（midnight 30 封邮件溢出）；已有缓解（render_async、行数上限），未做进程级缓存 | 观察 |
-| 署名抑制规则 | 「入门主题不显示署名」的设计基于旧主题经济，角色主题时代稀缺性分布不同，**需重新设计**再启用 | 阶段 3 |
 | 你的 WIP 的 lint | `plugins/gacha`、部分测试文件有 13 个 isort 错误（`uvx ruff check --fix` 可清），属会话开始前的未提交工作，未代改 | 用户 |
 
 **明确推迟**（设计已留档，勿重复设计）：盆栽商店、8 主题道具化、`/主题` gallery、
@@ -317,5 +315,5 @@ offload 到线程池。渲染函数签名一律 `render_x(data, kit: BaseKit | N
 | kit 注册表 / 显示名 | `plugins/render/kits/__init__.py` |
 | 共享原子 / 字体 | `plugins/render/kits/atoms.py` / `fonts.py` |
 | 设计文档（50 版式 + 评审） | `docs/design/image-responses/` |
-| 预览脚本 | `scripts/preview_renderers.py`（`--kit all`） |
+| 预览脚本 | `scripts/preview_kasumi_surfaces.py`（每次指定一个 `--kit`） |
 | 预览输出 | `.cache/render-previews/` |

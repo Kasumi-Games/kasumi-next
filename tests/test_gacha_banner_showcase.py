@@ -35,6 +35,7 @@ from plugins.inventory import database as inventory_database
 from plugins.inventory import season_service
 from plugins.render.kits import MangaKit
 from plugins.render.kits import KasumiKit
+from plugins.render.kits import MewtypeKit
 from plugins.render.kits import MinimalKit
 from plugins.gacha.models import Base as GachaBase
 from plugins.gacha.models import GachaState
@@ -215,6 +216,25 @@ def test_artless_data_renders_without_reserving_the_art_slot():
     with_art = render_banner(_showcase_data(), kit)
     without_art = render_banner(_showcase_data(featured_art=None), kit)
     assert without_art.size[1] < with_art.size[1]
+
+
+def test_artless_mewtype_showcase_grows_to_keep_bundle_inside_panel():
+    from plugins.gacha.render import banner as banner_module
+    from plugins.render.core import Constraints
+    from plugins.render.core import RenderContext
+    from utils.cards import CONTENT_WIDTH
+
+    showcase = banner_module._showcase(
+        MewtypeKit(),
+        _showcase_data(featured_art=None),
+    )
+    assert showcase is not None
+
+    size = showcase.measure(
+        RenderContext(),
+        Constraints(max_width=CONTENT_WIDTH, max_height=4000),
+    )
+    assert size.height > 280
 
 
 def test_banner_render_is_deterministic():

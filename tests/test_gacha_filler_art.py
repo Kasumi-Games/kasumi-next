@@ -257,10 +257,10 @@ def test_showcase_renders_the_frame_ring() -> None:
     without_ring = render_banner(
         banner_page_data(_banner(), pity_count=0, **bundle), kit
     )
-    # The hero has a fixed height, so the ring changes its contents rather
-    # than its outer geometry.
+    # Artless heroes size to their contents so neither the frame preview nor
+    # its accompanying copy can escape the panel.
     assert with_ring.size[0] == without_ring.size[0] == 864
-    assert with_ring.size == without_ring.size
+    assert with_ring.size[1] > without_ring.size[1]
     assert with_ring.tobytes() != without_ring.tobytes()
 
 
