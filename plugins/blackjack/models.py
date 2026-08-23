@@ -44,11 +44,14 @@ class Shoe:
     代表一个牌靴 (Shoe)，可以包含多副牌
     """
 
-    def __init__(self):
+    def __init__(self, rng: random.Random | None = None):
         """
         初始化牌靴
         """
-        pass
+        # The production game intentionally draws with replacement.  Keeping
+        # the RNG injectable lets the strategy simulator replay the exact
+        # deal sequence without changing live-game behaviour.
+        self._rng = rng or random
 
     def deal(self):
         """从牌靴中发一张牌。须确保牌靴不为空。
@@ -59,8 +62,8 @@ class Shoe:
         Returns:
             Card: 发出的牌
         """
-        suit = random.choice(suits)
-        rank = random.choices(number_ranks, [1 / 13] * 13)[0]
+        suit = self._rng.choice(suits)
+        rank = self._rng.choices(number_ranks, [1 / 13] * 13)[0]
         return Card(suit, rank)
 
 

@@ -16,6 +16,11 @@ from utils.passive_generator import generators as gens
 
 from .. import monetary
 from .rules import can_surrender
+from .rules import is_split_pair
+from .rules import surrender_loss
+from .rules import dealer_should_hit
+from .rules import blackjack_winnings
+from .rules import is_natural_blackjack
 from .utils import get_action
 from .models import Hand
 from .models import GameResult
@@ -52,7 +57,7 @@ async def play_dealer_turn(
     result_messages += Messages.DEALER_TURN
 
     count = 0
-    while dealer_hand.value < 17:
+    while dealer_should_hit(dealer_hand.value):
         dealer_hand.add_card(game_manager.get_shoe(channel_id).deal())
         count += 1
 
@@ -151,7 +156,7 @@ async def handle_surrender(
 ) -> None:
     """处理玩家投降的情况"""
     renderer = game_manager.renderer_for(user_id)
-    loss_amount = (bet_amount / 2).__ceil__()
+    loss_amount = surrender_loss(bet_amount)
     if settle_game:
         game_manager.end_game(user_id, GameResult.SURRENDER, winnings=-loss_amount)
     await matcher.send(
@@ -429,11 +434,11 @@ async def handle_initial_blackjack(
     identity: Optional[PlayerIdentity] = None,
 ) -> bool:
     renderer = game_manager.renderer_for(session.user_id)
-    player_blackjack = (
-        len(session.player_hand.cards) == 2 and session.player_hand.value == 21
+    player_blackjack = is_natural_blackjack(
+        len(session.player_hand.cards), session.player_hand.value
     )
-    dealer_blackjack = (
-        len(session.dealer_hand.cards) == 2 and session.dealer_hand.value == 21
+    dealer_blackjack = is_natural_blackjack(
+        len(session.dealer_hand.cards), session.dealer_hand.value
     )
 
     if dealer_blackjack and not player_blackjack:
@@ -476,11 +481,11 @@ async def handle_initial_blackjack(
                 referrer=gens[latest_message_id].event.referrer,
             )
         else:
-            blackjack_winnings = int(bet_amount * 1.5)
+            natural_winnings = blackjack_winnings(bet_amount)
             actual_winnings = game_manager.end_game(
                 session.user_id,
                 GameResult.BLACKJACK,
-                winnings=blackjack_winnings,
+                winnings=natural_winnings,
             )
             win_msg = Messages.BLACKJACK_WIN.format(
                 bet=bet_amount, amount=actual_winnings
@@ -535,9 +540,9 @@ async def handle_split_decision(
     split_card = False
     renderer = game_manager.renderer_for(session.user_id)
 
-    if (
-        session.player_hand.cards[0].get_value()
-        == session.player_hand.cards[1].get_value()
+    if is_split_pair(
+        session.player_hand.cards[0].get_value(),
+        session.player_hand.cards[1].get_value(),
     ):
         sentence = Messages.SPLIT_PROMPT
         await matcher.send(
@@ -664,7 +669,7 @@ async def handle_split_game(
                 winnings = -hand_bet
                 hand_result = prefix + Messages.BUST_LOSE.format(amount=hand_bet)
             else:
-                loss_amount = (hand_bet / 2).__ceil__()
+                loss_amount = surrender_loss(hand_bet)
                 winnings = -loss_amount
                 hand_result = prefix + Messages.SURRENDER_LOSE.format(
                     amount=loss_amount
