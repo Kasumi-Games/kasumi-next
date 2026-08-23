@@ -698,6 +698,86 @@
       "metadata": {
         "art": "plugins/inventory/resources/items/avatar_frames/frame_shop_azure_rhythm.png"
       }
+    },
+    {
+      "item_id": "standing_art_yumemita_nakamachi_arale",
+      "category": "cosmetic",
+      "name": "仲町阿拉蕾 夢見∞無限",
+      "description": "第二赛季梦限大 Mewtype 限定六星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 260,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/yumemita/nakamachi-arale.png"
+      }
+    },
+    {
+      "item_id": "standing_art_yumemita_fuji_miyako",
+      "category": "cosmetic",
+      "name": "藤都子 夢見∞無限",
+      "description": "第二赛季梦限大 Mewtype 限定五星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 261,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/yumemita/fuji-miyako.png"
+      }
+    },
+    {
+      "item_id": "standing_art_yumemita_minetsuki_ritsu",
+      "category": "cosmetic",
+      "name": "峰月律 夢見∞無限",
+      "description": "第二赛季梦限大 Mewtype 限定五星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 262,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/yumemita/minetsuki-ritsu.png"
+      }
+    },
+    {
+      "item_id": "standing_art_yumemita_miyanaga_nonoka",
+      "category": "cosmetic",
+      "name": "宫永乃乃花 夢見∞無限",
+      "description": "第二赛季梦限大 Mewtype 限定五星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 263,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/yumemita/miyanaga-nonoka.png"
+      }
+    },
+    {
+      "item_id": "standing_art_yumemita_sengoku_yuno",
+      "category": "cosmetic",
+      "name": "千石由乃 夢見∞無限",
+      "description": "第二赛季梦限大 Mewtype 限定五星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 264,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/yumemita/sengoku-yuno.png"
+      }
     }
   ]
 }
