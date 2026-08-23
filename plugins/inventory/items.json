@@ -104,6 +104,27 @@
       }
     },
     {
+      "item_id": "theme_mewtype",
+      "category": "cosmetic",
+      "name": "梦限大 Mewtype 主题",
+      "description": "梦限大 Mewtype 的梦境网格与霓虹渐变主题。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 172,
+      "cosmetic": {
+        "cosmetic_type": "theme",
+        "rarity": 6
+      },
+      "metadata": {
+        "kit": "mewtype",
+        "aliases": [
+          "梦限大",
+          "mewtype",
+          "夢見∞無限"
+        ]
+      }
+    },
+    {
       "item_id": "standing_art_placeholder_r5_001",
       "category": "cosmetic",
       "name": "市谷有咲 向着大海展翅的天马",
@@ -389,6 +410,142 @@
       },
       "metadata": {
         "bestdori_card_id": 1821,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_tae_little_happiness",
+      "category": "cosmetic",
+      "name": "花园多惠 不期而遇的小确幸",
+      "description": "常驻角色立绘：来自卡面「不期而遇的小确幸」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 240,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2165,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_moca_b5_infinity",
+      "category": "cosmetic",
+      "name": "青叶摩卡 B5尺寸的无限大",
+      "description": "常驻角色立绘：来自卡面「B5尺寸的无限大」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 241,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2280,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_kanon_dazzling_person",
+      "category": "cosmetic",
+      "name": "松原花音 耀眼之人",
+      "description": "常驻角色立绘：来自卡面「耀眼之人」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 242,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2197,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_eve_fitting_excitement",
+      "category": "cosmetic",
+      "name": "若宫伊芙 兴奋的试穿时间",
+      "description": "常驻角色立绘：来自卡面「兴奋的试穿时间」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 243,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2304,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_lisa_cherry_shadow",
+      "category": "cosmetic",
+      "name": "今井莉莎 樱影中摇曳的光",
+      "description": "常驻角色立绘：来自卡面「樱影中摇曳的光」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 244,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2183,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_nanami_walk_together",
+      "category": "cosmetic",
+      "name": "广町七深 携手同行",
+      "description": "常驻角色立绘：来自卡面「携手同行」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 245,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2354,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_rokka_light_in_darkness",
+      "category": "cosmetic",
+      "name": "朝日六花 予黑暗以光明",
+      "description": "常驻角色立绘：来自卡面「予黑暗以光明」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 246,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2292,
+        "bestdori_variant": "after_training"
+      }
+    },
+    {
+      "item_id": "standing_art_standard_soyo_too_dazzling",
+      "category": "cosmetic",
+      "name": "长崎爽世 只是过于耀眼",
+      "description": "常驻角色立绘：来自卡面「只是过于耀眼」。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 247,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "bestdori_card_id": 2232,
         "bestdori_variant": "after_training"
       }
     },
