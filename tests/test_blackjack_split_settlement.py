@@ -88,14 +88,16 @@ async def test_split_round_with_a_busted_hand_is_settled_and_recorded_once(
     )
 
     balance_changes: list[int] = []
-    monkeypatch.setattr("plugins.blackjack.session.monetary.get", lambda user_id: 100)
+
+    def reserve(user_id, amount, *args, **kwargs):
+        balance_changes.append(-amount)
+
     monkeypatch.setattr(
-        "plugins.blackjack.session.monetary.cost",
-        lambda user_id, amount, reason: balance_changes.append(-amount),
+        "plugins.blackjack.session.point_holds.reserve_points", reserve
     )
     monkeypatch.setattr(
-        "plugins.blackjack.session.monetary.add",
-        lambda user_id, amount, reason: balance_changes.append(amount),
+        "plugins.blackjack.session.point_holds.settle_point_hold",
+        lambda hold_key, payout, **kwargs: balance_changes.append(payout),
     )
     monkeypatch.setattr("plugins.blackjack.handlers.monetary.get", lambda user_id: 80)
 

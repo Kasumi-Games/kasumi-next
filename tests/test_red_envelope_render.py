@@ -395,12 +395,29 @@ def test_create_card_wires_the_cached_avatar():
 
 
 def test_completion_info_carries_the_full_ledger(sqlite_session, monkeypatch):
+    from types import SimpleNamespace
+
     from plugins.red_envelope import service
     from plugins.red_envelope import database
     from plugins.red_envelope.models import Base
 
     sqlite_session(database, Base)
-    monkeypatch.setattr(service.monetary, "add", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        service.point_holds,
+        "reserve_points",
+        lambda *args, **kwargs: SimpleNamespace(scope_type="season", scope_id="1"),
+    )
+    monkeypatch.setattr(
+        service.point_holds, "capture_point_hold", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        service.point_holds,
+        "get_point_hold",
+        lambda hold_key: SimpleNamespace(status="open"),
+    )
+    monkeypatch.setattr(
+        service.point_holds, "is_point_hold_scope_open", lambda *args, **kwargs: True
+    )
     monkeypatch.setattr(service.random, "randint", lambda low, high: high)
 
     service.create_envelope("creator", "channel", "hello", 10, 3)

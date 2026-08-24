@@ -30,6 +30,7 @@ from utils.passive_generator import generators as gens  # noqa: E402
 from .. import monetary  # noqa: E402
 from ..cck import card_manager  # noqa: E402
 from ..inventory.season_service import get_current_season_bounds  # noqa: E402
+from ..inventory import point_hold_service as point_holds  # noqa: E402
 from .models import Hand  # noqa: E402
 from .render import BlackjackRenderer  # noqa: E402
 from .session import GameManager  # noqa: E402
@@ -46,6 +47,7 @@ from .stats_render import stats_card_data  # noqa: E402
 from .stats_service import get_blackjack_stats  # noqa: E402
 
 game_manager = GameManager()
+point_holds.register_scope_closer("blackjack", game_manager.close_scope, priority=20)
 renderer: BlackjackRenderer = None
 
 
@@ -89,6 +91,9 @@ async def init_blackjack():
 
     # Initialize database
     init_database()
+    refunded = point_holds.refund_abandoned_game_holds(("blackjack",))
+    if refunded:
+        logger.info(f"已退还 {refunded} 笔上次进程遗留的二十一点押注")
 
     # Initialize renderer
     renderer = BlackjackRenderer(
@@ -230,12 +235,17 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             )
     except MatcherException:
         raise
+    except point_holds.PointHoldScopeClosed:
+        await game_start.finish(
+            Messages.SEASON_CANCELLED + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
     except Exception as e:
-        # 发生错误时退还下注金额
-        game_manager.refund_half_game(event.get_user_id())
+        # 发生非玩家行为导致的异常时原路退还完整押注。
+        game_manager.refund_game(event.get_user_id())
         code = handle_error(e, context="blackjack", user_id=event.get_user_id())
         await game_start.finish(
-            "发生意外错误！已退回一半的下注Pt给你，再试一次吧？\n错误码：{}".format(
+            "发生意外错误！已退回下注Pt给你，再试一次吧？\n错误码：{}".format(
                 code
             )
             + gens[latest_message_id].element,

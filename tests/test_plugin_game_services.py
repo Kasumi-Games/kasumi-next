@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+from types import SimpleNamespace
 from pathlib import Path
 
 
@@ -22,14 +23,22 @@ def test_blackjack_hand_session_and_stats(sqlite_session, monkeypatch):
 
     sqlite_session(database, Base)
     balance = {"u1": 100}
-    monkeypatch.setattr("plugins.blackjack.session.monetary.get", lambda user_id: balance[user_id])
+
+    def reserve(user_id, amount, *args, **kwargs):
+        if balance[user_id] < amount:
+            raise ValueError("insufficient")
+        balance[user_id] -= amount
+        return SimpleNamespace()
+
+    def settle(hold_key, payout, **kwargs):
+        balance["u1"] += payout
+        return SimpleNamespace()
+
     monkeypatch.setattr(
-        "plugins.blackjack.session.monetary.cost",
-        lambda user_id, amount, reason: balance.__setitem__(user_id, balance[user_id] - amount),
+        "plugins.blackjack.session.point_holds.reserve_points", reserve
     )
     monkeypatch.setattr(
-        "plugins.blackjack.session.monetary.add",
-        lambda user_id, amount, reason: balance.__setitem__(user_id, balance[user_id] + amount),
+        "plugins.blackjack.session.point_holds.settle_point_hold", settle
     )
 
     hand = Hand()
@@ -67,14 +76,22 @@ def test_mines_field_session_and_stats(sqlite_session, monkeypatch):
     monkeypatch.setattr("plugins.mines.models.get_random_arisa", lambda: Path("arisa.png"))
     monkeypatch.setattr("plugins.mines.models.random.sample", lambda population, mines: [0])
     balance = {"u1": 100}
-    monkeypatch.setattr("plugins.mines.session.monetary.get", lambda user_id: balance[user_id])
+
+    def reserve(user_id, amount, *args, **kwargs):
+        if balance[user_id] < amount:
+            raise ValueError("insufficient")
+        balance[user_id] -= amount
+        return SimpleNamespace()
+
+    def settle(hold_key, payout, **kwargs):
+        balance["u1"] += payout
+        return SimpleNamespace()
+
     monkeypatch.setattr(
-        "plugins.mines.session.monetary.cost",
-        lambda user_id, amount, reason: balance.__setitem__(user_id, balance[user_id] - amount),
+        "plugins.mines.session.point_holds.reserve_points", reserve
     )
     monkeypatch.setattr(
-        "plugins.mines.session.monetary.add",
-        lambda user_id, amount, reason: balance.__setitem__(user_id, balance[user_id] + amount),
+        "plugins.mines.session.point_holds.settle_point_hold", settle
     )
 
     field = Field(width=2, height=2, mines=1)

@@ -70,6 +70,23 @@ def economy_db(sqlite_session, monkeypatch):
         inventory_models.BONSAI_ITEM_ID,
         "盆栽",
     )
+    inventory_session.add(
+        inventory_models.Season(
+            id=1,
+            season_key="test-season",
+            season_number=1,
+            name="测试赛季",
+            start_time=1,
+            end_time=4_000_000_000,
+            timezone="UTC+8",
+            status="open",
+            metadata_json='{"starting_points": 0}',
+            config_hash="test",
+            opened_at=1,
+            settled_at=0,
+        )
+    )
+    inventory_session.commit()
     monkeypatch.setattr(
         "plugins.inventory.service.get_point_scope",
         lambda now=None: (inventory_models.SEASON_SCOPE_TYPE, "1", None),
@@ -194,17 +211,17 @@ def test_mailbox_send_read_cleanup_and_scheduled_processing(sqlite_session, monk
     assert scheduled.get_pending_count() == 0
 
 
-def test_red_envelope_claims_expiry_and_completion(sqlite_session, monkeypatch):
+def test_red_envelope_claims_expiry_and_completion(
+    sqlite_session, monkeypatch, economy_db
+):
+    from plugins import monetary
     from plugins.red_envelope import service
     from plugins.red_envelope import database
     from plugins.red_envelope.models import Base
 
     sqlite_session(database, Base)
-    added = []
-    monkeypatch.setattr(
-        service.monetary, "add", lambda *args, **kwargs: added.append(args)
-    )
     monkeypatch.setattr(service.random, "randint", lambda low, high: low)
+    monetary.add("creator", 20, "seed")
 
     envelope = service.create_envelope("creator", "channel", "hello", 10, 2)
     assert envelope.channel_index == 1
@@ -216,19 +233,20 @@ def test_red_envelope_claims_expiry_and_completion(sqlite_session, monkeypatch):
     second_status, second_amount, completion = service.claim_envelope("u2", "channel", 1)
     assert (second_status, second_amount) == ("success", 9)
     assert completion.lucky_king_id == "u2"
-    assert added == [
-        ("u1", 1, f"red_envelope_claim_{envelope.id}"),
-        ("u2", 9, f"red_envelope_claim_{envelope.id}"),
-    ]
+    assert monetary.get("u1") == 1
+    assert monetary.get("u2") == 9
 
     expired = service.create_envelope("creator", "channel", "old", 5, 1)
     expired.expires_at = 1
     database.session.commit()
     assert service.expire_overdue_envelopes() == 1
-    assert added[-1] == ("creator", 5, f"red_envelope_refund_{expired.id}")
+    assert monetary.get("creator") == 10
 
 
-def test_red_envelope_retries_an_uncredited_claim(sqlite_session, monkeypatch):
+def test_red_envelope_retries_an_uncredited_claim(
+    sqlite_session, monkeypatch, economy_db
+):
+    from plugins import monetary
     from plugins.red_envelope import service
     from plugins.red_envelope import database
     from plugins.red_envelope.models import Base
@@ -237,14 +255,18 @@ def test_red_envelope_retries_an_uncredited_claim(sqlite_session, monkeypatch):
     session = sqlite_session(database, Base)
     attempts = 0
 
+    original_capture = service.point_holds.capture_point_hold
+
     def flaky_credit(*args, **kwargs):
         nonlocal attempts
         attempts += 1
         if attempts == 1:
             raise RuntimeError("inventory unavailable")
+        return original_capture(*args, **kwargs)
 
-    monkeypatch.setattr(service.monetary, "add", flaky_credit)
+    monkeypatch.setattr(service.point_holds, "capture_point_hold", flaky_credit)
     monkeypatch.setattr(service.random, "randint", lambda low, high: low)
+    monetary.add("creator", 10, "seed")
     envelope = service.create_envelope("creator", "channel", "hello", 10, 2)
 
     assert service.claim_envelope("u1", "channel", 1)[0] == "error"
@@ -260,6 +282,217 @@ def test_red_envelope_retries_an_uncredited_claim(sqlite_session, monkeypatch):
     assert service.claim_envelope("u1", "channel", 1)[0] == "already"
 
 
+def test_red_envelope_scope_close_honors_pending_claim_then_refunds(
+    sqlite_session, monkeypatch, economy_db
+):
+    import time
+
+    from plugins import monetary
+    from plugins.inventory import point_hold_service as holds
+    from plugins.inventory.models import SEASON_SCOPE_TYPE
+    from plugins.red_envelope import database
+    from plugins.red_envelope import service
+    from plugins.red_envelope.models import Base
+
+    sqlite_session(database, Base)
+    monetary.add("creator", 100, "seed")
+    monkeypatch.setattr(service.random, "randint", lambda low, high: low)
+    envelope = service.create_envelope("creator", "channel", "hello", 50, 2)
+
+    original_capture = service.point_holds.capture_point_hold
+    attempts = 0
+
+    def fail_once(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("inventory unavailable")
+        return original_capture(*args, **kwargs)
+
+    monkeypatch.setattr(service.point_holds, "capture_point_hold", fail_once)
+    assert service.claim_envelope("u1", "channel", 1)[0] == "error"
+
+    service.close_scope_envelopes(
+        SEASON_SCOPE_TYPE, "1", cutoff=int(time.time()) + 1
+    )
+    service.close_scope_envelopes(
+        SEASON_SCOPE_TYPE, "1", cutoff=int(time.time()) + 1
+    )
+
+    assert monetary.get("creator") == 99
+    assert monetary.get("u1") == 1
+    assert envelope.is_expired is True
+    assert envelope.closed_reason == "season_end"
+    assert holds.get_point_hold(envelope.hold_key).status == holds.HOLD_REFUNDED
+
+
+def test_red_envelope_scope_close_honors_claim_at_exact_cutoff(
+    sqlite_session, monkeypatch, economy_db
+):
+    from plugins import monetary
+    from plugins.inventory import point_hold_service as holds
+    from plugins.inventory.models import SEASON_SCOPE_TYPE
+    from plugins.red_envelope import database
+    from plugins.red_envelope import service
+    from plugins.red_envelope.models import Base
+    from plugins.red_envelope.models import ClaimRecord
+
+    session = sqlite_session(database, Base)
+    monetary.add("creator", 100, "seed")
+    monkeypatch.setattr(service.random, "randint", lambda low, high: low)
+    envelope = service.create_envelope("creator", "channel", "hello", 50, 2)
+
+    original_capture = service.point_holds.capture_point_hold
+    attempts = 0
+
+    def fail_once(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("inventory unavailable")
+        return original_capture(*args, **kwargs)
+
+    monkeypatch.setattr(service.point_holds, "capture_point_hold", fail_once)
+    assert service.claim_envelope("u1", "channel", 1)[0] == "error"
+    claim = session.query(ClaimRecord).one()
+
+    service.close_scope_envelopes(
+        SEASON_SCOPE_TYPE, "1", cutoff=claim.claimed_at
+    )
+
+    session.refresh(claim)
+    assert claim.credited_at > 0
+    assert monetary.get("creator") == 99
+    assert monetary.get("u1") == 1
+    assert envelope.is_expired is True
+    assert holds.get_point_hold(envelope.hold_key).status == holds.HOLD_REFUNDED
+
+
+def test_red_envelope_reconciliation_refunds_unreferenced_open_hold(
+    sqlite_session, economy_db
+):
+    from plugins import monetary
+    from plugins.inventory import point_hold_service as holds
+    from plugins.red_envelope import database
+    from plugins.red_envelope import service
+    from plugins.red_envelope.models import Base
+
+    sqlite_session(database, Base)
+    monetary.add("creator", 100, "seed")
+    active = service.create_envelope("creator", "channel", "active", 20, 2)
+    holds.reserve_points(
+        "creator",
+        40,
+        "red_envelope:crashed-create",
+        "red_envelope",
+    )
+
+    assert monetary.get("creator") == 40
+    assert service.refund_orphaned_envelope_holds() == 1
+    assert monetary.get("creator") == 80
+    assert holds.get_point_hold(active.hold_key).status == holds.HOLD_OPEN
+    assert (
+        holds.get_point_hold("red_envelope:crashed-create").status
+        == holds.HOLD_REFUNDED
+    )
+
+
+def test_red_envelope_close_finishes_business_state_after_hold_was_refunded(
+    sqlite_session, economy_db
+):
+    from plugins import monetary
+    from plugins.inventory import point_hold_service as holds
+    from plugins.inventory.models import SEASON_SCOPE_TYPE
+    from plugins.red_envelope import database
+    from plugins.red_envelope import service
+    from plugins.red_envelope.models import Base
+
+    session = sqlite_session(database, Base)
+    monetary.add("creator", 100, "seed")
+    envelope = service.create_envelope("creator", "channel", "hello", 40, 2)
+
+    # Simulate a process disappearing after the inventory refund committed but
+    # before the red-envelope database saved its closed state.
+    holds.refund_point_hold(
+        envelope.hold_key,
+        operation_key=f"{envelope.hold_key}:close:season_end",
+    )
+    assert envelope.is_expired is False
+
+    service.close_scope_envelopes(SEASON_SCOPE_TYPE, "1", cutoff=envelope.created_at)
+
+    session.refresh(envelope)
+    assert envelope.is_expired is True
+    assert envelope.remaining_amount == 0
+    assert envelope.remaining_count == 0
+    assert envelope.closed_reason == "season_end"
+
+
+def test_legacy_active_envelope_backfills_funded_hold_without_second_debit(
+    sqlite_session, monkeypatch, economy_db
+):
+    import time
+
+    from plugins import monetary
+    from plugins.inventory.models import SEASON_SCOPE_TYPE
+    from plugins.red_envelope import database
+    from plugins.red_envelope import service
+    from plugins.red_envelope.models import Base
+    from plugins.red_envelope.models import ClaimRecord
+    from plugins.red_envelope.models import RedEnvelope
+
+    session = sqlite_session(database, Base)
+    now = int(time.time())
+    monetary.add("creator", 70, "legacy_balance_after_envelope_debit")
+    envelope = RedEnvelope(
+        creator_id="creator",
+        channel_id="channel",
+        channel_index=1,
+        title="legacy",
+        total_amount=30,
+        remaining_amount=25,
+        total_count=2,
+        remaining_count=1,
+        created_at=now - 10,
+        expires_at=now + 100,
+        is_expired=False,
+        hold_key=None,
+        scope_type="",
+        scope_id="",
+        closed_reason="",
+    )
+    session.add(envelope)
+    session.flush()
+    session.add(
+        ClaimRecord(
+            envelope_id=envelope.id,
+            user_id="u1",
+            amount=5,
+            claimed_at=now - 5,
+            credited_at=0,
+        )
+    )
+    session.commit()
+    monetary.add(
+        "u1",
+        5,
+        "legacy_red_envelope_claim",
+        idempotency_key=f"red_envelope_claim:{envelope.id}:u1",
+    )
+    monkeypatch.setattr(
+        service,
+        "get_point_scope_at",
+        lambda timestamp: (SEASON_SCOPE_TYPE, "1", None),
+    )
+
+    assert service.reconcile_legacy_envelope_holds(now=now) == 1
+    assert monetary.get("creator") == 70
+    assert session.query(ClaimRecord).one().credited_at > 0
+    service.close_scope_envelopes(SEASON_SCOPE_TYPE, "1", cutoff=now + 1)
+    assert monetary.get("creator") == 95
+    assert monetary.get("u1") == 5
+
+
 def test_red_envelope_migration_marks_historical_claims_as_credited(
     tmp_path, monkeypatch
 ):
@@ -269,6 +502,12 @@ def test_red_envelope_migration_marks_historical_claims_as_credited(
 
     path = tmp_path / "red-envelope.db"
     with sqlite3.connect(path) as connection:
+        connection.execute(
+            "CREATE TABLE red_envelopes ("
+            "id INTEGER PRIMARY KEY, "
+            "pending_amounts VARCHAR"
+            ")"
+        )
         connection.execute(
             "CREATE TABLE claim_records ("
             "id INTEGER PRIMARY KEY, "
@@ -295,8 +534,18 @@ def test_red_envelope_migration_marks_historical_claims_as_credited(
         credited_at = connection.execute(
             "SELECT credited_at FROM claim_records WHERE id = 1"
         ).fetchone()[0]
+        envelope_columns = {
+            row[1]
+            for row in connection.execute(
+                "PRAGMA table_info(red_envelopes)"
+            ).fetchall()
+        }
     assert "credited_at" in columns
     assert credited_at == 123
+    assert "pending_amounts" not in envelope_columns
+    assert {"hold_key", "scope_type", "scope_id", "closed_reason"}.issubset(
+        envelope_columns
+    )
 
 
 def test_inventory_profile_equipment_and_season_status(sqlite_session, monkeypatch):

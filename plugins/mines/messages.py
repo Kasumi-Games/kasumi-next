@@ -29,6 +29,7 @@ class Messages:
     HIT_MINE = "糟糕！被 Arisa 发现了，Pt全都被没收了"
     CASHOUT = "Kasumi 抱着Pt撤退啦！"
     TIMEOUT = "太久没动静了，Kasumi 先离开地下室了"
+    SEASON_CANCELLED = "赛季已结束，本局已取消，押注已原路退回旧钱包。"
 
     STATS_EMPTY = "你还没有玩过地下室探险哦，快来试试吧！"
     STATS_TEXT = (

@@ -42,6 +42,8 @@ from .service import claim_envelope  # noqa: E402
 from .service import create_envelope  # noqa: E402
 from .service import get_active_envelopes  # noqa: E402
 from .service import expire_overdue_envelopes  # noqa: E402
+from .service import reconcile_legacy_envelope_holds  # noqa: E402
+from .service import refund_orphaned_envelope_holds  # noqa: E402
 from .database import init_database  # noqa: E402
 from .messages import Messages  # noqa: E402
 from ..nickname import nickname  # noqa: E402
@@ -50,6 +52,10 @@ from ..nickname import nickname  # noqa: E402
 @get_driver().on_startup
 async def init():
     init_database()
+    reconcile_legacy_envelope_holds()
+    refunded = refund_orphaned_envelope_holds()
+    if refunded:
+        logger.info(f"已退还 {refunded} 笔未完成创建的红包托管")
     logger.info("红包插件初始化完成")
 
 
@@ -160,12 +166,10 @@ async def handle_create(event: MessageEvent, arg: Message = CommandArg()):
         )
 
     try:
-        monetary.cost(user_id, amount, "red_envelope_create")
         envelope = create_envelope(user_id, channel_id, title, amount, count)
     except MatcherException:
         raise
     except Exception as e:
-        monetary.add(user_id, amount, "red_envelope_create_refund")
         code = handle_error(e, context="red_envelope_create", user_id=user_id)
         await create_cmd.finish(
             "错误码：{}\n".format(code)

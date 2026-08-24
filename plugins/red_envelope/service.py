@@ -1,4 +1,5 @@
 import time
+import uuid
 import random
 from typing import Tuple
 from typing import Optional
@@ -6,10 +7,14 @@ from dataclasses import dataclass
 
 from nonebot.log import logger
 
-from .. import monetary
 from .models import ClaimRecord
 from .models import RedEnvelope
 from .database import get_session
+from ..inventory import point_hold_service as point_holds
+from ..inventory.models import ItemTransaction
+from ..inventory.models import PointHold
+from ..inventory.database import get_session as get_inventory_session
+from ..inventory.season_service import get_point_scope_at
 
 
 @dataclass
@@ -84,6 +89,14 @@ def create_envelope(
     if total_count > MAX_ENVELOPE_COUNT:
         raise ValueError(f"红包数量不能超过 {MAX_ENVELOPE_COUNT}")
 
+    hold_key = f"red_envelope:{uuid.uuid4().hex}"
+    hold = point_holds.reserve_points(
+        creator_id,
+        total_amount,
+        hold_key,
+        "red_envelope",
+        operation_key=f"{hold_key}:create",
+    )
     session = get_session()
     now = int(time.time())
     channel_index = _get_next_channel_index(session, channel_id)
@@ -99,6 +112,10 @@ def create_envelope(
         created_at=now,
         expires_at=now + EXPIRE_SECONDS,
         is_expired=False,
+        hold_key=hold_key,
+        scope_type=hold.scope_type,
+        scope_id=hold.scope_id,
+        closed_reason="",
     )
 
     try:
@@ -110,6 +127,9 @@ def create_envelope(
         return envelope
     except Exception as e:
         session.rollback()
+        point_holds.refund_point_hold(
+            hold_key, operation_key=f"{hold_key}:create_failed"
+        )
         logger.error("创建红包时发生错误: {}", e)
         raise
 
@@ -147,29 +167,52 @@ def get_active_envelope_by_index(
     )
 
 
-def _expire_envelope(envelope: RedEnvelope) -> int:
+def _close_envelope(
+    envelope: RedEnvelope, *, reason: str, cutoff: int
+) -> int:
     session = get_session()
     if envelope.is_expired:
         return 0
 
-    refund_amount = max(0, envelope.remaining_amount)
-    if refund_amount > 0:
-        monetary.add(
-            envelope.creator_id,
-            refund_amount,
-            f"red_envelope_refund_{envelope.id}",
-            idempotency_key=f"red_envelope_refund:{envelope.id}",
+    pending_claims = (
+        session.query(ClaimRecord)
+        .filter(
+            ClaimRecord.envelope_id == envelope.id,
+            ClaimRecord.credited_at == 0,
+            ClaimRecord.claimed_at <= cutoff,
         )
+        .order_by(ClaimRecord.id.asc())
+        .all()
+    )
+    for claim in pending_claims:
+        _credit_claim(envelope, claim, max(cutoff, claim.claimed_at), allow_closed=True)
+
+    refund_amount = 0
+    if envelope.hold_key:
+        refund = point_holds.refund_point_hold(
+            envelope.hold_key,
+            operation_key=f"{envelope.hold_key}:close:{reason}",
+        )
+        refund_amount = refund.amount
 
     envelope.is_expired = True
     envelope.remaining_amount = 0
     envelope.remaining_count = 0
+    envelope.closed_reason = reason
 
     session.add(envelope)
     session.commit()
 
-    logger.info(f"红包过期处理完成: id={envelope.id} refund={refund_amount}")
+    logger.info(
+        f"红包关闭处理完成: id={envelope.id} reason={reason} refund={refund_amount}"
+    )
     return refund_amount
+
+
+def _expire_envelope(envelope: RedEnvelope) -> int:
+    return _close_envelope(
+        envelope, reason="expired", cutoff=max(1, envelope.expires_at)
+    )
 
 
 def _build_completion_info(
@@ -203,13 +246,21 @@ def _build_completion_info(
 
 
 def _credit_claim(
-    envelope: RedEnvelope, claim: ClaimRecord, now: int
+    envelope: RedEnvelope,
+    claim: ClaimRecord,
+    now: int,
+    *,
+    allow_closed: bool = False,
 ) -> Optional[EnvelopeCompletionInfo]:
-    monetary.add(
+    if not envelope.hold_key:
+        raise ValueError("红包缺少 Pt 托管记录")
+    point_holds.capture_point_hold(
+        envelope.hold_key,
         claim.user_id,
         claim.amount,
-        f"red_envelope_claim_{envelope.id}",
-        idempotency_key=f"red_envelope_claim:{envelope.id}:{claim.user_id}",
+        operation_key=f"{envelope.hold_key}:claim:{claim.id}",
+        allow_closed_scope=allow_closed,
+        now=now,
     )
     claim.credited_at = max(1, now)
     get_session().commit()
@@ -281,6 +332,11 @@ def claim_envelope(
         _expire_envelope(envelope)
         return ("expired", None, None)
 
+    hold = point_holds.get_point_hold(envelope.hold_key or "")
+    if hold is None or not point_holds.is_point_hold_scope_open(hold, now=now):
+        _close_envelope(envelope, reason="season_end", cutoff=now)
+        return ("expired", None, None)
+
     if envelope.remaining_count <= 0 or envelope.remaining_amount <= 0:
         return ("empty", None, None)
 
@@ -340,3 +396,140 @@ def expire_overdue_envelopes() -> int:
         count += 1
 
     return count
+
+
+def close_scope_envelopes(scope_type: str, scope_id: str, cutoff: int) -> None:
+    """Honor pre-cutoff claims, then refund active envelopes in one Pt scope."""
+
+    session = get_session()
+    envelopes = (
+        session.query(RedEnvelope)
+        .filter(
+            RedEnvelope.scope_type == scope_type,
+            RedEnvelope.scope_id == scope_id,
+            RedEnvelope.is_expired == False,  # noqa: E712
+        )
+        .order_by(RedEnvelope.created_at.asc(), RedEnvelope.id.asc())
+        .all()
+    )
+    for envelope in envelopes:
+        _close_envelope(envelope, reason="season_end", cutoff=cutoff)
+
+
+def refund_orphaned_envelope_holds() -> int:
+    """Refund open holds left before their envelope row could be committed.
+
+    Creation crosses two SQLite databases: the inventory hold commits first,
+    followed by the red-envelope row.  A hard process exit between those
+    commits bypasses the normal exception refund.  Startup/lifecycle
+    reconciliation runs without live command interleaving and can therefore
+    safely treat an unreferenced open hold as abandoned.
+    """
+
+    inventory_session = get_inventory_session()
+    hold_keys = [
+        row[0]
+        for row in inventory_session.query(PointHold.hold_key)
+        .filter(
+            PointHold.kind == "red_envelope",
+            PointHold.status == point_holds.HOLD_OPEN,
+        )
+        .order_by(PointHold.created_at.asc(), PointHold.hold_key.asc())
+        .all()
+    ]
+    if not hold_keys:
+        return 0
+
+    referenced = {
+        row[0]
+        for row in get_session()
+        .query(RedEnvelope.hold_key)
+        .filter(RedEnvelope.hold_key.is_not(None))
+        .all()
+    }
+    orphaned = [hold_key for hold_key in hold_keys if hold_key not in referenced]
+    for hold_key in orphaned:
+        point_holds.refund_point_hold(
+            hold_key,
+            operation_key=f"{hold_key}:orphan_refund",
+        )
+    return len(orphaned)
+
+
+def reconcile_legacy_envelope_holds(now: int | None = None) -> int:
+    """Attach old active envelope rows to funded holds without debiting twice."""
+
+    now = int(time.time()) if now is None else now
+    session = get_session()
+    envelopes = (
+        session.query(RedEnvelope)
+        .filter(
+            RedEnvelope.is_expired == False,  # noqa: E712
+            RedEnvelope.remaining_count > 0,
+            RedEnvelope.hold_key.is_(None),
+        )
+        .all()
+    )
+    migrated = 0
+    for envelope in envelopes:
+        pending_amount = 0
+        pending_claims = (
+            session.query(ClaimRecord)
+            .filter(
+                ClaimRecord.envelope_id == envelope.id,
+                ClaimRecord.credited_at == 0,
+            )
+            .all()
+        )
+        for claim in pending_claims:
+            legacy_key_prefix = (
+                f"red_envelope_claim:{envelope.id}:{claim.user_id}:"
+            )
+            legacy_credit = (
+                get_inventory_session()
+                .query(ItemTransaction)
+                .filter(ItemTransaction.idempotency_key.like(f"{legacy_key_prefix}%"))
+                .first()
+            )
+            if legacy_credit is not None:
+                # Old code may have committed the inventory credit immediately
+                # before crashing ahead of credited_at. Adopt that durable
+                # outcome instead of funding and paying the claim twice.
+                claim.credited_at = max(1, legacy_credit.created_at)
+            else:
+                pending_amount += claim.amount
+        session.commit()
+        funded_amount = max(0, envelope.remaining_amount + pending_amount)
+        scope_type, scope_id, _ = get_point_scope_at(envelope.created_at)
+        hold_key = f"red_envelope:legacy:{envelope.id}"
+        if funded_amount:
+            point_holds.create_funded_point_hold(
+                envelope.creator_id,
+                funded_amount,
+                hold_key,
+                "red_envelope",
+                scope=(scope_type, scope_id),
+                operation_key=f"{hold_key}:backfill",
+            )
+        envelope.hold_key = hold_key if funded_amount else None
+        envelope.scope_type = scope_type
+        envelope.scope_id = scope_id
+        session.commit()
+        migrated += 1
+
+        hold = point_holds.get_point_hold(hold_key) if funded_amount else None
+        if envelope.expires_at <= now or (
+            hold is not None
+            and not point_holds.is_point_hold_scope_open(hold, now=now)
+        ):
+            _close_envelope(
+                envelope,
+                reason="expired" if envelope.expires_at <= now else "season_end",
+                cutoff=min(now, envelope.expires_at),
+            )
+    return migrated
+
+
+point_holds.register_scope_closer(
+    "red_envelope", close_scope_envelopes, priority=10
+)

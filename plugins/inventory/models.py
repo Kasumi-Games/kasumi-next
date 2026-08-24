@@ -118,6 +118,38 @@ class ItemTransaction(Base):
     created_at = Column(Integer, nullable=False)
 
 
+class PointHold(Base):
+    """Persisted Pt removed from a wallet pending a business outcome."""
+
+    __tablename__ = "point_holds"
+
+    hold_key = Column(String, primary_key=True)
+    kind = Column(String, nullable=False, index=True)
+    owner_user_id = Column(String, nullable=False, index=True)
+    scope_type = Column(String, nullable=False, index=True)
+    scope_id = Column(String, nullable=False, index=True)
+    reserved_amount = Column(Integer, nullable=False)
+    remaining_amount = Column(Integer, nullable=False)
+    status = Column(String, nullable=False, default="open", index=True)
+    created_at = Column(Integer, nullable=False)
+    closed_at = Column(Integer, nullable=False, default=0)
+
+
+class PointHoldOperation(Base):
+    """Idempotency and audit row for one mutation of a :class:`PointHold`."""
+
+    __tablename__ = "point_hold_operations"
+
+    operation_key = Column(String, primary_key=True)
+    hold_key = Column(
+        String, ForeignKey("point_holds.hold_key"), nullable=False, index=True
+    )
+    operation_type = Column(String, nullable=False)
+    recipient_user_id = Column(String, nullable=False, default="")
+    amount = Column(Integer, nullable=False)
+    created_at = Column(Integer, nullable=False)
+
+
 class Season(Base):
     __tablename__ = "seasons"
 

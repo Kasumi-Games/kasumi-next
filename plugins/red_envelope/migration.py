@@ -32,6 +32,21 @@ def migrate_red_envelope_schema():
                 cursor.execute("ALTER TABLE red_envelopes DROP COLUMN pending_amounts")
                 dropped_column = True
                 logger.info("已删除 pending_amounts 列。")
+            additions = {
+                "hold_key": "VARCHAR",
+                "scope_type": "VARCHAR DEFAULT '' NOT NULL",
+                "scope_id": "VARCHAR DEFAULT '' NOT NULL",
+                "closed_reason": "VARCHAR DEFAULT '' NOT NULL",
+            }
+            for column, ddl in additions.items():
+                if column not in columns:
+                    cursor.execute(
+                        f"ALTER TABLE red_envelopes ADD COLUMN {column} {ddl}"
+                    )
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_red_envelopes_hold_key "
+                "ON red_envelopes(hold_key) WHERE hold_key IS NOT NULL"
+            )
 
         cursor.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='claim_records'"

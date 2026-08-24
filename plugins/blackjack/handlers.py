@@ -233,6 +233,9 @@ async def play_player_turn(
                     referrer=gens[latest_message_id].event.referrer,
                 )
             else:
+                active_session = game_manager.get_session(event.get_user_id())
+                if active_session is not None:
+                    game_manager.ensure_active(active_session)
                 msg = str(resp.get_message()).strip()
                 latest_message_id = resp.message.id
                 gens[latest_message_id] = PG(resp)
@@ -321,9 +324,18 @@ async def play_player_turn(
                         )
                         continue
 
-                    monetary.cost(event.get_user_id(), bet_amount, "blackjack")
+                    if not game_manager.increase_bet(
+                        event.get_user_id(), bet_amount, "double"
+                    ):
+                        await matcher.send(
+                            Messages.DOUBLE_NOT_ENOUGH.format(
+                                amount=monetary.get(event.get_user_id())
+                            )
+                            + gens[latest_message_id].element,
+                            referrer=gens[latest_message_id].event.referrer,
+                        )
+                        continue
                     bet_amount *= 2
-                    game_manager.set_player_bet(event.get_user_id(), bet_amount)
                     player_hand.add_card(game_manager.get_shoe(event.channel.id).deal())
                     await matcher.send(
                         await _render_jpeg_segment(
@@ -568,6 +580,7 @@ async def handle_split_decision(
             )
             split_card = False
         else:
+            game_manager.ensure_active(session)
             msg = str(resp.get_message()).strip()
             latest_message_id = resp.message.id
             gens[latest_message_id] = PG(resp)
@@ -589,10 +602,18 @@ async def handle_split_decision(
             )
             split_card = False
         elif split_card:
-            monetary.cost(event.get_user_id(), bet_amount, "blackjack")
-            game_manager.set_player_bet(event.get_user_id(), bet_amount * 2)
-            bet_amount *= 2
-            game_manager.set_split_state(event.get_user_id(), 1)
+            if game_manager.increase_bet(event.get_user_id(), bet_amount, "split"):
+                bet_amount *= 2
+                game_manager.set_split_state(event.get_user_id(), 1)
+            else:
+                await matcher.send(
+                    Messages.SPLIT_NOT_ENOUGH.format(
+                        amount=monetary.get(event.get_user_id())
+                    )
+                    + gens[latest_message_id].element,
+                    referrer=gens[latest_message_id].event.referrer,
+                )
+                split_card = False
 
     return split_card, bet_amount, latest_message_id
 

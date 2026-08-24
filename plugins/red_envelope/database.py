@@ -18,6 +18,9 @@ def init_database():
     """Initialize database connections and create tables"""
     global session
 
+    if session is not None:
+        return
+
     # Run migration before table creation
     migrate_red_envelope_schema()
 

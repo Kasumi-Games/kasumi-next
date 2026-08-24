@@ -28,6 +28,7 @@ class Messages:
     DOUBLE_NOT_ENOUGH = "你只有 {amount} 个Pt，不够双倍下注哦~请重新选择"
 
     TIMEOUT_LOSE = "时间到了哦，游戏自动结束。下注的Pt已没收哦~\n"
+    SEASON_CANCELLED = "赛季已结束，本局已取消，押注已原路退回旧钱包。"
 
     BUST_LOSE = "你爆牌啦，Kasumi 获胜！输掉了 {amount} 个Pt"
     DEALER_BUST_WIN = "Kasumi 爆牌，你获胜啦！赢得了 {amount} 个Pt"

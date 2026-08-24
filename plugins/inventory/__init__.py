@@ -73,6 +73,7 @@ from .season_service import get_current_season  # noqa: E402
 from .season_service import settle_due_seasons  # noqa: E402
 from .season_service import settlement_preview  # noqa: E402
 from .season_service import activate_due_seasons  # noqa: E402
+from .season_service import close_offseason_scope_for_opening  # noqa: E402
 from .season_service import get_due_seasons  # noqa: E402
 from .season_service import get_user_season_rank  # noqa: E402
 from .season_service import list_settled_rankings  # noqa: E402
@@ -103,6 +104,16 @@ def _report_theme_catalog_problems() -> None:
         logger.opt(exception=True).error("theme catalog validation failed")
 
 
+def reconcile_legacy_point_holds(*, now: int) -> int:
+    """Backfill legacy cross-plugin escrows before lifecycle settlement runs."""
+
+    from ..red_envelope.service import reconcile_legacy_envelope_holds
+    from ..red_envelope.service import refund_orphaned_envelope_holds
+
+    migrated = reconcile_legacy_envelope_holds(now=now)
+    return migrated + refund_orphaned_envelope_holds()
+
+
 @get_driver().on_startup
 @scheduler.scheduled_job(id="season_lifecycle", trigger="interval", minutes=1)
 async def process_season_lifecycle():
@@ -111,13 +122,21 @@ async def process_season_lifecycle():
         from .migration import migrate_legacy_season_participation
 
         opening_time = int(time.time())
-        for season in get_due_seasons(now=opening_time):
+        # Legacy cross-database reservations must become durable holds before
+        # any due season freezes its wallet and ranking.
+        reconcile_legacy_point_holds(now=opening_time)
+        # Old-season settlement is a hard opening barrier. A failure raises
+        # out of this job before any new wallet becomes visible.
+        settled = settle_due_seasons(now=opening_time)
+        due_seasons = get_due_seasons(now=opening_time)
+        if due_seasons:
+            close_offseason_scope_for_opening(now=opening_time)
+        for season in due_seasons:
             migrate_legacy_monetary_balances(season=season)
         opened = activate_due_seasons(now=opening_time)
         active_season = get_current_season(now=opening_time)
         if active_season is not None:
             migrate_legacy_season_participation(season=active_season)
-        settled = settle_due_seasons()
         delivered = dispatch_pending_season_rewards()
         if opened or settled or delivered:
             logger.info(

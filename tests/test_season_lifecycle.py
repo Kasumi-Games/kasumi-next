@@ -514,7 +514,21 @@ async def test_lifecycle_retries_deferred_legacy_migration(
         "get_current_season",
         lambda *, now=None: active_season,
     )
-    monkeypatch.setattr(inventory_plugin, "settle_due_seasons", lambda: 0)
+    monkeypatch.setattr(
+        inventory_plugin,
+        "settle_due_seasons",
+        lambda *, now=None: calls.append("settle") or 0,
+    )
+    monkeypatch.setattr(
+        inventory_plugin,
+        "reconcile_legacy_point_holds",
+        lambda *, now=None: calls.append("reconcile-envelopes") or 0,
+    )
+    monkeypatch.setattr(
+        inventory_plugin,
+        "close_offseason_scope_for_opening",
+        lambda *, now=None: calls.append("close-offseason") or 0,
+    )
     monkeypatch.setattr(
         inventory_plugin,
         "dispatch_pending_season_rewards",
@@ -539,7 +553,14 @@ async def test_lifecycle_retries_deferred_legacy_migration(
 
     await inventory_plugin.process_season_lifecycle()
 
-    assert calls == ["migration:due", "open", "participation:active"]
+    assert calls == [
+        "reconcile-envelopes",
+        "settle",
+        "close-offseason",
+        "migration:due",
+        "open",
+        "participation:active",
+    ]
 
 
 async def test_lifecycle_does_not_open_when_legacy_migration_fails(
@@ -551,6 +572,14 @@ async def test_lifecycle_does_not_open_when_legacy_migration_fails(
         inventory_plugin, "get_due_seasons", lambda *, now=None: [object()]
     )
     monkeypatch.setattr(
+        inventory_plugin, "settle_due_seasons", lambda *, now=None: 0
+    )
+    monkeypatch.setattr(
+        inventory_plugin,
+        "close_offseason_scope_for_opening",
+        lambda *, now=None: 0,
+    )
+    monkeypatch.setattr(
         inventory_plugin,
         "activate_due_seasons",
         lambda *, now=None: calls.append("open"),
@@ -559,6 +588,26 @@ async def test_lifecycle_does_not_open_when_legacy_migration_fails(
         migration,
         "migrate_legacy_monetary_balances",
         lambda *, season=None: (_ for _ in ()).throw(RuntimeError("migration failed")),
+    )
+
+    await inventory_plugin.process_season_lifecycle()
+
+    assert calls == []
+
+
+async def test_lifecycle_does_not_settle_before_legacy_holds_are_reconciled(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    calls: list[str] = []
+    monkeypatch.setattr(
+        inventory_plugin,
+        "reconcile_legacy_point_holds",
+        lambda *, now=None: (_ for _ in ()).throw(RuntimeError("reconcile failed")),
+    )
+    monkeypatch.setattr(
+        inventory_plugin,
+        "settle_due_seasons",
+        lambda *, now=None: calls.append("settle") or 0,
     )
 
     await inventory_plugin.process_season_lifecycle()
@@ -759,3 +808,93 @@ def test_normal_due_settlement_remains_idempotent(lifecycle_db):
         .count()
         == 1
     )
+
+
+def test_settlement_refunds_open_holds_before_freezing_ranking(
+    lifecycle_db, monkeypatch
+):
+    from plugins.inventory import service as inventory_service
+    from plugins.inventory import point_hold_service as holds
+
+    session, _ = lifecycle_db
+    season = _sync_and_grant(session)
+    monkeypatch.setattr(
+        inventory_service,
+        "get_point_scope",
+        lambda now=None: (SEASON_SCOPE_TYPE, str(season.id), season),
+    )
+    holds.reserve_points("u1", 40, "mines:at-cutoff", "mines")
+
+    with patch("plugins.inventory.season_service.time.time", return_value=END):
+        season_service.settle_season("s1", now=END)
+
+    ranking = (
+        session.query(SeasonRanking)
+        .filter(
+            SeasonRanking.season_id == season.id,
+            SeasonRanking.user_id == "u1",
+        )
+        .one()
+    )
+    assert ranking.final_points == 125
+    assert holds.get_point_hold("mines:at-cutoff").status == holds.HOLD_REFUNDED
+
+
+async def test_lifecycle_does_not_open_next_season_when_old_close_fails(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    calls: list[str] = []
+    monkeypatch.setattr(
+        inventory_plugin,
+        "settle_due_seasons",
+        lambda *, now=None: (_ for _ in ()).throw(RuntimeError("close failed")),
+    )
+    monkeypatch.setattr(
+        inventory_plugin,
+        "activate_due_seasons",
+        lambda *, now=None: calls.append("open") or 1,
+    )
+
+    await inventory_plugin.process_season_lifecycle()
+
+    assert calls == []
+
+
+def test_opening_closes_offseason_holds_before_new_wallet(
+    lifecycle_db, monkeypatch
+):
+    from plugins.inventory import service as inventory_service
+    from plugins.inventory import point_hold_service as holds
+    from plugins.inventory.models import OFFSEASON_SCOPE_TYPE
+
+    session, _ = lifecycle_db
+    season = season_service.sync_seasons_config(now=START)[0]
+    scope_id = season_service.get_offseason_scope_id(now=START)
+    monkeypatch.setattr(
+        inventory_service,
+        "get_point_scope",
+        lambda now=None: (OFFSEASON_SCOPE_TYPE, scope_id, None),
+    )
+    inventory_service.grant_item(
+        "u1",
+        SEASON_POINT_ITEM_ID,
+        50,
+        "seed_offseason",
+        scope=(OFFSEASON_SCOPE_TYPE, scope_id),
+    )
+    balance_before_hold = inventory_service.get_quantity(
+        "u1",
+        SEASON_POINT_ITEM_ID,
+        scope=(OFFSEASON_SCOPE_TYPE, scope_id),
+    )
+    holds.reserve_points("u1", 30, "mines:offseason", "mines")
+
+    assert season_service.activate_due_seasons(now=START) == 1
+    assert holds.get_point_hold("mines:offseason").status == holds.HOLD_REFUNDED
+    assert inventory_service.get_quantity(
+        "u1",
+        SEASON_POINT_ITEM_ID,
+        scope=(OFFSEASON_SCOPE_TYPE, scope_id),
+    ) == balance_before_hold
+    session.refresh(season)
+    assert season.status == "open"

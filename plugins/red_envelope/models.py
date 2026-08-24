@@ -27,6 +27,10 @@ class RedEnvelope(Base):
     created_at = Column(Integer, nullable=False)
     expires_at = Column(Integer, nullable=False)
     is_expired = Column(Boolean, nullable=False, default=False)
+    hold_key = Column(String, nullable=True, unique=True)
+    scope_type = Column(String, nullable=False, default="")
+    scope_id = Column(String, nullable=False, default="")
+    closed_reason = Column(String, nullable=False, default="")
 
     claims = relationship(
         "ClaimRecord", back_populates="envelope", cascade="all, delete-orphan"

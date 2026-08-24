@@ -8,6 +8,7 @@ from nonebot import require
 from nonebot import get_driver
 from nonebot import on_command
 from nonebot import get_plugin_config
+from nonebot.log import logger
 from nonebot.params import CommandArg
 from nonebot.adapters.satori import Message
 from nonebot.adapters.satori import MessageEvent
@@ -27,6 +28,7 @@ from utils.content_safety import ensure_safe_text  # noqa: E402
 from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 
 from .. import monetary  # noqa: E402
+from ..inventory import point_hold_service as point_holds  # noqa: E402
 from .utils import speaker_dict  # noqa: E402
 from .utils import match_character  # noqa: E402
 from .utils import call_speaker_api  # noqa: E402
@@ -44,9 +46,54 @@ with open(Path(__file__).parent / "characters.json", "r", encoding="utf-8") as f
 vits = on_command("tts", priority=10, block=True)
 
 
+def _reserve_vits_charge(user_id: str, amount: int) -> str:
+    hold_key = f"vits:{uuid.uuid4().hex}"
+    point_holds.reserve_points(
+        user_id,
+        amount,
+        hold_key,
+        "vits",
+        operation_key=f"{hold_key}:reserve",
+    )
+    return hold_key
+
+
+def _settle_vits_charge(hold_key: str) -> bool:
+    """Consume a delivered request, or refund it if its Pt scope closed."""
+
+    try:
+        point_holds.settle_point_hold(
+            hold_key,
+            0,
+            operation_key=f"{hold_key}:settle",
+        )
+        return True
+    except point_holds.PointHoldScopeClosed:
+        point_holds.refund_point_hold(
+            hold_key,
+            operation_key=f"{hold_key}:scope_cancel",
+        )
+        return False
+    except point_holds.PointHoldClosed:
+        hold = point_holds.get_point_hold(hold_key)
+        if hold is not None and hold.status == point_holds.HOLD_REFUNDED:
+            return False
+        raise
+
+
+def _refund_vits_charge(hold_key: str) -> None:
+    point_holds.refund_point_hold(
+        hold_key,
+        operation_key=f"{hold_key}:error_refund",
+    )
+
+
 @get_driver().on_startup
 async def get_available_speakers():
     global speakers
+    refunded = point_holds.refund_abandoned_game_holds(("vits",))
+    if refunded:
+        logger.info(f"已退还 {refunded} 笔上次进程遗留的语音合成费用")
     try:
         speakers = await call_speaker_api(
             url=plugin_config.bert_vits_api_url + "/speakers"
@@ -188,8 +235,7 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
         )
 
     user_id = event.get_user_id()
-    refund_key = f"vits_refund:{uuid.uuid4().hex}"
-    monetary.cost(user_id, required_amount, "vits")
+    hold_key = _reserve_vits_charge(user_id, required_amount)
     try:
         response = await call_synthesize_api(
             text=text,
@@ -202,21 +248,23 @@ async def handle_vits(event: MessageEvent, arg: Message = CommandArg()):
             + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
+        charged = _settle_vits_charge(hold_key)
     except Exception as e:
-        monetary.add(
-            user_id,
-            required_amount,
-            "vits_error",
-            idempotency_key=refund_key,
-        )
+        _refund_vits_charge(hold_key)
         code = handle_error(e, context="vits_delivery", user_id=user_id)
         await vits.finish(
             "请求失败\n错误码：{}".format(code) + passive_generator.element,
             referrer=passive_generator.event.referrer,
         )
 
+    if charged:
+        result_text = (
+            f"本次语音合成消耗了 {required_amount} Pt，"
+            f"你还有 {monetary.get(user_id)} Pt"
+        )
+    else:
+        result_text = "赛季已切换，本次语音合成未扣除 Pt"
     await vits.finish(
-        f"本次语音合成消耗了 {required_amount} Pt，你还有 {monetary.get(user_id)} Pt"
-        + passive_generator.element,
+        result_text + passive_generator.element,
         referrer=passive_generator.event.referrer,
     )

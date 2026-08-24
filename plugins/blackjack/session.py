@@ -1,13 +1,14 @@
+import uuid
 from typing import Set
 from typing import Dict
 from typing import Optional
 from collections import defaultdict
 from dataclasses import dataclass
 
-from .. import monetary
 from .models import Hand
 from .models import Shoe
 from .models import GameResult
+from ..inventory import point_hold_service as point_holds
 from .game_service import BlackjackGameService
 
 
@@ -18,6 +19,8 @@ class GameSession:
     bet_amount: int
     player_hand: Hand
     dealer_hand: Hand
+    hold_key: str = ""
+    cancelled_reason: str = ""
     split_hand: Optional[Hand] = None
     split_bet: int = 0
     current_hand_index: int = 0
@@ -46,6 +49,7 @@ class GameManager:
         self._shoes: Dict[str, Shoe] = defaultdict(self._init_shoe)
         self._active_players: Set[str] = set()
         self._player_bets: Dict[str, int] = {}
+        self._player_hold_keys: Dict[str, str] = {}
         self._player_split_state: Dict[str, int] = defaultdict(lambda: 0)
 
     def set_renderer(self, renderer) -> None:
@@ -73,6 +77,9 @@ class GameManager:
             bet_amount=bet_amount,
             player_hand=player_hand,
             dealer_hand=dealer_hand,
+            # Renderer/unit-test callers may construct a display-only session
+            # without starting a wager. Production sessions always have one.
+            hold_key=self._player_hold_keys.get(user_id, ""),
             renderer=renderer,
         )
         self._sessions[user_id] = session
@@ -109,12 +116,49 @@ class GameManager:
         if user_id in self._active_players:
             return False
 
-        if monetary.get(user_id) < bet_amount:
+        hold_key = f"blackjack:{uuid.uuid4().hex}"
+        try:
+            point_holds.reserve_points(
+                user_id,
+                bet_amount,
+                hold_key,
+                "blackjack",
+                operation_key=f"{hold_key}:start",
+            )
+        except point_holds.PointHoldError:
             return False
-
-        monetary.cost(user_id, bet_amount, "blackjack")
         self._active_players.add(user_id)
         self._player_bets[user_id] = bet_amount
+        self._player_hold_keys[user_id] = hold_key
+        return True
+
+    def ensure_active(self, session: GameSession) -> None:
+        if session.cancelled_reason:
+            self._cleanup_player(session.user_id)
+            raise point_holds.PointHoldScopeClosed(session.cancelled_reason)
+
+    def increase_bet(self, user_id: str, amount: int, action: str) -> bool:
+        hold_key = self._player_hold_keys.get(user_id)
+        if hold_key is None:
+            return False
+        try:
+            point_holds.increase_point_hold(
+                hold_key,
+                user_id,
+                amount,
+                operation_key=f"{hold_key}:increase:{action}",
+            )
+        except point_holds.PointHoldScopeClosed:
+            session = self._sessions.get(user_id)
+            if session is not None:
+                session.cancelled_reason = "赛季已结束"
+            point_holds.refund_point_hold(
+                hold_key, operation_key=f"{hold_key}:season_cancel"
+            )
+            raise
+        except point_holds.PointHoldError:
+            return False
+        self._player_bets[user_id] = self._player_bets.get(user_id, 0) + amount
         return True
 
     def end_game(self, user_id: str, result: GameResult, winnings: int = 0) -> int:
@@ -126,10 +170,26 @@ class GameManager:
 
         bet_amount = self._player_bets.get(user_id, 0)
         is_split = self._player_split_state[user_id] > 0
+        session = self._sessions.get(user_id)
+        if session is not None:
+            self.ensure_active(session)
+        hold_key = self._player_hold_keys[user_id]
 
         total_return = bet_amount + winnings
-        if total_return > 0:
-            monetary.add(user_id, total_return, "blackjack")
+        try:
+            point_holds.settle_point_hold(
+                hold_key,
+                max(0, total_return),
+                operation_key=f"{hold_key}:settle",
+            )
+        except point_holds.PointHoldScopeClosed:
+            point_holds.refund_point_hold(
+                hold_key, operation_key=f"{hold_key}:season_cancel"
+            )
+            if session is not None:
+                session.cancelled_reason = "赛季已结束"
+            self._cleanup_player(user_id)
+            raise
 
         BlackjackGameService.record_game(
             user_id=user_id,
@@ -139,36 +199,54 @@ class GameManager:
             is_split=is_split,
         )
 
-        self._active_players.discard(user_id)
-        self._player_bets.pop(user_id, None)
-        self._player_split_state.pop(user_id, None)
-        self.remove_session(user_id)
+        self._cleanup_player(user_id)
 
         return winnings
 
     def refund_game(self, user_id: str) -> None:
-        if user_id not in self._active_players:
+        hold_key = self._player_hold_keys.get(user_id)
+        if hold_key is None:
             return
-
-        bet_amount = self._player_bets.get(user_id, 0)
-        if bet_amount > 0:
-            monetary.add(user_id, bet_amount, "blackjack")
-
-        self._active_players.discard(user_id)
-        self._player_bets.pop(user_id, None)
-        self._player_split_state.pop(user_id, None)
-        self.remove_session(user_id)
+        point_holds.refund_point_hold(
+            hold_key, operation_key=f"{hold_key}:refund"
+        )
+        self._cleanup_player(user_id)
 
     def refund_half_game(self, user_id: str) -> None:
         if user_id not in self._active_players:
             return
 
         bet_amount = self._player_bets.get(user_id, 0)
-        if bet_amount > 0:
-            monetary.add(user_id, bet_amount // 2, "blackjack")
+        hold_key = self._player_hold_keys.get(user_id)
+        if hold_key is not None:
+            point_holds.settle_point_hold(
+                hold_key,
+                bet_amount // 2,
+                operation_key=f"{hold_key}:half_refund",
+            )
+        self._cleanup_player(user_id)
 
+    def close_scope(self, scope_type: str, scope_id: str, cutoff: int) -> None:
+        del cutoff
+        for session in list(self._sessions.values()):
+            hold = point_holds.get_point_hold(session.hold_key)
+            if (
+                hold is None
+                or hold.scope_type != scope_type
+                or hold.scope_id != scope_id
+                or hold.status != point_holds.HOLD_OPEN
+            ):
+                continue
+            point_holds.refund_point_hold(
+                session.hold_key,
+                operation_key=f"{session.hold_key}:season_cancel",
+            )
+            session.cancelled_reason = "赛季已结束"
+
+    def _cleanup_player(self, user_id: str) -> None:
         self._active_players.discard(user_id)
         self._player_bets.pop(user_id, None)
+        self._player_hold_keys.pop(user_id, None)
         self._player_split_state.pop(user_id, None)
         self.remove_session(user_id)
 

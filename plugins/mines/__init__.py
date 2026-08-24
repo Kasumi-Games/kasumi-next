@@ -29,6 +29,7 @@ from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
 from .. import monetary  # noqa: E402
+from ..inventory import point_hold_service as point_holds  # noqa: E402
 from ..inventory.season_service import get_current_season_bounds  # noqa: E402
 from .models import BlockType  # noqa: E402
 from .models import GameResult  # noqa: E402
@@ -46,6 +47,7 @@ from .stats_service import get_mines_stats  # noqa: E402
 from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
 
 game_manager = GameManager()
+point_holds.register_scope_closer("mines", game_manager.close_scope, priority=20)
 
 
 async def _render_field_image(
@@ -131,7 +133,16 @@ async def _send_result_card(
 @get_driver().on_startup
 async def init_mines():
     init_database()
+    refunded = point_holds.refund_abandoned_game_holds(("mines",))
+    if refunded:
+        logger.info(f"已退还 {refunded} 笔上次进程遗留的扫雷押注")
     logger.info("扫雷插件初始化完成")
+
+
+@get_driver().on_shutdown
+async def shutdown_mines():
+    for user_id in list(game_manager._active_players):
+        game_manager.refund_game(user_id)
 
 
 def not_in_game(event: MessageEvent) -> bool:
@@ -323,6 +334,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     referrer=gens[latest_message_id].event.referrer,
                 )
 
+            game_manager.ensure_active(session)
+
             msg = str(resp.get_message()).strip()
             latest_message_id = resp.message.id
             gens[latest_message_id] = PG(resp)
@@ -457,6 +470,11 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
 
     except MatcherException:
         raise
+    except point_holds.PointHoldScopeClosed:
+        await game_start.finish(
+            Messages.SEASON_CANCELLED + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
     except Exception as e:
         game_manager.refund_game(event.get_user_id())
         code = handle_error(e, context="mines", user_id=event.get_user_id())

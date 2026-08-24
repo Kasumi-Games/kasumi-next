@@ -146,6 +146,8 @@ def activate_due_seasons(now: int | None = None) -> int:
 
     now = int(time.time()) if now is None else now
     seasons = get_due_seasons(now=now)
+    if seasons:
+        close_offseason_scope_for_opening(now=now)
     session = get_session()
     for season in seasons:
         if get_season_metadata(season).get("start_on_deployment"):
@@ -156,6 +158,16 @@ def activate_due_seasons(now: int | None = None) -> int:
     if seasons:
         session.commit()
     return len(seasons)
+
+
+def close_offseason_scope_for_opening(now: int | None = None) -> int:
+    """Close the temporary Pt wallet immediately before a due season opens."""
+
+    now = int(time.time()) if now is None else now
+    from .point_hold_service import close_point_scope
+
+    scope_id = get_offseason_scope_id(now=now)
+    return close_point_scope(OFFSEASON_SCOPE_TYPE, scope_id, cutoff=now)
 
 
 def get_due_seasons(now: int | None = None) -> list[Season]:
@@ -196,6 +208,7 @@ def get_current_season(now: int | None = None) -> Optional[Season]:
             Season.end_time > now,
             Season.opened_at > 0,
             Season.settled_at == 0,
+            Season.status == "open",
         )
         .order_by(Season.start_time.desc())
         .first()
@@ -267,6 +280,48 @@ def get_point_scope(now: int | None = None) -> tuple[str, str, Season | None]:
     return OFFSEASON_SCOPE_TYPE, get_offseason_scope_id(now=now), None
 
 
+def get_point_scope_at(timestamp: int) -> tuple[str, str, Season | None]:
+    """Resolve the wallet that was live at a historical timestamp.
+
+    Unlike :func:`get_current_season`, settled seasons remain eligible here;
+    this is used only to attach legacy business records to their original
+    wallet during migration.
+    """
+
+    # Sync using real/current lifecycle state. Passing the historical timestamp
+    # here would incorrectly rewind live season statuses to planned/open.
+    sync_seasons_config()
+    seasons = get_session().query(Season).order_by(Season.start_time.asc()).all()
+    for season in seasons:
+        effective_end = (
+            min(season.end_time, season.settled_at)
+            if season.settled_at
+            else season.end_time
+        )
+        if season.opened_at and season.start_time <= timestamp < effective_end:
+            return SEASON_SCOPE_TYPE, str(season.id), season
+
+    previous = next(
+        (
+            season
+            for season in reversed(seasons)
+            if (
+                min(season.end_time, season.settled_at)
+                if season.settled_at
+                else season.end_time
+            )
+            <= timestamp
+        ),
+        None,
+    )
+    next_season = next(
+        (season for season in seasons if season.start_time > timestamp), None
+    )
+    prev_key = previous.season_key if previous else "before-first-season"
+    next_key = next_season.season_key if next_season else "after-last-season"
+    return OFFSEASON_SCOPE_TYPE, f"{prev_key}_to_{next_key}", None
+
+
 def get_offseason_scope_id(now: int | None = None) -> str:
     now = int(time.time()) if now is None else now
     sync_seasons_config(now=now)
@@ -281,7 +336,9 @@ def get_offseason_scope_id(now: int | None = None) -> str:
         (
             season
             for season in previous_candidates
-            if season.end_time <= now or season.settled_at
+            if season.end_time <= now
+            or season.settled_at
+            or season.status == "settling"
         ),
         None,
     )
@@ -448,6 +505,9 @@ def settle_season(
     season.status = "settling"
     session.commit()
     try:
+        from .point_hold_service import close_point_scope
+
+        close_point_scope(SEASON_SCOPE_TYPE, str(season.id), cutoff=now)
         ranking_rows = _season_point_query(season.id).all()
         metadata = get_season_metadata(season)
         reward_tiers = metadata.get("reward_tiers", [])
@@ -517,9 +577,9 @@ def settle_season(
             session.query(Season).filter(Season.season_key == season_key).first()
         )
         if failed_season is not None and not failed_season.settled_at:
-            failed_season.status = (
-                "open" if now < failed_season.end_time else "ended"
-            )
+            # A partial reconciliation may already have refunded Pt. Keep the
+            # barrier closed and let the lifecycle job retry safely.
+            failed_season.status = "settling"
             session.commit()
         raise
 
