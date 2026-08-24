@@ -400,7 +400,8 @@ class StarbeatRealConfigTest(unittest.TestCase):
         seasons = season_service.sync_seasons_config()  # runs _validate_reward_items
         # 扬帆起航 was scrapped before launch; 星之鼓动 is the real season 1.
         self.assertEqual(
-            [season.season_key for season in seasons], ["2026-s01"]
+            [season.season_key for season in seasons],
+            ["2026-s01", "2026-s02"],
         )
 
     def test_scrapped_planned_season_is_pruned_from_the_database(self) -> None:
@@ -521,6 +522,109 @@ class StarbeatRealConfigTest(unittest.TestCase):
         self.assertEqual(tiers["rank_4_10"]["star_sticker"], 600)
         self.assertEqual(tiers["rank_11_50"]["star_sticker"], 300)
         self.assertEqual(tiers["rank_11_50"]["frame_starbeat_top50"], 1)
+
+    def test_mewtype_season_builds_with_the_requested_rarities_and_weights(self) -> None:
+        sync_catalog()
+        season_service.sync_seasons_config()
+        season = season_service.get_season_by_key("2026-s02")
+        self.assertIsNotNone(season)
+        self.assertEqual(season.season_number, 2)
+        self.assertEqual(season.name, "夢見∞無限")
+
+        metadata = season_service.get_season_metadata(season)
+        self.assertEqual(metadata["gacha_theme_item_id"], "theme_mewtype")
+        self.assertEqual(
+            metadata["gacha_character_frame_item_id"],
+            "frame_yumemita_character",
+        )
+        self.assertEqual(
+            {
+                character["character_id"]: character["rarity"]
+                for character in metadata["featured_characters"]
+            },
+            {
+                "nakamachi_arale": 6,
+                "fuji_miyako": 5,
+                "minetsuki_ritsu": 5,
+                "miyanaga_nonoka": 5,
+                "sengoku_yuno": 5,
+            },
+        )
+
+        banner = gacha_service._banner_from_season(season)
+        self.assertIsNotNone(banner)
+        gacha_service._validate_banner_rewards(banner)  # must not raise
+        limited_five_star = [
+            entry
+            for entry in banner.entries
+            if entry.featured and entry.rarity == 5
+        ]
+        standard_five_star = [
+            entry
+            for entry in banner.entries
+            if not entry.featured and entry.rarity == 5
+        ]
+        self.assertEqual(len(limited_five_star), 4)
+        self.assertTrue(standard_five_star)
+        self.assertEqual({entry.weight for entry in limited_five_star}, {12})
+        self.assertEqual({entry.weight for entry in standard_five_star}, {10})
+
+    def test_mewtype_art_and_placeholder_frames_exist(self) -> None:
+        from pathlib import Path
+
+        from plugins.inventory.catalog import load_catalog
+
+        root = Path(__file__).resolve().parents[1]
+        item_ids = {
+            "standing_art_yumemita_nakamachi_arale",
+            "standing_art_yumemita_fuji_miyako",
+            "standing_art_yumemita_minetsuki_ritsu",
+            "standing_art_yumemita_miyanaga_nonoka",
+            "standing_art_yumemita_sengoku_yuno",
+            "frame_yumemita_champion",
+            "frame_yumemita_podium",
+            "frame_yumemita_top10",
+            "frame_yumemita_top50",
+            "frame_yumemita_character",
+        }
+        catalog = {
+            item["item_id"]: item
+            for item in load_catalog()
+            if item["item_id"] in item_ids
+        }
+        self.assertEqual(set(catalog), item_ids)
+        for item_id, item in catalog.items():
+            art = item["metadata"]["art"]
+            self.assertTrue((root / art).is_file(), f"{item_id}: {art}")
+
+    def test_new_standard_five_star_art_starts_with_season_two(self) -> None:
+        expected = {
+            "standing_art_standard_tae_little_happiness",
+            "standing_art_standard_moca_b5_infinity",
+            "standing_art_standard_kanon_dazzling_person",
+            "standing_art_standard_eve_fitting_excitement",
+            "standing_art_standard_lisa_cherry_shadow",
+            "standing_art_standard_nanami_walk_together",
+            "standing_art_standard_rokka_light_in_darkness",
+            "standing_art_standard_soyo_too_dazzling",
+        }
+        config = season_service.load_seasons_config()
+        seasons = {season["season_key"]: season for season in config["seasons"]}
+        season_one_ids = {
+            entry["item_id"]
+            for entry in seasons["2026-s01"]["gacha_banner"]["entries"]
+        }
+        self.assertTrue(expected.isdisjoint(season_one_ids))
+
+        season_two_entries = {
+            entry["item_id"]: entry
+            for entry in seasons["2026-s02"]["gacha_banner"]["entries"]
+        }
+        self.assertTrue(expected.issubset(season_two_entries))
+        self.assertEqual(
+            {season_two_entries[item_id]["rarity"] for item_id in expected},
+            {5},
+        )
 
     def test_theme_catalog_stays_clean(self) -> None:
         from utils.theming import validate_theme_catalog

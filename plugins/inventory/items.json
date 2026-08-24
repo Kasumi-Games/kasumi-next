@@ -700,6 +700,86 @@
       }
     },
     {
+      "item_id": "frame_yumemita_champion",
+      "category": "cosmetic",
+      "name": "夢見∞無限冠军头像框",
+      "description": "第二赛季冠军限定头像框。紫青渐变光环以纸片爆发冠与∞徽记标识最高荣誉。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 250,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_yumemita_champion.png"
+      }
+    },
+    {
+      "item_id": "frame_yumemita_podium",
+      "category": "cosmetic",
+      "name": "夢見∞無限前三头像框",
+      "description": "第二赛季前三限定头像框。青、粉、紫三色领奖轨配以纸片贴纸装饰。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 251,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_yumemita_podium.png"
+      }
+    },
+    {
+      "item_id": "frame_yumemita_top10",
+      "category": "cosmetic",
+      "name": "夢見∞無限前十头像框",
+      "description": "第二赛季前十限定头像框。粉青双轨间穿插明快的节拍切片。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 252,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_yumemita_top10.png"
+      }
+    },
+    {
+      "item_id": "frame_yumemita_top50",
+      "category": "cosmetic",
+      "name": "夢見∞無限前五十头像框",
+      "description": "第二赛季前五十限定头像框。清透青色裁角环点缀粉青纸片标记。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 253,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 3
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_yumemita_top50.png"
+      }
+    },
+    {
+      "item_id": "frame_yumemita_character",
+      "category": "cosmetic",
+      "name": "梦限大六星角色头像框",
+      "description": "第二赛季六星角色附带头像框。只留下阿拉蕾舞台耳机上醒目的黑黄猫耳。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 254,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_yumemita_character.png"
+      }
+    },
+    {
       "item_id": "standing_art_yumemita_nakamachi_arale",
       "category": "cosmetic",
       "name": "仲町阿拉蕾 夢見∞無限",
