@@ -419,7 +419,7 @@ class KasumiKit(BaseKit):
             width=_as_fixed(width),
             height=Fixed(78),
             radius=39,
-            padding=Insets.only(left=14, top=10, right=22, bottom=10),
+            padding=Insets.only(left=14, top=7, right=22, bottom=7),
         )
 
     def player_card(

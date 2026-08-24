@@ -144,6 +144,16 @@ class GameIdentityTest(unittest.TestCase):
             _components(equipped, BanGDreamRingedAvatar)[0].ring_width, 0
         )
 
+    def test_equipped_frame_is_not_compressed_by_strip_padding(self) -> None:
+        strip = cards.game_identity(
+            self.kit,
+            _identity(avatar_frame=FRAME_ART),
+            width=720,
+        )
+        expected_frame_size = round(52 * 512 / 416)
+        available_height = 76 - strip.padding.top - strip.padding.bottom
+        self.assertGreaterEqual(available_height, expected_frame_size)
+
 
 class PlayerCardTest(unittest.TestCase):
     def setUp(self) -> None:

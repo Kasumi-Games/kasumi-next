@@ -94,6 +94,20 @@ class KasumiSurfaceTest(unittest.TestCase):
         )
         self.assertGreater(strip.measure(self.ctx, self.constraints).width, 0)
 
+    def test_game_identity_does_not_compress_equipped_avatar_frame(self) -> None:
+        frame = (
+            Path(__file__).resolve().parents[1]
+            / "plugins/inventory/resources/items/avatar_frames/frame_starbeat_top50.png"
+        )
+        strip = cards.game_identity(
+            self.kit,
+            PlayerIdentity(nickname="香", avatar_frame=frame),
+            width=cards.CONTENT_WIDTH,
+        )
+        expected_frame_size = round(52 * 512 / 416)
+        available_height = 78 - strip.padding.top - strip.padding.bottom
+        self.assertGreaterEqual(available_height, expected_frame_size)
+
     def test_narrow_strip_drops_chip_then_detail_never_the_name(self) -> None:
         # Authoring guide §2.4: when the strip is too narrow, the level chip
         # goes first, then the detail — the nickname never collapses to "…".

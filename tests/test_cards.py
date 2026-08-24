@@ -323,6 +323,22 @@ class TierADispatchTest(unittest.TestCase):
         )
         self.assertEqual((size.width, size.height), (56, 56))
 
+    def test_generic_game_identity_does_not_compress_equipped_avatar_frame(self) -> None:
+        from plugins.render import PlayerIdentity
+
+        frame = (
+            Path(__file__).resolve().parents[1]
+            / "plugins/inventory/resources/items/avatar_frames/frame_starbeat_top50.png"
+        )
+        strip = cards.game_identity(
+            KITS["sakura"](),
+            PlayerIdentity(nickname="香澄", avatar_frame=frame),
+            width=cards.CONTENT_WIDTH,
+        )
+        expected_frame_size = round(56 * 512 / 416)
+        available_height = 80 - strip.padding.top - strip.padding.bottom
+        self.assertGreaterEqual(available_height, expected_frame_size)
+
     def test_reveal_tiles_are_uniform_height(self) -> None:
         # Mixed note/no-note pulls must not produce ragged grid rows.
         kit = KITS["minimal"]()

@@ -430,7 +430,7 @@ class BanGDreamKit(BaseKit):
             HStack(cells, gap=gap, align="center"),
             width=Fixed(strip_width),
             height=Fixed(strip_height),
-            padding=Insets.only(left=14, top=12, right=26, bottom=12),
+            padding=Insets.only(left=14, top=6, right=26, bottom=6),
             radius=strip_height // 2,
         )
 

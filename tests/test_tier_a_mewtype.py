@@ -115,6 +115,62 @@ class MewtypeSurfaceTest(unittest.TestCase):
         )
         self.assertGreater(strip.measure(self.ctx, self.constraints).width, 0)
 
+    def test_game_identity_does_not_compress_equipped_avatar_frame(self) -> None:
+        strip = cards.game_identity(
+            self.kit,
+            PlayerIdentity(nickname="梦", avatar_frame=FRAME),
+            width=720,
+        )
+        expected_frame_size = round(54 * 512 / 416)
+        available_height = (
+            82
+            - strip.frame_offset
+            - strip.padding.top
+            - strip.padding.bottom
+        )
+        self.assertGreaterEqual(available_height, expected_frame_size)
+
+    def test_avatar_frame_is_anchored_to_the_upper_avatar_disc(self) -> None:
+        """The offset shadow must not move or shrink the framed portrait."""
+
+        for avatar_size in (54, 112):
+            with self.subTest(avatar_size=avatar_size):
+                frame_size = round(avatar_size * 512 / 416)
+                avatar = self.kit._avatar(
+                    Image.new("RGBA", (128, 128), (0, 0, 0, 255)),
+                    "梦",
+                    avatar_size,
+                    frame=Image.new("RGBA", (512, 512), (0, 0, 0, 0)),
+                )
+                canvas = Image.new(
+                    "RGBA", (frame_size, frame_size), (0, 0, 0, 0)
+                )
+                avatar.render(
+                    self.ctx,
+                    canvas,
+                    Rect(0, 0, frame_size, frame_size),
+                )
+
+                portrait = Image.new("L", canvas.size, 0)
+                source = canvas.load()
+                target = portrait.load()
+                for y in range(canvas.height):
+                    for x in range(canvas.width):
+                        red, green, blue, alpha = source[x, y]
+                        if alpha and red < 8 and green < 8 and blue < 8:
+                            target[x, y] = 255
+
+                bbox = portrait.getbbox()
+                self.assertIsNotNone(bbox)
+                assert bbox is not None
+                portrait_center = (
+                    (bbox[0] + bbox[2] - 1) / 2,
+                    (bbox[1] + bbox[3] - 1) / 2,
+                )
+                frame_center = ((frame_size - 1) / 2, (frame_size - 1) / 2)
+                self.assertEqual(portrait_center, frame_center)
+                self.assertEqual(bbox[2] - bbox[0], avatar_size - 10)
+
     def test_player_card_handles_every_cosmetic_slot(self) -> None:
         identity = PlayerIdentity(nickname="梦限大", level=42, avatar=AVATAR)
         card = cards.player_card(

@@ -858,7 +858,7 @@ def _generic_game_identity(
         HStack(cells, gap=16, align="center"),
         width=Fixed(width),
         height=Fixed(80),
-        padding=Insets.only(left=16, top=12, right=20, bottom=12),
+        padding=Insets.only(left=16, top=5, right=20, bottom=5),
     )
 
 

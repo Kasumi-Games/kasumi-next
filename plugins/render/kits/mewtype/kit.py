@@ -403,7 +403,7 @@ class MewtypeKit(BaseKit):
             HStack(cells, gap=gap, align="center"),
             width=_fixed(width),
             height=Fixed(82),
-            padding=Insets.only(left=14, top=10, right=22, bottom=10),
+            padding=Insets.only(left=14, top=6, right=22, bottom=6),
             frame_color=self.primary,
         )
 
@@ -611,23 +611,39 @@ class MewtypeKit(BaseKit):
                 radius=max(1, size // 2 - 5),
             )
 
+        shadow_offset = 4
+        # MewtypePanel normally keeps its offset shadow inside its requested
+        # bounds, making the upper face ``shadow_offset`` pixels smaller and
+        # shifting its centre up-left. A cosmetic frame, however, is defined
+        # against the avatar disc itself (the Ø416 opening in a 512 canvas),
+        # not against the combined face-and-shadow bounds. Give the panel room
+        # for the shadow, then anchor its upper face to the frame centre.
+        panel_size = size if frame is None else size + shadow_offset
         disc: Component = MewtypePanel(
             face,
-            width=Fixed(size),
-            height=Fixed(size),
+            width=Fixed(panel_size),
+            height=Fixed(panel_size),
             padding=5,
             fill=self.paper_fill,
             radius=size // 2,
             frame_color=self.accent,
-            frame_offset=4,
+            frame_offset=shadow_offset,
         )
         if frame is None:
             return disc
         frame_size = round(size * 512 / 416)
+        disc_inset = (frame_size - size) // 2
         return Frame(
             Overlay(
                 [
-                    Frame(disc, align_x="center", align_y="center"),
+                    Frame(
+                        disc,
+                        width=Fixed(frame_size),
+                        height=Fixed(frame_size),
+                        padding=Insets.only(left=disc_inset, top=disc_inset),
+                        align_x="start",
+                        align_y="start",
+                    ),
                     self.image(
                         frame,
                         width=Fixed(frame_size),
