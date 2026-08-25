@@ -29,9 +29,6 @@ from utils.passive_generator import PassiveGenerator as PG  # noqa: E402
 from utils.passive_generator import generators as gens  # noqa: E402
 
 from .. import monetary  # noqa: E402
-from ..inventory import point_hold_service as point_holds  # noqa: E402
-from ..inventory.season_service import get_current_season_bounds  # noqa: E402
-from .models import BlockType  # noqa: E402
 from .models import GameResult  # noqa: E402
 from .render import MinesResultData  # noqa: E402
 from .render import render  # noqa: E402
@@ -39,12 +36,15 @@ from .render import stats_page  # noqa: E402
 from .render import result_page  # noqa: E402
 from .session import GameManager  # noqa: E402
 from .session import GameSession  # noqa: E402
+from .session import parse_reveal_indices  # noqa: E402
 from .database import init_database  # noqa: E402
 from .messages import Messages  # noqa: E402
+from ..inventory import point_hold_service as point_holds  # noqa: E402
 from ..daily_task import check_progress  # noqa: E402
 from ..daily_task import get_today_task  # noqa: E402
 from .stats_service import get_mines_stats  # noqa: E402
 from ..monetary.level_service import LEVEL_UP_STICKERS  # noqa: E402
+from ..inventory.season_service import get_current_season_bounds  # noqa: E402
 
 game_manager = GameManager()
 point_holds.register_scope_closer("mines", game_manager.close_scope, priority=20)
@@ -376,30 +376,23 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 )
                 await game_start.finish(referrer=event.referrer)
 
-            if not msg.isdigit():
+            indices = parse_reveal_indices(msg, session.field.total_cells())
+            if indices is None:
                 await game_start.send(
                     Messages.INPUT_INVALID + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
                 )
                 continue
 
-            index = int(msg) - 1
-            if index < 0 or index >= 25:
-                await game_start.send(
-                    Messages.INPUT_INVALID + gens[latest_message_id].element,
-                    referrer=gens[latest_message_id].event.referrer,
-                )
-                continue
-
-            if index in session.revealed_indices:
+            reveal = session.reveal_blocks(indices)
+            if not reveal.opened_indices:
                 await game_start.send(
                     Messages.ALREADY_REVEALED + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
                 )
                 continue
 
-            block = session.field.reveal_block(index)
-            if block == BlockType.MINE:
+            if reveal.hit_mine:
                 session.field.reveal_all_mines()
                 game_manager.end_game(event.get_user_id(), GameResult.LOSE, payout=0)
                 await game_start.send(
@@ -421,10 +414,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 )
                 await game_start.finish(referrer=event.referrer)
 
-            session.revealed_indices.add(index)
-            session.update_multiplier()
-
-            if session.revealed_count >= session.safe_cells:
+            if reveal.won:
                 payout = session.get_payout()
                 win_multiplier = session.multiplier
                 game_manager.end_game(

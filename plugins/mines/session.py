@@ -3,15 +3,40 @@ import uuid
 from math import comb
 from typing import Set
 from typing import Dict
+from typing import Tuple
+from typing import Iterable
 from typing import Optional
 from dataclasses import field as dataclass_field
 from dataclasses import dataclass
 
 from .models import Field
+from .models import BlockType
 from .models import MinesGame
 from .models import GameResult
 from .database import get_session
 from ..inventory import point_hold_service as point_holds
+
+
+@dataclass(frozen=True)
+class RevealBatchResult:
+    """Result of revealing one or more cells in input order."""
+
+    opened_indices: Tuple[int, ...]
+    already_revealed_indices: Tuple[int, ...]
+    hit_mine: bool
+    won: bool
+
+
+def parse_reveal_indices(message: str, total_cells: int) -> Optional[Tuple[int, ...]]:
+    """Parse a whitespace-separated, one-based list of board positions."""
+    parts = message.split()
+    if not parts or any(not part.isdecimal() for part in parts):
+        return None
+
+    indices = tuple(int(part) - 1 for part in parts)
+    if any(index < 0 or index >= total_cells for index in indices):
+        return None
+    return indices
 
 
 @dataclass
@@ -48,6 +73,45 @@ class GameSession:
 
     def get_payout(self) -> int:
         return int(self.bet_amount * self.multiplier)
+
+    def reveal_blocks(self, indices: Iterable[int]) -> RevealBatchResult:
+        """Reveal cells in order, stopping as soon as the round ends.
+
+        Previously revealed cells are skipped so a mixed batch can still open
+        its new cells. A mine and the final safe cell both end processing;
+        positions later in the same message are left untouched.
+        """
+        opened_indices = []
+        already_revealed_indices = []
+        hit_mine = False
+        won = False
+        total_cells = self.field.total_cells()
+
+        for index in indices:
+            if index < 0 or index >= total_cells:
+                raise ValueError(f"cell index out of range: {index}")
+            if index in self.revealed_indices:
+                already_revealed_indices.append(index)
+                continue
+
+            block = self.field.reveal_block(index)
+            opened_indices.append(index)
+            if block == BlockType.MINE:
+                hit_mine = True
+                break
+
+            self.revealed_indices.add(index)
+            self.update_multiplier()
+            if self.revealed_count >= self.safe_cells:
+                won = True
+                break
+
+        return RevealBatchResult(
+            opened_indices=tuple(opened_indices),
+            already_revealed_indices=tuple(already_revealed_indices),
+            hit_mine=hit_mine,
+            won=won,
+        )
 
 
 class GameManager:
