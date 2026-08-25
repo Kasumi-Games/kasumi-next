@@ -107,7 +107,7 @@ def inbox_page(
         return card_page(
             kit,
             title="邮箱",
-            subtitle=None,
+            subtitle="收件箱",
             article_title="收件箱",
             body=panel_section(
                 kit,

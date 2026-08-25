@@ -194,6 +194,19 @@ def test_mailbox_cards_render_in_multiple_kits(kit_cls):
     assert render_claim_all(ClaimOutcome(total_mails=3), kit).size[0] == 864
 
 
+def test_empty_bangdream_inbox_keeps_the_title_pill():
+    from plugins.mailbox.render.inbox import inbox_page
+    from plugins.render.kits.bangdream import BanGDreamKit
+    from plugins.render.kits.bangdream.components import BanGDreamTitlePill
+
+    page = inbox_page([], BanGDreamKit())
+    header = page.child.children[0]
+
+    assert isinstance(header.child, BanGDreamTitlePill)
+    assert header.child.title == "邮箱"
+    assert header.child.subtitle == "收件箱"
+
+
 def test_inbox_spells_out_status_and_uses_one_index_shape():
     from plugins.mailbox.render.inbox import inbox_page
     from plugins.mailbox.render.inbox import _index_cell
