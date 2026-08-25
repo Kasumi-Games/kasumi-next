@@ -237,6 +237,45 @@ def test_artless_mewtype_showcase_grows_to_keep_bundle_inside_panel():
     assert size.height > 280
 
 
+def test_mewtype_showcase_keeps_the_current_season_bundle_unabridged():
+    from dataclasses import replace
+
+    from plugins.gacha.render import banner as banner_module
+    from plugins.render.core import Constraints
+    from plugins.render.core import RenderContext
+
+    frame_art = (
+        ROOT
+        / "plugins/inventory/resources/items/avatar_frames"
+        / "frame_yumemita_character.png"
+    )
+    offer = banner_module._bundle_offer(
+        MewtypeKit(),
+        ("梦限大六星角色头像框", "梦限大 Mewtype 主题"),
+        frame_art,
+    )
+    copy = offer.children[0].child
+    copy_width = (
+        banner_module._HERO_COPY_WIDTH
+        - banner_module._FRAME_PREVIEW
+        - 12  # ``_bundle_offer`` HStack gap.
+    )
+    offer_size = offer.measure(
+        RenderContext(),
+        Constraints(max_width=banner_module._HERO_COPY_WIDTH, max_height=448),
+    )
+
+    natural_lines, _ = replace(copy, max_lines=None)._layout_text(
+        Constraints(max_width=copy_width)
+    )
+    visible_lines, _ = copy._layout_text(
+        Constraints(max_width=copy_width, max_height=offer_size.height)
+    )
+
+    assert len(natural_lines) == 3
+    assert visible_lines == natural_lines
+
+
 def test_banner_render_is_deterministic():
     kit = KasumiKit()
     first = render_banner(_showcase_data(), kit)

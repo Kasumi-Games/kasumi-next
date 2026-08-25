@@ -27,8 +27,8 @@ from dataclasses import dataclass
 from PIL import Image
 
 from utils.cards import BODY_SIZE
-from utils.cards import CONTENT_WIDTH
 from utils.cards import LABEL_SIZE
+from utils.cards import CONTENT_WIDTH
 from utils.cards import badge
 from utils.cards import meter
 from utils.cards import stat_row
@@ -42,8 +42,8 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 from ..service import GachaEntry
 from ..service import GachaBanner
@@ -54,6 +54,8 @@ from ..service import current_rates
 _HERO_HEIGHT = 500
 _HERO_COPY_WIDTH = 340
 _FRAME_PREVIEW = 82
+_BUNDLE_COPY_LINES = 3
+_BUNDLE_COPY_HEIGHT = round(BODY_SIZE * 1.35) * _BUNDLE_COPY_LINES
 _DETAIL_GAP = 16
 _RATE_PANEL_WIDTH = 282
 _STATE_PANEL_WIDTH = CONTENT_WIDTH - _RATE_PANEL_WIDTH - _DETAIL_GAP
@@ -148,14 +150,10 @@ def banner_page_data(
     return BannerPageData(
         banner_name=banner.name,
         season_name=banner.season_name,
-        featured_name=(
-            names.get(featured.item_id, featured.name) if featured else ""
-        ),
+        featured_name=(names.get(featured.item_id, featured.name) if featured else ""),
         featured_rarity=featured.rarity if featured else 0,
         featured_art=art.get(featured.item_id) if featured else None,
-        bundle_names=tuple(
-            names.get(item_id, item_id) for item_id in bundle_item_ids
-        ),
+        bundle_names=tuple(names.get(item_id, item_id) for item_id in bundle_item_ids),
         rates=tuple(sorted(rates.items(), reverse=True)),
         single_cost=banner.single_cost,
         ten_cost=banner.ten_cost,
@@ -274,9 +272,7 @@ def _showcase(kit: BaseKit, data: BannerPageData) -> Component | None:
 
     copy = Frame(
         VStack(copy_rows, gap=14, align="start"),
-        width=Fixed(
-            _HERO_COPY_WIDTH if has_art else CONTENT_WIDTH
-        ),
+        width=Fixed(_HERO_COPY_WIDTH if has_art else CONTENT_WIDTH),
         height=Fill() if has_art else None,
         align_x="stretch",
         align_y="stretch",
@@ -317,14 +313,20 @@ def _bundle_offer(
     copy = kit.text(
         " · ".join(bundle_names),
         font_size=BODY_SIZE,
-        max_lines=3,
+        max_lines=_BUNDLE_COPY_LINES,
         overflow="ellipsis",
     )
     if frame_art is None:
         return copy
     return HStack(
         [
-            Frame(copy, width=Fill(), align_x="start", align_y="center"),
+            Frame(
+                copy,
+                width=Fill(),
+                height=Fixed(_BUNDLE_COPY_HEIGHT),
+                align_x="start",
+                align_y="center",
+            ),
             _frame_preview(kit, frame_art),
         ],
         gap=12,
@@ -457,9 +459,7 @@ def _rate_row(kit: BaseKit, rarity: int, rate: float) -> Component:
     return HStack(
         [
             Frame(
-                kit.text(
-                    f"★{rarity}", font_size=BODY_SIZE, wrap=False, max_lines=1
-                ),
+                kit.text(f"★{rarity}", font_size=BODY_SIZE, wrap=False, max_lines=1),
                 width=Fill(),
                 align_x="start",
                 align_y="center",
