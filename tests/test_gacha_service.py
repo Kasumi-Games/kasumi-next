@@ -569,6 +569,22 @@ class StarbeatRealConfigTest(unittest.TestCase):
         self.assertEqual({entry.weight for entry in limited_five_star}, {12})
         self.assertEqual({entry.weight for entry in standard_five_star}, {10})
 
+    def test_mewtype_theme_is_a_top_ten_reward(self) -> None:
+        config = season_service.load_seasons_config()
+        mewtype = next(
+            entry
+            for entry in config["seasons"]
+            if entry["season_key"] == "2026-s02"
+        )
+        tier_items = {
+            tier["tier_key"]: {item["item_id"] for item in tier["items"]}
+            for tier in mewtype["reward_tiers"]
+        }
+
+        for tier_key in ("rank_1", "rank_2_3", "rank_4_10"):
+            self.assertIn("theme_mewtype", tier_items[tier_key])
+        self.assertNotIn("theme_mewtype", tier_items["rank_11_50"])
+
     def test_mewtype_art_and_placeholder_frames_exist(self) -> None:
         from pathlib import Path
 
