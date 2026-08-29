@@ -322,7 +322,7 @@
         },
         {
           "character_id": "miyanaga_nonoka",
-          "name": "宫永乃乃花",
+          "name": "宫永野乃花",
           "standing_art_item_id": "standing_art_yumemita_miyanaga_nonoka",
           "rarity": 5
         },
@@ -388,7 +388,7 @@
           {
             "item_id": "standing_art_yumemita_miyanaga_nonoka",
             "character_id": "miyanaga_nonoka",
-            "name": "宫永乃乃花 夢見∞無限",
+            "name": "宫永野乃花 夢見∞無限",
             "rarity": 5,
             "weight": 12,
             "featured": true
