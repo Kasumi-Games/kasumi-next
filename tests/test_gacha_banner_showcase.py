@@ -49,6 +49,8 @@ from plugins.inventory.models import Base as InventoryBase
 from plugins.inventory.models import Item
 from plugins.inventory.models import CosmeticItem
 from plugins.inventory.catalog import sync_catalog
+from plugins.gacha.render.banner import _STATE_CONTENT_WIDTH
+from plugins.gacha.render.banner import _pity_block
 
 ROOT = Path(__file__).resolve().parents[1]
 KASUMI_ART = (
@@ -157,6 +159,21 @@ def test_rates_are_rarity_descending_and_pity_adjusted():
     # ``current_rates`` invents 0.0 entries for rarities 2/1 near hard pity;
     # the card must not show rarities the banner never drops.
     assert [rarity for rarity, _ in capped.rates] == [6, 5, 4, 3]
+
+
+def test_pity_meter_fill_uses_the_visible_state_panel_width():
+    data = _showcase_data(pity_count=50, hard_pity=90)
+    pity_block = _pity_block(MewtypeKit(), data)
+    track = pity_block.children[1]
+    nominal_track_width = track.width.value
+    nominal_fill_width = track.child.child.width.value
+    visible_track_width = min(nominal_track_width, _STATE_CONTENT_WIDTH)
+    visible_fill_width = min(nominal_fill_width, visible_track_width)
+
+    assert visible_fill_width / visible_track_width == pytest.approx(
+        50 / 90,
+        abs=0.01,
+    )
 
 
 def test_bundle_names_fall_back_to_raw_item_ids():

@@ -59,6 +59,8 @@ _BUNDLE_COPY_HEIGHT = round(BODY_SIZE * 1.35) * _BUNDLE_COPY_LINES
 _DETAIL_GAP = 16
 _RATE_PANEL_WIDTH = 282
 _STATE_PANEL_WIDTH = CONTENT_WIDTH - _RATE_PANEL_WIDTH - _DETAIL_GAP
+_STATE_PANEL_PADDING = 24
+_STATE_CONTENT_WIDTH = _STATE_PANEL_WIDTH - _STATE_PANEL_PADDING * 2
 _DETAIL_HEIGHT = 320
 
 
@@ -408,7 +410,7 @@ def _details_deck(kit: BaseKit, data: BannerPageData) -> Component:
         ),
         width=Fixed(_STATE_PANEL_WIDTH),
         height=Fixed(_DETAIL_HEIGHT),
-        padding=Insets.all(24),
+        padding=Insets.all(_STATE_PANEL_PADDING),
         radius=22,
     )
     return HStack([rates, state], gap=_DETAIL_GAP, align="stretch")
@@ -491,6 +493,7 @@ def _pity_block(kit: BaseKit, data: BannerPageData) -> Component:
                 kit,
                 value=data.pity_count,
                 total=data.hard_pity,
+                width=_STATE_CONTENT_WIDTH,
                 label="",
             ),
         ],
