@@ -608,10 +608,14 @@ def grant_featured_character_reward(
     from .service import grant_item
     from .service import get_quantity
 
-    featured = metadata.get("featured_characters", [])
+    featured_six_stars = [
+        entry
+        for entry in metadata.get("featured_characters", [])
+        if int(entry.get("rarity", 0)) == 6
+    ]
     owned_before = any(
         get_quantity(user_id, _standing_art_item_id(entry)) > 0
-        for entry in featured
+        for entry in featured_six_stars
         if _standing_art_item_id(entry)
     )
     results = [
@@ -625,7 +629,7 @@ def grant_featured_character_reward(
             idempotency_key=idempotency_key,
         )
     ]
-    if owned_before:
+    if int(character.get("rarity", 0)) != 6 or owned_before:
         return results
 
     frame_item_id = metadata.get("gacha_character_frame_item_id")

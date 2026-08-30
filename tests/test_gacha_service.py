@@ -569,6 +569,52 @@ class StarbeatRealConfigTest(unittest.TestCase):
         self.assertEqual({entry.weight for entry in limited_five_star}, {12})
         self.assertEqual({entry.weight for entry in standard_five_star}, {10})
 
+    def test_mewtype_limited_five_star_does_not_block_six_star_bundle(self) -> None:
+        sync_catalog()
+        season_service.sync_seasons_config()
+        grant_item(
+            "u1",
+            "standing_art_yumemita_fuji_miyako",
+            1,
+            "season_gacha_pull",
+        )
+
+        results = season_service.grant_featured_character_reward(
+            "u1",
+            "2026-s02",
+            "nakamachi_arale",
+            idempotency_key="test:mewtype:first-six-star",
+        )
+
+        self.assertEqual(
+            [result.item_id for result in results],
+            [
+                "standing_art_yumemita_nakamachi_arale",
+                "frame_yumemita_character",
+                "theme_mewtype",
+            ],
+        )
+        self.assertEqual(get_quantity("u1", "frame_yumemita_character"), 1)
+        self.assertEqual(get_quantity("u1", "theme_mewtype"), 1)
+
+    def test_mewtype_five_star_reward_does_not_grant_six_star_bundle(self) -> None:
+        sync_catalog()
+        season_service.sync_seasons_config()
+
+        results = season_service.grant_featured_character_reward(
+            "u1",
+            "2026-s02",
+            "fuji_miyako",
+            idempotency_key="test:mewtype:five-star",
+        )
+
+        self.assertEqual(
+            [result.item_id for result in results],
+            ["standing_art_yumemita_fuji_miyako"],
+        )
+        self.assertEqual(get_quantity("u1", "frame_yumemita_character"), 0)
+        self.assertEqual(get_quantity("u1", "theme_mewtype"), 0)
+
     def test_mewtype_theme_is_a_top_ten_reward(self) -> None:
         config = season_service.load_seasons_config()
         mewtype = next(
