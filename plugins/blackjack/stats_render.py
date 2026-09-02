@@ -16,6 +16,7 @@ a database and only the raster is offloaded via
 """
 
 from typing import TYPE_CHECKING
+from typing import Sequence
 from dataclasses import dataclass
 
 from PIL import Image
@@ -28,8 +29,11 @@ from utils.cards import stat_row
 from utils.cards import card_page
 from utils.cards import game_identity
 from utils.cards import panel_section
+from plugins.render import Fill
 from plugins.render import Fixed
 from plugins.render import Frame
+from plugins.render import HStack
+from plugins.render import Spacer
 from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
@@ -39,6 +43,20 @@ from plugins.render.kits.bangdream import BanGDreamKit
 
 if TYPE_CHECKING:
     from .stats_service import BlackjackStats
+    from .stats_service import BlackjackGameRecord
+
+
+# Keep this in step with the compact recent-form strip on ``/探险统计``.
+# Thirty 20px cells plus their gaps fit inside the shared 720px panel body.
+_FORM_SLOTS = 30
+_FORM_CELL_WIDTH = 20
+_FORM_CELL_GAP = 4
+_FORM_BAR_HEIGHT = 22
+
+# Outcome colours are semantic rather than theme accents. Their placement
+# above/below the rule keeps the strip readable in monochrome themes too.
+WIN_COLOR = (54, 179, 111, 255)
+LOSS_COLOR = (229, 75, 83, 255)
 
 
 @dataclass(frozen=True)
@@ -62,6 +80,7 @@ class StatsCardData:
         avg_loss: Average amount lost per losing hand.
         biggest_win: Largest single-hand win.
         biggest_loss: Largest single-hand loss, as a positive number.
+        recent_games: Up to 30 games, newest first, for the recent-form strip.
     """
 
     identity: PlayerIdentity
@@ -80,6 +99,7 @@ class StatsCardData:
     avg_loss: float
     biggest_win: int
     biggest_loss: int
+    recent_games: Sequence["BlackjackGameRecord"]
 
 
 def stats_card_data(
@@ -112,6 +132,7 @@ def stats_card_data(
         avg_loss=stats.avg_loss,
         biggest_win=stats.biggest_win,
         biggest_loss=stats.biggest_loss,
+        recent_games=stats.recent_games,
     )
 
 
@@ -141,21 +162,22 @@ def stats_page(data: StatsCardData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+    sections: list[Component] = [
+        game_identity(kit, data.identity, width=CONTENT_WIDTH),
+        _record_panel(kit, data),
+        _ledger_panel(kit, data),
+    ]
+    form = _recent_form_panel(kit, data)
+    if form is not None:
+        sections.append(form)
+
     return card_page(
         kit,
         title="黑香澄",
         subtitle=f"战绩 · {data.total_games} 局",
         article_title="STATISTICS",
         show_subtitle=False,
-        body=VStack(
-            [
-                game_identity(kit, data.identity, width=CONTENT_WIDTH),
-                _record_panel(kit, data),
-                _ledger_panel(kit, data),
-            ],
-            gap=24,
-            align="stretch",
-        ),
+        body=VStack(sections, gap=24, align="stretch"),
         footer=_footer(kit),
     )
 
@@ -203,6 +225,54 @@ def _ledger_panel(kit: BaseKit, data: StatsCardData) -> Component:
         stat_row(kit, "单局最高输掉", f"{data.biggest_loss} Pt"),
     ]
     return panel_section(kit, VStack(rows, gap=16, align="stretch"))
+
+
+def _recent_form_panel(kit: BaseKit, data: StatsCardData) -> Component | None:
+    """Show the latest hands as win-up/loss-down bars.
+
+    The service returns newest first, so reverse it for chronological reading
+    and keep the newest hand at the right edge. Pushes leave an empty slot,
+    preserving their place in the sequence without looking like a win/loss.
+    """
+
+    records = list(reversed(data.recent_games))[-_FORM_SLOTS:]
+    if not records:
+        return None
+
+    def bar(fill_color) -> Component:
+        return kit.panel(
+            None,
+            width=Fixed(_FORM_CELL_WIDTH),
+            height=Fixed(_FORM_BAR_HEIGHT),
+            fill=fill_color,
+            radius=6,
+        )
+
+    def slot() -> Component:
+        return Spacer(width=Fixed(_FORM_CELL_WIDTH), height=Fixed(_FORM_BAR_HEIGHT))
+
+    top = [bar(WIN_COLOR) if record.amount > 0 else slot() for record in records]
+    bottom = [
+        bar(LOSS_COLOR) if record.amount < 0 else slot() for record in records
+    ]
+
+    strip = VStack(
+        [
+            HStack(top, gap=_FORM_CELL_GAP, align="end"),
+            kit.separator(length=Fill()),
+            HStack(bottom, gap=_FORM_CELL_GAP, align="start"),
+        ],
+        gap=6,
+        align="stretch",
+    )
+    caption = kit.text(
+        f"最近 {len(records)} 局 · 上为胜，下为负，空为平 · 右端最新",
+        font_size=LABEL_SIZE,
+        color=kit.muted_text_color,
+        wrap=False,
+        max_lines=1,
+    )
+    return panel_section(kit, VStack([strip, caption], gap=14, align="start"))
 
 
 def _footer(kit: BaseKit) -> Component:

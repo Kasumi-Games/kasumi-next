@@ -50,6 +50,20 @@ def _identity() -> PlayerIdentity:
     return PlayerIdentity(nickname="Kasumi", level=12)
 
 
+def _records(amounts):
+    from plugins.blackjack.stats_service import BlackjackGameRecord
+
+    return [
+        BlackjackGameRecord(
+            time=1_700_000_000 - index * 3600,
+            amount=amount,
+            is_win=amount > 0,
+            bet_amount=200,
+        )
+        for index, amount in enumerate(amounts)
+    ]
+
+
 def test_stats_card_data_maps_every_service_field():
     from plugins.blackjack.stats_render import stats_card_data
 
@@ -72,6 +86,7 @@ def test_stats_card_data_maps_every_service_field():
     assert data.avg_loss == pytest.approx(263.2)
     assert data.biggest_win == 1200
     assert data.biggest_loss == 1000
+    assert data.recent_games == []
 
 
 @pytest.mark.parametrize(
@@ -97,6 +112,37 @@ def test_stats_card_renders_with_positive_profit_and_no_level():
     image = render_stats(data, MinimalKit())
 
     assert image.size[0] == CARD_WIDTH
+
+
+def test_stats_card_renders_recent_win_loss_form():
+    from plugins.blackjack.stats_render import render_stats
+    from plugins.blackjack.stats_render import stats_card_data
+
+    kit = MinimalKit()
+    with_form = render_stats(
+        stats_card_data(_stats(recent_games=_records([120, -200, 0, 340])), _identity()),
+        kit,
+    )
+    without_form = render_stats(stats_card_data(_stats(), _identity()), kit)
+
+    assert with_form.height > without_form.height
+
+
+def test_stats_form_caps_at_thirty_slots_and_uses_mines_outcome_colors():
+    from plugins.blackjack import stats_render
+    from plugins.mines.render import stats as mines_stats_render
+
+    records = _records([100] * 45)
+    assert len(list(reversed(records))[-stats_render._FORM_SLOTS :]) == 30
+    strip_width = (
+        stats_render._FORM_SLOTS * stats_render._FORM_CELL_WIDTH
+        + (stats_render._FORM_SLOTS - 1) * stats_render._FORM_CELL_GAP
+    )
+    from utils.cards import INNER_WIDTH
+
+    assert strip_width <= INNER_WIDTH
+    assert stats_render.WIN_COLOR == mines_stats_render.WIN_COLOR
+    assert stats_render.LOSS_COLOR == mines_stats_render.LOSS_COLOR
 
 
 def test_get_user_stats_counts_blackjacks(sqlite_session):
