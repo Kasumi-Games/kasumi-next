@@ -3,6 +3,7 @@ class Messages:
     BET_TIMEOUT = "等太久啦，Kasumi 先回地下室继续找Pt了"
     BET_INVALID = "输入的金额不是数字，请重新输入"
     BET_TOO_SMALL = "下注Pt不能少于 1 个哦"
+    BET_TOO_LARGE = "单局下注不能超过 {max_payout} Pt"
     BET_NOT_ENOUGH = "你只有 {amount} 个Pt，不够下注哦~"
     ALREADY_IN_GAME = "你已经在地下室寻宝了，先把这局玩完吧~"
 
@@ -62,5 +63,6 @@ class Messages:
         "奖励规则：\n"
         "• 翻开的安全箱子越多，倍率越高\n"
         "• 巡逻的 Arisa 数量越多，倍率越高\n"
+        "• 单局结算最高 1,000,000,000 Pt，达到后倍率不再增长\n"
         "• 若翻到 Arisa，不仅不仅没收本次投入，还会被赶出去哦！"
     )

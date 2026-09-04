@@ -44,6 +44,7 @@ class MinesResultData:
         safe_cells: Total safe cells on the board.
         mines: Number of Arisas hiding on the board.
         balance: Balance after settlement.
+        payout_capped: Whether the round reached the payout ceiling.
         task_name: Daily task completed by this round, when one fired.
         task_reward: Star stickers that task granted.
         old_level: Level before this round's XP, when the round leveled the
@@ -61,6 +62,7 @@ class MinesResultData:
     safe_cells: int
     mines: int
     balance: int
+    payout_capped: bool = False
     task_name: str | None = None
     task_reward: int | None = None
     old_level: int | None = None
@@ -176,6 +178,8 @@ def _ledger_panel(kit: BaseKit, data: MinesResultData) -> Component:
     ]
     if data.positive:
         rows.append(cards.stat_row(kit, "结算倍率", f"x{data.multiplier:.2f}"))
+    if data.payout_capped:
+        rows.append(cards.stat_row(kit, "派奖上限", f"{data.payout:,} Pt（已达）"))
     rows.append(
         cards.stat_row(kit, "已翻开", f"{data.revealed_count}/{data.safe_cells}")
     )

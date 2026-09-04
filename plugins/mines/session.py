@@ -19,6 +19,7 @@ from ..inventory import point_hold_service as point_holds
 DEFAULT_BOARD_SIZE = 5
 MIN_BOARD_SIZE = 2
 MAX_BOARD_SIZE = 10
+MAX_PAYOUT = 1_000_000_000
 
 
 def parse_start_args(
@@ -95,6 +96,21 @@ class GameSession:
     def safe_cells(self) -> int:
         return self.field.safe_cells()
 
+    @property
+    def multiplier_cap(self) -> float:
+        """Highest displayed multiplier that still pays at most the cap."""
+
+        return MAX_PAYOUT / self.bet_amount
+
+    @property
+    def is_payout_capped(self) -> bool:
+        """Whether this round has reached the configured payout ceiling."""
+
+        return (
+            self.revealed_count > 0
+            and self.multiplier >= self.multiplier_cap
+        )
+
     def update_multiplier(self) -> None:
         if self.revealed_count <= 0:
             self.multiplier = 1.0
@@ -104,9 +120,12 @@ class GameSession:
         prob = comb(total_gems, self.revealed_count) / comb(
             total_tiles, self.revealed_count
         )
-        self.multiplier = (1 / prob) * (1 - self.house_edge)
+        uncapped_multiplier = (1 / prob) * (1 - self.house_edge)
+        self.multiplier = min(uncapped_multiplier, self.multiplier_cap)
 
     def get_payout(self) -> int:
+        if self.is_payout_capped:
+            return MAX_PAYOUT
         return int(self.bet_amount * self.multiplier)
 
     def reveal_blocks(self, indices: Iterable[int]) -> RevealBatchResult:
@@ -159,7 +178,7 @@ class GameManager:
         return user_id in self._active_players
 
     def start_game(self, user_id: str, bet_amount: int) -> bool:
-        if user_id in self._active_players:
+        if bet_amount > MAX_PAYOUT or user_id in self._active_players:
             return False
         hold_key = f"mines:{uuid.uuid4().hex}"
         try:
@@ -184,6 +203,8 @@ class GameManager:
         mines: int,
         board_size: int = DEFAULT_BOARD_SIZE,
     ) -> GameSession:
+        if bet_amount <= 0 or bet_amount > MAX_PAYOUT:
+            raise ValueError(f"bet amount must be between 1 and {MAX_PAYOUT}")
         if not MIN_BOARD_SIZE <= board_size <= MAX_BOARD_SIZE:
             raise ValueError(f"unsupported board size: {board_size}")
         if mines <= 0 or mines >= board_size * board_size:

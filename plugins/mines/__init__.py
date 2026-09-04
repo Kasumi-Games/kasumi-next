@@ -34,6 +34,7 @@ from .render import MinesResultData  # noqa: E402
 from .render import render  # noqa: E402
 from .render import stats_page  # noqa: E402
 from .render import result_page  # noqa: E402
+from .session import MAX_PAYOUT  # noqa: E402
 from .session import MAX_BOARD_SIZE  # noqa: E402
 from .session import MIN_BOARD_SIZE  # noqa: E402
 from .session import GameManager  # noqa: E402
@@ -120,6 +121,7 @@ async def _send_result_card(
         safe_cells=session.safe_cells,
         mines=session.mines,
         balance=monetary.get(user_id),
+        payout_capped=session.is_payout_capped,
         task_name=task_name,
         task_reward=task_reward,
         old_level=old_level,
@@ -169,9 +171,10 @@ game_stats = on_command(
 
 def _format_status(session) -> str:
     payout = session.get_payout()
+    cap_status = "（已达派奖上限）" if session.is_payout_capped else ""
     return (
         f"已翻开 {session.revealed_count}/{session.safe_cells} | "
-        f"当前倍率 {session.multiplier:.4f}x | 可结算 {payout} 个Pt"
+        f"当前倍率 {session.multiplier:.4f}x{cap_status} | 可结算 {payout} 个Pt"
     )
 
 
@@ -260,6 +263,12 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             bet_amount, latest_message_id, check, game_start
         )
 
+        if bet_amount > MAX_PAYOUT:
+            await game_start.finish(
+                Messages.BET_TOO_LARGE.format(max_payout=f"{MAX_PAYOUT:,}")
+                + gens[latest_message_id].element,
+                referrer=gens[latest_message_id].event.referrer,
+            )
         if mines is None:
             mines = 5
         if mines <= 0:

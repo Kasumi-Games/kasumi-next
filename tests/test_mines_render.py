@@ -105,11 +105,12 @@ def test_result_card_measures_in_every_kit():
     loss = _result_data(
         outcome=GameResult.LOSE, payout=0, multiplier=3.32, balance=1231
     )
+    capped = _result_data(payout=1_000_000_000, payout_capped=True)
     ctx = RenderContext()
     constraints = Constraints(max_width=2000, max_height=6000)
     for name, factory in KITS.items():
         kit = factory()
-        for data in (full, loss):
+        for data in (full, loss, capped):
             page = result_page(data, kit, identity=_identity())
             size = page.child.measure(ctx, constraints)
             assert size.width > 0, name
@@ -155,6 +156,19 @@ def test_reward_rows_only_render_when_they_fired():
         identity=_identity(),
     )
     assert rewarded.height > bare.height
+
+
+def test_payout_cap_adds_a_disclosure_row():
+    from plugins.render.kits import KITS
+    from plugins.mines.render.result import render_result
+
+    bare = render_result(_result_data(), KITS["minimal"]())
+    capped = render_result(
+        _result_data(payout=1_000_000_000, payout_capped=True),
+        KITS["minimal"](),
+    )
+
+    assert capped.height > bare.height
 
 
 def test_win_and_loss_result_cards_differ_in_the_monochrome_kit():
