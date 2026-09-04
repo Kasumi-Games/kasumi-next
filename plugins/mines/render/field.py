@@ -11,25 +11,49 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
-from plugins.render.kits.bangdream import BG_DIR
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.kasumi import KasumiKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BG_DIR
+from plugins.render.kits.bangdream import BanGDreamKit
 
 from ..models import Field
 from ..models import BlockType
 
 #: Width of the board panel, which the identity strip matches.
 BOARD_WIDTH = 786
+BOARD_PADDING = 50
+DEFAULT_CELL_SIZE = 120
+DEFAULT_CELL_GAP = 21
+MIN_CELL_GAP = 8
 
 
-def generate_unrevealed_field(index: int, kit: BaseKit) -> Component:
+def _cell_layout(board_size: int) -> tuple[int, int]:
+    """Return a cell size and gap that fill the fixed square board panel."""
+
+    if board_size <= 0:
+        raise ValueError("board size must be positive")
+    inner_size = BOARD_WIDTH - BOARD_PADDING * 2
+    gap = min(
+        DEFAULT_CELL_GAP,
+        max(MIN_CELL_GAP, round(DEFAULT_CELL_GAP * 5 / board_size)),
+    )
+    cell_size = (inner_size - gap * (board_size - 1)) // board_size
+    return cell_size, gap
+
+
+def generate_unrevealed_field(
+    index: int, kit: BaseKit, *, cell_size: int = DEFAULT_CELL_SIZE
+) -> Component:
     is_mewtype = isinstance(kit, MewtypeKit)
+    radius = max(8, round(16 * cell_size / DEFAULT_CELL_SIZE))
+    font_size = max(24, round(80 * cell_size / DEFAULT_CELL_SIZE))
+    if index >= 100:
+        font_size = min(font_size, round(cell_size * 0.48))
     return kit.panel(
         Frame(
             kit.text(
                 str(index),
-                font_size=80,
+                font_size=font_size,
                 color=(
                     (169, 205, 245, 255)
                     if is_mewtype
@@ -41,15 +65,19 @@ def generate_unrevealed_field(index: int, kit: BaseKit) -> Component:
             align_x="center",
             align_y="center",
         ),
-        width=Fixed(120),
-        height=Fixed(120),
+        width=Fixed(cell_size),
+        height=Fixed(cell_size),
         fill=kit.paper_fill if is_mewtype else (223, 223, 223, 255),
-        radius=16,
+        radius=radius,
     )
 
 
 def generate_revealed_field(
-    stamp_path: Path, background_color: tuple[int, int, int], kit: BaseKit
+    stamp_path: Path,
+    background_color: tuple[int, int, int],
+    kit: BaseKit,
+    *,
+    cell_size: int = DEFAULT_CELL_SIZE,
 ) -> Component:
     frame_color = None
     if isinstance(kit, MewtypeKit):
@@ -57,16 +85,20 @@ def generate_revealed_field(
         background_color = (255, 232, 248) if is_mine else (228, 248, 255)
         frame_color = kit.accent if is_mine else kit.primary
     panel_kwargs = {"frame_color": frame_color} if frame_color is not None else {}
+    stamp_size = max(1, cell_size - round(10 * cell_size / DEFAULT_CELL_SIZE))
+    radius = max(8, round(16 * cell_size / DEFAULT_CELL_SIZE))
     return kit.panel(
         Frame(
-            kit.image(stamp_path, width=Fixed(110), height=Fixed(110)),
+            kit.image(
+                stamp_path, width=Fixed(stamp_size), height=Fixed(stamp_size)
+            ),
             align_x="center",
             align_y="center",
         ),
-        width=Fixed(120),
-        height=Fixed(120),
+        width=Fixed(cell_size),
+        height=Fixed(cell_size),
         fill=background_color + (255,),
-        radius=16,
+        radius=radius,
         **panel_kwargs,
     )
 
@@ -121,37 +153,37 @@ def _board_panel(kit: BaseKit, child):
     if isinstance(kit, BanGDreamKit):
         return kit.board_frame(
             child,
-            width=Fixed(786),
-            height=Fixed(786),
-            padding=50,
+            width=Fixed(BOARD_WIDTH),
+            height=Fixed(BOARD_WIDTH),
+            padding=BOARD_PADDING,
             radius=32,
         )
     if isinstance(kit, MewtypeKit):
         return kit.panel(
             Frame(
                 child,
-                width=Fixed(786),
-                height=Fixed(786),
-                padding=50,
+                width=Fixed(BOARD_WIDTH),
+                height=Fixed(BOARD_WIDTH),
+                padding=BOARD_PADDING,
                 align_x="stretch",
                 align_y="stretch",
                 aspect_ratio=1,
             ),
-            width=Fixed(786),
-            height=Fixed(786),
+            width=Fixed(BOARD_WIDTH),
+            height=Fixed(BOARD_WIDTH),
         )
     return kit.panel(
         Frame(
             child,
-            width=Fixed(786),
-            height=Fixed(786),
-            padding=50,
+            width=Fixed(BOARD_WIDTH),
+            height=Fixed(BOARD_WIDTH),
+            padding=BOARD_PADDING,
             align_x="stretch",
             align_y="stretch",
             aspect_ratio=1,
         ),
-        width=Fixed(786),
-        height=Fixed(786),
+        width=Fixed(BOARD_WIDTH),
+        height=Fixed(BOARD_WIDTH),
         radius=32,
     )
 
@@ -164,23 +196,28 @@ def render(
 ) -> Image.Image:
     kit = kit or BanGDreamKit()
     cells = []
+    cell_size, cell_gap = _cell_layout(max(field.width, field.height))
 
     for i in range(field.height):
         for j in range(field.width):
             block = field.field[i][j]
             if block == BlockType.EMPTY or block == BlockType.MINE:
-                cell = generate_unrevealed_field(i * field.width + j + 1, kit)
+                cell = generate_unrevealed_field(
+                    i * field.width + j + 1, kit, cell_size=cell_size
+                )
             elif block == BlockType.EMPTY_SHOWN:
                 cell = generate_revealed_field(
                     field.kasumi_stamps[i][j],
                     (255, 124, 85),
                     kit,
+                    cell_size=cell_size,
                 )
             elif block == BlockType.MINE_SHOWN:
                 cell = generate_revealed_field(
                     field.arisa_stamps[i][j],
                     (184, 130, 225),
                     kit,
+                    cell_size=cell_size,
                 )
             cells.append(cell)
 
@@ -198,9 +235,9 @@ def render(
                 children=cells,
                 columns=field.width,
                 rows=field.height,
-                column_track=Fixed(120),
-                row_track=Fixed(120),
-                gap=21,
+                column_track=Fixed(cell_size),
+                row_track=Fixed(cell_size),
+                gap=cell_gap,
             ),
         )
     )

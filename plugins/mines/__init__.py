@@ -34,8 +34,11 @@ from .render import MinesResultData  # noqa: E402
 from .render import render  # noqa: E402
 from .render import stats_page  # noqa: E402
 from .render import result_page  # noqa: E402
+from .session import MAX_BOARD_SIZE  # noqa: E402
+from .session import MIN_BOARD_SIZE  # noqa: E402
 from .session import GameManager  # noqa: E402
 from .session import GameSession  # noqa: E402
+from .session import parse_start_args  # noqa: E402
 from .session import parse_reveal_indices  # noqa: E402
 from .database import init_database  # noqa: E402
 from .messages import Messages  # noqa: E402
@@ -172,27 +175,6 @@ def _format_status(session) -> str:
     )
 
 
-def _parse_args(arg_text: str) -> Tuple[Optional[int], Optional[int]]:
-    parts = [part for part in arg_text.split() if part]
-    if not parts:
-        return None, None
-
-    bet_amount = None
-    mines = None
-    try:
-        bet_amount = int(parts[0])
-    except ValueError:
-        bet_amount = None
-
-    if len(parts) >= 2:
-        try:
-            mines = int(parts[1])
-        except ValueError:
-            mines = None
-
-    return bet_amount, mines
-
-
 async def _get_bet_amount(
     bet_amount: Optional[int],
     latest_message_id: str,
@@ -259,19 +241,25 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             referrer=gens[latest_message_id].event.referrer,
         )
 
-    parts = [part for part in arg_text.split() if part]
-    bet_amount, mines = _parse_args(arg_text)
+    try:
+        bet_amount, mines, board_size = parse_start_args(arg_text)
+    except ValueError:
+        await game_start.finish(
+            Messages.MINES_INVALID + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
+
+    if not MIN_BOARD_SIZE <= board_size <= MAX_BOARD_SIZE:
+        await game_start.finish(
+            Messages.BOARD_SIZE_INVALID + gens[latest_message_id].element,
+            referrer=gens[latest_message_id].event.referrer,
+        )
 
     try:
         bet_amount, latest_message_id = await _get_bet_amount(
             bet_amount, latest_message_id, check, game_start
         )
 
-        if len(parts) >= 2 and mines is None:
-            await game_start.finish(
-                Messages.MINES_INVALID + gens[latest_message_id].element,
-                referrer=gens[latest_message_id].event.referrer,
-            )
         if mines is None:
             mines = 5
         if mines <= 0:
@@ -279,9 +267,13 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                 Messages.MINES_TOO_SMALL + gens[latest_message_id].element,
                 referrer=gens[latest_message_id].event.referrer,
             )
-        if mines >= 25:
+        total_cells = board_size * board_size
+        if mines >= total_cells:
             await game_start.finish(
-                Messages.MINES_TOO_LARGE + gens[latest_message_id].element,
+                Messages.MINES_TOO_LARGE.format(
+                    size=board_size, max_mines=total_cells - 1
+                )
+                + gens[latest_message_id].element,
                 referrer=gens[latest_message_id].event.referrer,
             )
 
@@ -298,7 +290,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             )
 
         session = game_manager.create_session(
-            event.get_user_id(), event.channel.id, bet_amount, mines
+            event.get_user_id(), event.channel.id, bet_amount, mines, board_size
         )
 
         # Resolved once per game on the event-loop thread, then passed into
@@ -308,18 +300,19 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
         kit = kit_for_user(event.get_user_id())
         avatar = await get_avatar(event.get_user_id())
         identity = identity_for(event.get_user_id(), avatar=avatar)
-        detail = f"押注 {bet_amount} Pt · 剩 {mines} 雷"
+        detail = f"押注 {bet_amount} Pt · {board_size}×{board_size} · 剩 {mines} 雷"
+        max_position = session.field.total_cells()
 
         await game_start.send(
             await _render_field_image(
                 session.field, kit=kit, identity=identity, detail=detail
             )
             + MessageSegment.text(
-                Messages.START.format(number=mines)
+                Messages.START.format(number=mines, max_position=max_position)
                 + "\n"
                 + _format_status(session)
                 + "\n"
-                + Messages.PROMPT
+                + Messages.PROMPT.format(max_position=max_position)
             )
             + gens[latest_message_id].element,
             referrer=gens[latest_message_id].event.referrer,
@@ -379,7 +372,8 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
             indices = parse_reveal_indices(msg, session.field.total_cells())
             if indices is None:
                 await game_start.send(
-                    Messages.INPUT_INVALID + gens[latest_message_id].element,
+                    Messages.INPUT_INVALID.format(max_position=max_position)
+                    + gens[latest_message_id].element,
                     referrer=gens[latest_message_id].event.referrer,
                 )
                 continue
@@ -452,7 +446,7 @@ async def handle_start(event: MessageEvent, arg: Optional[Message] = CommandArg(
                     + "\n"
                     + _format_status(session)
                     + "\n"
-                    + Messages.PROMPT
+                    + Messages.PROMPT.format(max_position=max_position)
                 )
                 + gens[latest_message_id].element,
                 referrer=gens[latest_message_id].event.referrer,

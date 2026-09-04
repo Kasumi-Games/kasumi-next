@@ -16,6 +16,41 @@ from .models import GameResult
 from .database import get_session
 from ..inventory import point_hold_service as point_holds
 
+DEFAULT_BOARD_SIZE = 5
+MIN_BOARD_SIZE = 2
+MAX_BOARD_SIZE = 10
+
+
+def parse_start_args(
+    arg_text: str,
+) -> Tuple[Optional[int], Optional[int], int]:
+    """Parse ``<stake> <mines> [board side length]``."""
+
+    parts = [part for part in arg_text.split() if part]
+    if len(parts) > 3:
+        raise ValueError("too many arguments")
+
+    bet_amount: Optional[int] = None
+    mines: Optional[int] = None
+    board_size = DEFAULT_BOARD_SIZE
+    if parts:
+        try:
+            bet_amount = int(parts[0])
+        except ValueError:
+            bet_amount = None
+    if len(parts) >= 2:
+        try:
+            mines = int(parts[1])
+        except ValueError as exc:
+            raise ValueError("mine count must be an integer") from exc
+    if len(parts) == 3:
+        try:
+            board_size = int(parts[2])
+        except ValueError as exc:
+            raise ValueError("board side length must be an integer") from exc
+
+    return bet_amount, mines, board_size
+
 
 @dataclass(frozen=True)
 class RevealBatchResult:
@@ -142,9 +177,19 @@ class GameManager:
         return True
 
     def create_session(
-        self, user_id: str, channel_id: str, bet_amount: int, mines: int
+        self,
+        user_id: str,
+        channel_id: str,
+        bet_amount: int,
+        mines: int,
+        board_size: int = DEFAULT_BOARD_SIZE,
     ) -> GameSession:
-        field = Field(width=5, height=5, mines=mines)
+        if not MIN_BOARD_SIZE <= board_size <= MAX_BOARD_SIZE:
+            raise ValueError(f"unsupported board size: {board_size}")
+        if mines <= 0 or mines >= board_size * board_size:
+            raise ValueError("mine count must leave at least one safe cell")
+
+        field = Field(width=board_size, height=board_size, mines=mines)
         session = GameSession(
             user_id=user_id,
             channel_id=channel_id,
