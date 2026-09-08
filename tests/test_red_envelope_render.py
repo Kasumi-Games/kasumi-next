@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from plugins.render import Constraints
 from plugins.render import PlayerIdentity
 from plugins.render.kits import KITS
 from plugins.render.kits import MangaKit
@@ -288,26 +287,35 @@ def test_list_card_index_font_size_is_consistent_per_digit_count():
     }
 
     assert sizes[999] == 26
-    assert {sizes[index] for index in (1000, 1111, 9999)} == {22}
-    assert {sizes[index] for index in (10000, 88888)} == {17}
+    assert {sizes[index] for index in (1000, 1111, 9999)} == {20}
+    assert {sizes[index] for index in (10000, 88888)} == {16}
 
 
 @pytest.mark.parametrize("kit_cls", KITS.values(), ids=KITS.keys())
-def test_list_card_large_indices_are_not_ellipsized(kit_cls):
-    from plugins.red_envelope.render.listing import INDEX_CHIP
+def test_list_card_large_indices_are_not_ellipsized(kit_cls, monkeypatch):
+    from plugins.render.kits import atoms
+    from plugins.render.kits.bangdream import components as bangdream_components
 
     indices = (1000, 8888, 9999, 10000, 88888)
-    nodes = _collect_text_nodes(
-        list_page([_list_item(index) for index in indices], kit_cls()).child
-    )
     index_texts = {str(index) for index in indices}
-    index_nodes = [node for node in nodes if node.text in index_texts]
+    ellipsized: list[tuple[str, str]] = []
 
-    for node in index_nodes:
-        lines, _font_size = node._layout_text(
-            Constraints(max_width=INDEX_CHIP, max_height=INDEX_CHIP)
-        )
-        assert lines == [node.text]
+    for text_module in (atoms, bangdream_components):
+        original_ellipsis = text_module._ellipsis
+
+        def track_ellipsis(
+            text, font, max_width, *, force=False, _original=original_ellipsis
+        ):
+            result = _original(text, font, max_width, force=force)
+            if text in index_texts and result != text:
+                ellipsized.append((text, result))
+            return result
+
+        monkeypatch.setattr(text_module, "_ellipsis", track_ellipsis)
+
+    render_list([_list_item(index) for index in indices], kit_cls())
+
+    assert ellipsized == []
 
 
 def test_list_card_empty_state_is_a_card_not_text():
