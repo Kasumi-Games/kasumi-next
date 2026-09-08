@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from plugins.render import Constraints
 from plugins.render import PlayerIdentity
+from plugins.render.kits import KITS
 from plugins.render.kits import MangaKit
 from plugins.render.kits import MinimalKit
 from plugins.red_envelope.render import ClaimRow
@@ -85,6 +87,28 @@ def _collect_text(component) -> list[str]:
 
     visit(component)
     return texts
+
+
+def _collect_text_nodes(component) -> list[object]:
+    """Collect text components so typography rules can be asserted directly."""
+
+    nodes: list[object] = []
+
+    def visit(node) -> None:
+        if isinstance(getattr(node, "text", None), str):
+            nodes.append(node)
+        for attribute in ("children", "child"):
+            value = getattr(node, attribute, None)
+            if value is None:
+                continue
+            if isinstance(value, (list, tuple)):
+                for child in value:
+                    visit(child)
+            else:
+                visit(value)
+
+    visit(component)
+    return nodes
 
 
 @pytest.mark.parametrize("kit_cls", [MinimalKit, MangaKit])
@@ -250,6 +274,40 @@ def test_list_card_shows_index_remaining_and_validity():
     assert "剩 23 小时" in texts
     assert "剩 40 分钟" in texts
     assert "发送「抢红包 编号」领取 · 「发红包 金额 份数」再发一个" in texts
+
+
+def test_list_card_index_font_size_is_consistent_per_digit_count():
+    indices = (999, 1000, 1111, 9999, 10000, 88888)
+    nodes = _collect_text_nodes(
+        list_page([_list_item(index) for index in indices], MinimalKit()).child
+    )
+    sizes = {
+        int(node.text): node.font_size
+        for node in nodes
+        if node.text in {str(index) for index in indices}
+    }
+
+    assert sizes[999] == 26
+    assert {sizes[index] for index in (1000, 1111, 9999)} == {22}
+    assert {sizes[index] for index in (10000, 88888)} == {17}
+
+
+@pytest.mark.parametrize("kit_cls", KITS.values(), ids=KITS.keys())
+def test_list_card_large_indices_are_not_ellipsized(kit_cls):
+    from plugins.red_envelope.render.listing import INDEX_CHIP
+
+    indices = (1000, 8888, 9999, 10000, 88888)
+    nodes = _collect_text_nodes(
+        list_page([_list_item(index) for index in indices], kit_cls()).child
+    )
+    index_texts = {str(index) for index in indices}
+    index_nodes = [node for node in nodes if node.text in index_texts]
+
+    for node in index_nodes:
+        lines, _font_size = node._layout_text(
+            Constraints(max_width=INDEX_CHIP, max_height=INDEX_CHIP)
+        )
+        assert lines == [node.text]
 
 
 def test_list_card_empty_state_is_a_card_not_text():

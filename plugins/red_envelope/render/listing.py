@@ -56,8 +56,13 @@ MAX_ROWS = 12
 ROW_HEIGHT = 76
 ROW_GAP = 18
 
-#: 编号是玩家照着输入的领取口令，方形填充徽章，三位数也装得下。
+#: 编号是玩家照着输入的领取口令，方形填充徽章。
 INDEX_CHIP = 56
+INDEX_FONT_SIZE = 26
+#: 每个位数档位使用同一字号；88 / 位数让四位数从 26px 降到 22px，
+#: 同时给 56px 徽章留出足够余量，避免字体栅格化后贴边或被省略。
+INDEX_FONT_WIDTH_BUDGET = 88
+MIN_INDEX_FONT_SIZE = 8
 
 #: 尾列固定宽度——每行都保留这一列，行中部的标题/余量才对得齐。
 VALIDITY_COLUMN = 150
@@ -168,7 +173,7 @@ def _row(kit: BaseKit, item: EnvelopeListItem) -> Component:
                     str(item.channel_index),
                     width=INDEX_CHIP,
                     height=INDEX_CHIP,
-                    font_size=26,
+                    font_size=_index_font_size(item.channel_index),
                 ),
                 Frame(
                     VStack(
@@ -209,6 +214,16 @@ def _row(kit: BaseKit, item: EnvelopeListItem) -> Component:
         height=Fixed(ROW_HEIGHT),
         align_x="stretch",
         align_y="center",
+    )
+
+
+def _index_font_size(channel_index: int) -> int:
+    """Choose one stable badge font size for each index digit count."""
+
+    digits = len(str(abs(channel_index)))
+    return max(
+        MIN_INDEX_FONT_SIZE,
+        min(INDEX_FONT_SIZE, INDEX_FONT_WIDTH_BUDGET // digits),
     )
 
 
