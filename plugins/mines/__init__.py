@@ -35,6 +35,7 @@ from .render import render  # noqa: E402
 from .render import stats_page  # noqa: E402
 from .render import result_page  # noqa: E402
 from .session import MAX_PAYOUT  # noqa: E402
+from .session import MAX_XP_REWARD  # noqa: E402
 from .session import MAX_BOARD_SIZE  # noqa: E402
 from .session import MIN_BOARD_SIZE  # noqa: E402
 from .session import GameManager  # noqa: E402
@@ -52,6 +53,14 @@ from ..inventory.season_service import get_current_season_bounds  # noqa: E402
 
 game_manager = GameManager()
 point_holds.register_scope_closer("mines", game_manager.close_scope, priority=20)
+
+
+def _xp_reward_for_multiplier(multiplier: float) -> int:
+    """Return the mines XP reward, capped at 2.5 times the Pt ceiling."""
+
+    if multiplier >= MAX_PAYOUT:
+        return MAX_XP_REWARD
+    return int(multiplier * 2.5)
 
 
 async def _render_field_image(
@@ -103,7 +112,9 @@ async def _send_result_card(
         if multiplier >= 2.0:
             try:
                 level_before = monetary.get_level(user_id)
-                leveled = await monetary.add_xp(user_id, int(multiplier * 2.5))
+                leveled = await monetary.add_xp(
+                    user_id, _xp_reward_for_multiplier(multiplier)
+                )
                 level_after = monetary.get_level(user_id)
                 if leveled and level_after > level_before:
                     old_level = level_before

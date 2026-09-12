@@ -1,7 +1,13 @@
+from types import SimpleNamespace
+
 import pytest
 
+import plugins.mines as mines_plugin
 from plugins.mines import _format_status
+from plugins.mines import _xp_reward_for_multiplier
+from plugins.mines.models import GameResult
 from plugins.mines.session import MAX_PAYOUT
+from plugins.mines.session import MAX_XP_REWARD
 from plugins.mines.session import GameManager
 from plugins.mines.session import GameSession
 
@@ -75,3 +81,64 @@ def test_session_rejects_bet_larger_than_payout_cap():
         manager.create_session(
             "user", "channel", MAX_PAYOUT + 1, 5, board_size=5
         )
+
+
+def test_xp_reward_keeps_existing_multiplier_scaling_below_cap():
+    assert _xp_reward_for_multiplier(2.0) == 5
+    assert _xp_reward_for_multiplier(8.33) == 20
+
+
+def test_xp_reward_stops_at_two_and_a_half_times_payout_cap():
+    assert MAX_XP_REWARD == MAX_PAYOUT * 5 // 2
+    assert _xp_reward_for_multiplier(MAX_PAYOUT * 10) == MAX_XP_REWARD
+
+
+async def test_result_settlement_passes_capped_xp_to_monetary(monkeypatch):
+    awarded_xp = []
+
+    async def add_xp(user_id, amount):
+        awarded_xp.append((user_id, amount))
+        return None
+
+    async def no_task(*args, **kwargs):
+        return None
+
+    class _Page:
+        async def render_async(self):
+            return object()
+
+    class _Matcher:
+        async def send(self, *args, **kwargs):
+            return None
+
+    async def image_segment(image):
+        return ""
+
+    monkeypatch.setattr(mines_plugin.monetary, "add_xp", add_xp)
+    monkeypatch.setattr(mines_plugin.monetary, "get_level", lambda user_id: 1)
+    monkeypatch.setattr(mines_plugin.monetary, "get", lambda user_id: 0)
+    monkeypatch.setattr(mines_plugin, "check_progress", no_task)
+    monkeypatch.setattr(mines_plugin, "result_page", lambda *args, **kwargs: _Page())
+    monkeypatch.setattr(mines_plugin, "image_segment_async", image_segment)
+
+    session = GameSession(
+        user_id="user",
+        channel_id="channel",
+        bet_amount=1,
+        mines=1,
+        field=_FixedField(4, 1),
+    )
+    pg = SimpleNamespace(element="", event=SimpleNamespace(referrer=None))
+
+    await mines_plugin._send_result_card(
+        _Matcher(),
+        session,
+        GameResult.CASHOUT,
+        payout=MAX_PAYOUT,
+        multiplier=MAX_PAYOUT * 10,
+        kit=None,
+        identity=None,
+        pg=pg,
+    )
+
+    assert awarded_xp == [("user", MAX_XP_REWARD)]
