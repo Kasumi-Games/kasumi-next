@@ -1,0 +1,22 @@
+{
+  "assets": [
+    {
+      "file": "fonts/SourceHanSerifSC-SemiBold.otf",
+      "upstream": "https://github.com/adobe-fonts/source-han-serif",
+      "version": "repository bundled copy",
+      "sha256": "faf16caeaf207e1926e01af8d9f1a8e71b0e9d8f51bf3b5d9a78f9f30e7e3e31",
+      "license": "SIL OFL 1.1",
+      "license_file": "fonts/OFL-SourceHanSerif.txt",
+      "purpose": "CJK body text and headings"
+    },
+    {
+      "file": "fonts/CormorantSC-SemiBold.ttf",
+      "upstream": "https://github.com/CatharsisFonts/Cormorant",
+      "version": "9719e26aa8e26d7a30e736667427b9e05b5db059",
+      "sha256": "e9559c1d93a14e36572824ce137b2d48e08008429d403402ce284964956aee42",
+      "license": "SIL OFL 1.1",
+      "license_file": "fonts/OFL-Cormorant.txt",
+      "purpose": "Latin display text and short German or English labels"
+    }
+  ]
+}

@@ -31,6 +31,7 @@ NEW_KIT_NAMES = (
     "kasumi",
     "mewtype",
     "endfield",
+    "roselia",
 )
 
 

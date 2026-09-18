@@ -39,6 +39,7 @@ if str(ROOT) not in sys.path:
 from plugins.render import AutoPage
 from plugins.render import BaseKit
 from plugins.render import Component
+from plugins.render import Constraints
 from plugins.render import Fill
 from plugins.render import Fixed
 from plugins.render import Frame
@@ -466,13 +467,15 @@ def _tier_a(kit: BaseKit, art: ShowcaseArt, *, width: int) -> Component:
         pieces.append(_surface_placeholder(kit, "player_card", width=width))
 
     if _overrides(kit, "pull_reveal"):
+        reveal = kit.pull_reveal(_pulls(art), width=width - 32)
+        reveal_size = reveal.measure(RenderContext(), Constraints(max_width=width - 32))
         pieces.append(
             _labelled_atom(
                 kit,
                 "PULL REVEAL",
-                kit.pull_reveal(_pulls(art), width=width - 32),
+                reveal,
                 width=width,
-                height=410,
+                height=max(410, reveal_size.height + 64),
             )
         )
     else:

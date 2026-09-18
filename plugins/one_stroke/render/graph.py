@@ -22,11 +22,10 @@ from plugins.render import RenderContext
 from plugins.render import PlayerIdentity
 from plugins.render.primitives import load_font
 from plugins.render.primitives import draw_rounded_rectangle
+from plugins.render.kits.mewtype import MewtypeKit
 from plugins.render.kits.bangdream import BG_DIR
 from plugins.render.kits.bangdream import CHINESE_FONT
 from plugins.render.kits.bangdream import BanGDreamKit
-from plugins.render.kits.kasumi import KasumiKit
-from plugins.render.kits.mewtype import MewtypeKit
 
 from ..session import GameSession
 from ..difficulty import apply_time_decay
@@ -381,8 +380,9 @@ def _title_bar(
 ):
     if isinstance(kit, MewtypeKit):
         return kit.compact_header("ONE STROKE", subtitle, width=BOARD_WIDTH)
-    if isinstance(kit, KasumiKit):
-        return kit.game_title(title, subtitle, width=width, height=height)
+    game_title = getattr(kit, "game_title", None)
+    if callable(game_title):
+        return game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):
         return kit.title_pill(
             title,

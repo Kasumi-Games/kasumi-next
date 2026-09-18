@@ -5,6 +5,7 @@ from .kasumi import KasumiKit
 from .sakura import SakuraKit
 from .mewtype import MewtypeKit
 from .minimal import MinimalKit
+from .roselia import RoseliaKit
 from .sailing import SailingKit
 from .endfield import EndfieldKit
 from .midnight import MidnightKit
@@ -23,6 +24,7 @@ KITS = {
     "kasumi": KasumiKit,
     "mewtype": MewtypeKit,
     "endfield": EndfieldKit,
+    "roselia": RoseliaKit,
 }
 
 #: Player-facing name for each kit. A theme item's ``name`` in ``items.json``
@@ -40,6 +42,7 @@ KIT_DISPLAY_NAMES = {
     "kasumi": "星之鼓动",
     "mewtype": "梦限大 Mewtype",
     "endfield": "终末地工业",
+    "roselia": "Roselia · 蔷薇穹庭",
 }
 
 __all__ = [
@@ -56,4 +59,5 @@ __all__ = [
     "SakuraKit",
     "MewtypeKit",
     "EndfieldKit",
+    "RoseliaKit",
 ]

@@ -125,6 +125,23 @@
       }
     },
     {
+      "item_id": "theme_roselia",
+      "category": "cosmetic",
+      "name": "Roselia · 蔷薇穹庭",
+      "description": "深蓝紫穹顶、冷色彩窗与新艺术蔷薇线框组成的 Roselia 主题。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 174,
+      "cosmetic": {
+        "cosmetic_type": "theme",
+        "rarity": 6
+      },
+      "metadata": {
+        "kit": "roselia",
+        "aliases": ["roselia", "ロゼリア", "蔷薇穹庭"]
+      }
+    },
+    {
       "item_id": "standing_art_placeholder_r5_001",
       "category": "cosmetic",
       "name": "市谷有咲 向着大海展翅的天马",

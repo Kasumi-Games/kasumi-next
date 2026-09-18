@@ -496,7 +496,11 @@ def _render_gallery(
         "blackjack-stats",
         lambda: render_blackjack_stats(
             stats_card_data(
-                blackjack_stats["_stats"](),
+                blackjack_stats["_stats"](
+                    recent_games=blackjack_stats["_records"](
+                        [120, -200, 0, 340, -100, 400, -200]
+                    )
+                ),
                 blackjack_stats["_identity"](),
             ),
             kit,
@@ -809,10 +813,12 @@ def _render_gallery(
     )
     emit("shop-theme-list", lambda: render_inventory_list(shop_themes, kit))
 
+    from plugins.render.kits import KIT_DISPLAY_NAMES
+
     preview_data = ThemePreviewData(
         sku="T01",
-        name="梦限大 Mewtype 主题",
-        description="淡紫方格纸、糖果色标记与青色像素切角组成的梦限大主题。",
+        name=KIT_DISPLAY_NAMES[kit_name],
+        description="使用本主题的实际背景、字体、面板和强调色。",
         price=3000,
     )
     emit(

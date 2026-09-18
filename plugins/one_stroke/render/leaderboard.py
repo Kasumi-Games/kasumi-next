@@ -8,9 +8,8 @@ from plugins.render import Insets
 from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
-from plugins.render.kits.bangdream import BanGDreamKit
-from plugins.render.kits.kasumi import KasumiKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 LeaderboardRows = list[tuple[str, float]]
 
@@ -179,8 +178,9 @@ def _title_bar(
             gap=14,
             align="stretch",
         )
-    if isinstance(kit, KasumiKit):
-        return kit.game_title(title, subtitle, width=width, height=height)
+    game_title = getattr(kit, "game_title", None)
+    if callable(game_title):
+        return game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):
         return kit.title_pill(
             title,

@@ -27,8 +27,8 @@ from plugins.render import ColorLike
 from plugins.render import Component
 from plugins.render import RenderContext
 from plugins.render import PlayerIdentity
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 if TYPE_CHECKING:
     from .models import Hand
@@ -610,7 +610,10 @@ class BlackjackRenderer:
                     font_size=self.RenderLayout.NAME_TAG_FONT_SIZE,
                     color=self.RenderLayout.WHITE_TEXT_COLOR,
                     align="center",
+                    wrap=False,
                     max_lines=1,
+                    overflow="shrink",
+                    line_height=44,
                 ),
                 align_x="center",
                 align_y="center",
