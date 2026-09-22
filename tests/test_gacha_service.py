@@ -401,7 +401,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
         # 扬帆起航 was scrapped before launch; 星之鼓动 is the real season 1.
         self.assertEqual(
             [season.season_key for season in seasons],
-            ["2026-s01", "2026-s02"],
+            ["2026-s01", "2026-s02", "2026-s03"],
         )
 
     def test_scrapped_planned_season_is_pruned_from_the_database(self) -> None:
@@ -630,6 +630,125 @@ class StarbeatRealConfigTest(unittest.TestCase):
         for tier_key in ("rank_1", "rank_2_3", "rank_4_10"):
             self.assertIn("theme_mewtype", tier_items[tier_key])
         self.assertNotIn("theme_mewtype", tier_items["rank_11_50"])
+
+    def test_roselia_season_builds_with_the_mystical_bouquet_band(self) -> None:
+        sync_catalog()
+        season_service.sync_seasons_config()
+        season = season_service.get_season_by_key("2026-s03")
+        self.assertIsNotNone(season)
+        self.assertEqual(season.season_number, 3)
+        self.assertEqual(season.name, "Roselia · 蔷薇穹庭")
+
+        metadata = season_service.get_season_metadata(season)
+        self.assertEqual(metadata["starts_at"], "2026-09-28T00:00:00+08:00")
+        self.assertEqual(metadata["ends_at"], "2026-10-26T00:00:00+08:00")
+        self.assertEqual(metadata["gacha_theme_item_id"], "theme_roselia")
+        self.assertEqual(
+            metadata["gacha_character_frame_item_id"],
+            "frame_roselia_character",
+        )
+        self.assertEqual(
+            {
+                character["character_id"]: character["rarity"]
+                for character in metadata["featured_characters"]
+            },
+            {
+                "yukina": 6,
+                "sayo": 5,
+                "lisa": 5,
+                "ako": 5,
+                "rinko": 5,
+            },
+        )
+
+        banner = gacha_service._banner_from_season(season)
+        self.assertIsNotNone(banner)
+        gacha_service._validate_banner_rewards(banner)  # must not raise
+        self.assertEqual(banner.banner_key, "2026-s03-limited")
+        self.assertEqual(banner.name, "蔷薇穹庭 限定卡池")
+        featured = [entry for entry in banner.entries if entry.featured]
+        self.assertEqual(
+            [entry.character_id for entry in featured],
+            ["yukina", "sayo", "lisa", "ako", "rinko"],
+        )
+        self.assertEqual(
+            [entry.bestdori_card_id for entry in featured],
+            [90021, 90022, 90023, 90024, 90025],
+        )
+        self.assertEqual({entry.bestdori_variant for entry in featured}, {"normal"})
+        self.assertEqual(featured[0].rarity, 6)
+        self.assertEqual(
+            {entry.weight for entry in featured if entry.rarity == 5},
+            {12},
+        )
+
+    def test_roselia_six_star_bundle_and_rank_rewards_ship_the_theme(self) -> None:
+        sync_catalog()
+        season_service.sync_seasons_config()
+
+        five_star_results = season_service.grant_featured_character_reward(
+            "u1",
+            "2026-s03",
+            "sayo",
+            idempotency_key="test:roselia:five-star",
+        )
+        self.assertEqual(
+            [result.item_id for result in five_star_results],
+            ["standing_art_roselia_sayo_mystical_bouquet"],
+        )
+        self.assertEqual(get_quantity("u1", "theme_roselia"), 0)
+
+        six_star_results = season_service.grant_featured_character_reward(
+            "u1",
+            "2026-s03",
+            "yukina",
+            idempotency_key="test:roselia:first-six-star",
+        )
+        self.assertEqual(
+            [result.item_id for result in six_star_results],
+            [
+                "standing_art_roselia_yukina_mystical_bouquet",
+                "frame_roselia_character",
+                "theme_roselia",
+            ],
+        )
+
+        config = season_service.load_seasons_config()
+        roselia = next(
+            entry
+            for entry in config["seasons"]
+            if entry["season_key"] == "2026-s03"
+        )
+        tier_items = {
+            tier["tier_key"]: {item["item_id"] for item in tier["items"]}
+            for tier in roselia["reward_tiers"]
+        }
+        for tier_key in ("rank_1", "rank_2_3", "rank_4_10"):
+            self.assertIn("theme_roselia", tier_items[tier_key])
+        self.assertNotIn("theme_roselia", tier_items["rank_11_50"])
+
+    def test_roselia_avatar_frame_assets_exist(self) -> None:
+        from pathlib import Path
+
+        from plugins.inventory.catalog import load_catalog
+
+        root = Path(__file__).resolve().parents[1]
+        item_ids = {
+            "frame_roselia_champion",
+            "frame_roselia_podium",
+            "frame_roselia_top10",
+            "frame_roselia_top50",
+            "frame_roselia_character",
+        }
+        catalog = {
+            item["item_id"]: item
+            for item in load_catalog()
+            if item["item_id"] in item_ids
+        }
+        self.assertEqual(set(catalog), item_ids)
+        for item_id, item in catalog.items():
+            art = item["metadata"]["art"]
+            self.assertTrue((root / art).is_file(), f"{item_id}: {art}")
 
     def test_mewtype_art_and_placeholder_frames_exist(self) -> None:
         from pathlib import Path
