@@ -132,7 +132,10 @@ class RenderTest(unittest.TestCase):
             with self.subTest(kit=name):
                 image = render_result(FULL_DATA, kit=factory(), identity=IDENTITY)
                 self.assertEqual(
-                    image.width, cards.CONTENT_WIDTH + 2 * cards.PAGE_PADDING
+                    image.width,
+                    1160
+                    if name == "manosaba"
+                    else cards.CONTENT_WIDTH + 2 * cards.PAGE_PADDING,
                 )
                 self.assertGreater(image.height, 0)
 
@@ -154,9 +157,7 @@ class RenderTest(unittest.TestCase):
             previous_best_seconds=90.0,
             is_new_record=True,
         )
-        self.assertGreater(
-            render_result(with_record, kit=kit).height, plain.height
-        )
+        self.assertGreater(render_result(with_record, kit=kit).height, plain.height)
 
         self.assertGreater(
             render_result(FULL_DATA, kit=kit, identity=IDENTITY).height,
@@ -236,7 +237,9 @@ class PersonalBestTest(unittest.TestCase):
         db.commit()
 
         assert get_personal_best("u1", "普通", start_time=100, end_time=200) == 8.0
-        assert [row.user_id for row in get_leaderboard("普通", start_time=100, end_time=200)] == [
+        assert [
+            row.user_id for row in get_leaderboard("普通", start_time=100, end_time=200)
+        ] == [
             "u2",
             "u1",
         ]
@@ -261,9 +264,7 @@ class DecayFactorTest(unittest.TestCase):
         for elapsed in (0.0, 3.0, 6.5, 20.0, 120.0):
             factor = time_decay_factor(elapsed, graph)
             self.assertEqual(
-                apply_time_decay(
-                    base_reward=100, elapsed_seconds=elapsed, graph=graph
-                ),
+                apply_time_decay(base_reward=100, elapsed_seconds=elapsed, graph=graph),
                 max(0, int(round(100 * factor))),
             )
 

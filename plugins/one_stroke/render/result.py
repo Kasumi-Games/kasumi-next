@@ -101,8 +101,7 @@ def record_text(data: OneStrokeResultData) -> str:
     if data.previous_best_seconds is None:
         return f"首次通关{data.difficulty}难度"
     return (
-        f"个人最佳 {data.previous_best_seconds:.2f} 秒 → "
-        f"{data.elapsed_seconds:.2f} 秒"
+        f"个人最佳 {data.previous_best_seconds:.2f} 秒 → {data.elapsed_seconds:.2f} 秒"
     )
 
 
@@ -143,11 +142,16 @@ def result_page(
 
     kit = kit or BanGDreamKit()
 
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (
+        themed := page_for(kit, "one_stroke.result", data, identity=identity)
+    ) is not None:
+        return themed
+
     sections: list[Component] = []
     if identity is not None:
-        sections.append(
-            cards.game_identity(kit, identity, width=cards.CONTENT_WIDTH)
-        )
+        sections.append(cards.game_identity(kit, identity, width=cards.CONTENT_WIDTH))
     sections.append(cards.headline(kit, "挑战成功"))
     sections.append(cards.panel_section(kit, _settlement(kit, data)))
     extras = _extras(kit, data)
@@ -218,9 +222,7 @@ def _extras(kit: BaseKit, data: OneStrokeResultData) -> Component | None:
 
     rows: list[Component] = []
     if data.task_name is not None:
-        rows.append(
-            cards.task_progress(kit, f"每日任务 · {data.task_name}", 1, 1)
-        )
+        rows.append(cards.task_progress(kit, f"每日任务 · {data.task_name}", 1, 1))
     if data.leveled_up:
         assert data.old_level is not None and data.new_level is not None
         rows.append(cards.level_up(kit, data.old_level, data.new_level))

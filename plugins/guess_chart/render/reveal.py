@@ -39,8 +39,8 @@ from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render.types import ImageSource
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 #: Jacket display size. Bestdori jackets are square; 280px leaves a
 #: 416px text column inside the 720px panel for the song identity.
@@ -135,9 +135,7 @@ def render_reveal(
     return reveal_page(data, kit).render()
 
 
-def reveal_page(
-    data: GuessChartRevealData, kit: BaseKit | None = None
-) -> AutoPage:
+def reveal_page(data: GuessChartRevealData, kit: BaseKit | None = None) -> AutoPage:
     """Build the reveal page without rendering it.
 
     Args:
@@ -149,6 +147,11 @@ def reveal_page(
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "guess_chart.reveal", data)) is not None:
+        return themed
     won = data.outcome == "win"
 
     sections: list[Component] = [
@@ -166,9 +169,7 @@ def reveal_page(
         kit,
         title="猜谱面",
         subtitle=(
-            _mewtype_detail(data)
-            if isinstance(kit, MewtypeKit)
-            else _subtitle(data)
+            _mewtype_detail(data) if isinstance(kit, MewtypeKit) else _subtitle(data)
         ),
         article_title="ANSWER",
         body=VStack(sections, gap=18, align="stretch"),

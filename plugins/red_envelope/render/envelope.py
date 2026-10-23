@@ -35,7 +35,6 @@ from PIL import Image
 from utils.cards import BODY_SIZE
 from utils.cards import LABEL_SIZE
 from utils.cards import INNER_WIDTH
-from utils.cards import badge
 from utils.cards import headline
 from utils.cards import stat_row
 from utils.cards import card_page
@@ -50,8 +49,8 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 #: 结算榜逐行展示的领取数上限；超出折叠成一行小结（红包最多 10000 份）。
 #: 两个金额极值另有 stat 行兜底，所以被折叠也不会丢信息。
@@ -128,9 +127,7 @@ class EnvelopeCompletionData:
     claims: tuple[ClaimRow, ...]
 
 
-def render_create(
-    data: EnvelopeCreateData, kit: BaseKit | None = None
-) -> Image.Image:
+def render_create(data: EnvelopeCreateData, kit: BaseKit | None = None) -> Image.Image:
     """Render the create announcement card.
 
     Args:
@@ -156,6 +153,11 @@ def create_page(data: EnvelopeCreateData, kit: BaseKit | None = None) -> AutoPag
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "red_envelope.create", data)) is not None:
+        return themed
     title = _clean(data.title, "红包")
     creator = PlayerIdentity(
         nickname=_clean(data.creator.nickname, "玩家"),
@@ -274,6 +276,11 @@ def completion_page(
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "red_envelope.completion", data)) is not None:
+        return themed
     title = _clean(data.title, "红包")
     creator_name = _clean(data.creator_name, "玩家")
     lucky_king_name = _clean(data.lucky_king_name, "玩家")

@@ -30,8 +30,8 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 
 @dataclass(frozen=True)
@@ -120,6 +120,11 @@ def checkin_page(data: CheckinData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "daily.checkin", data)) is not None:
+        return themed
     sections: list[Component] = []
     if not isinstance(kit, MewtypeKit):
         sections.append(headline(kit, "签到成功"))

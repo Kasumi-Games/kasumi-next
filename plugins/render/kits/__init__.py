@@ -8,6 +8,7 @@ from .minimal import MinimalKit
 from .roselia import RoseliaKit
 from .sailing import SailingKit
 from .endfield import EndfieldKit
+from .manosaba import ManosabaKit
 from .midnight import MidnightKit
 from .bangdream import BanGDreamKit
 
@@ -24,6 +25,7 @@ KITS = {
     "kasumi": KasumiKit,
     "mewtype": MewtypeKit,
     "endfield": EndfieldKit,
+    "manosaba": ManosabaKit,
     "roselia": RoseliaKit,
 }
 
@@ -42,6 +44,7 @@ KIT_DISPLAY_NAMES = {
     "kasumi": "星之鼓动",
     "mewtype": "梦限大 Mewtype",
     "endfield": "终末地工业",
+    "manosaba": "魔法少女的魔女审判",
     "roselia": "Roselia · 蔷薇穹庭",
 }
 
@@ -59,5 +62,6 @@ __all__ = [
     "SakuraKit",
     "MewtypeKit",
     "EndfieldKit",
+    "ManosabaKit",
     "RoseliaKit",
 ]

@@ -80,6 +80,13 @@ def render_leaderboard(
     kit: BaseKit | None = None,
 ) -> Image.Image:
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (
+        themed := page_for(kit, "one_stroke.rank", easy_rows, normal_rows, hard_rows)
+    ) is not None:
+        return themed.render()
     page = AutoPage(
         max_width=1500,
         background=kit.background(),

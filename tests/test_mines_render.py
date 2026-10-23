@@ -94,6 +94,7 @@ def test_result_card_measures_in_every_kit():
     from plugins.render.kits import KITS
     from plugins.mines.models import GameResult
     from plugins.mines.render.result import result_page
+    from plugins.render.kits.manosaba.layouts.folio import FolioPage
 
     full = _result_data(
         task_name="见好就收",
@@ -112,7 +113,11 @@ def test_result_card_measures_in_every_kit():
         kit = factory()
         for data in (full, loss, capped):
             page = result_page(data, kit, identity=_identity())
-            size = page.child.measure(ctx, constraints)
+            size = (
+                page.compose(ctx)
+                if isinstance(page, FolioPage)
+                else page.child.measure(ctx, constraints)
+            )
             assert size.width > 0, name
             assert size.height > 0, name
 
@@ -205,13 +210,18 @@ def test_stats_card_measures_in_every_kit():
     from plugins.render.core import RenderContext
     from plugins.render.kits import KITS
     from plugins.mines.render.stats import stats_page
+    from plugins.render.kits.manosaba.layouts.folio import FolioPage
 
     stats = _stats(_records([120, -200, 0, 340, -80, 900, -60]))
     ctx = RenderContext()
     constraints = Constraints(max_width=2000, max_height=6000)
     for name, factory in KITS.items():
         page = stats_page(stats, factory())
-        size = page.child.measure(ctx, constraints)
+        size = (
+            page.compose(ctx)
+            if isinstance(page, FolioPage)
+            else page.child.measure(ctx, constraints)
+        )
         assert size.width > 0, name
         assert size.height > 0, name
 

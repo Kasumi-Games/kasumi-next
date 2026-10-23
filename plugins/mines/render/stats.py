@@ -72,6 +72,11 @@ def stats_page(data: "MinesStats", kit: BaseKit | None = None) -> AutoPage:
 
     kit = kit or BanGDreamKit()
 
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "mines.stats", data)) is not None:
+        return themed
+
     sections: list[Component] = [
         _summary_panel(kit, data),
         _detail_panel(kit, data),
@@ -193,12 +198,8 @@ def _recent_form_panel(kit: BaseKit, data: "MinesStats") -> Component | None:
     def slot() -> Component:
         return Spacer(width=Fixed(_FORM_CELL_WIDTH), height=Fixed(_FORM_BAR_HEIGHT))
 
-    top = [
-        bar(WIN_COLOR) if record.amount > 0 else slot() for record in records
-    ]
-    bottom = [
-        bar(LOSS_COLOR) if record.amount < 0 else slot() for record in records
-    ]
+    top = [bar(WIN_COLOR) if record.amount > 0 else slot() for record in records]
+    bottom = [bar(LOSS_COLOR) if record.amount < 0 else slot() for record in records]
 
     strip = VStack(
         [

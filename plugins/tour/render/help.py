@@ -20,6 +20,8 @@ from plugins.render import Component
 from plugins.render.kits.mewtype import MewtypeKit
 from plugins.render.kits.bangdream import BanGDreamKit
 
+from ..help_content import RULE_SECTIONS
+
 _ROW_GAP = 18
 _SECTION_GAP = 24
 _ACTION_BADGE_WIDTH = 64
@@ -35,6 +37,11 @@ def help_page(kit: BaseKit | None = None) -> AutoPage:
     """Build the tour rules card without rendering it."""
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "tour.help")) is not None:
+        return themed
     section_gap = 18 if isinstance(kit, MewtypeKit) else _SECTION_GAP
     return card_page(
         kit,
@@ -56,103 +63,19 @@ def help_page(kit: BaseKit | None = None) -> AutoPage:
 
 
 def _getting_started_panel(kit: BaseKit) -> Component:
-    return _section(
-        kit,
-        "目标与开局",
-        [
-            _rule(
-                kit,
-                "游戏目标",
-                "完成 26 场演出；体力降至 0 或以下即失败。",
-            ),
-            _rule(
-                kit,
-                "开始游戏",
-                "/巡演 [初级|中级|高级|超级]；不填难度默认初级。",
-            ),
-            _rule(
-                kit,
-                "显示模式",
-                "/巡演 模式 [图片|文本]；按用户保存，默认为图片。",
-            ),
-            _rule(
-                kit,
-                "赛季竞速榜",
-                "/巡演排行榜；按当前赛季、各难度分别记录最快通关时间。",
-            ),
-        ],
-    )
+    return _content_section(kit, 0)
 
 
 def _daily_flow_panel(kit: BaseKit) -> Component:
-    return _section(
-        kit,
-        "牌库与每日流程",
-        [
-            _rule(
-                kit,
-                "牌库",
-                "巡演牌 2-14 各两张；乐器和食物 2-10 各一张。开局 4 张手牌。",
-            ),
-            _rule(
-                kit,
-                "每日流程",
-                "每天最多 3 次计数行动；完成后进入下一天并补 3 张牌。0 不计行动。",
-            ),
-            _rule(
-                kit,
-                "食物与休息",
-                "每天第一张食物才恢复体力；5 只能在当天尚未行动且前一天未休息时使用。",
-            ),
-        ],
-    )
+    return _content_section(kit, 1)
 
 
 def _actions_panel(kit: BaseKit) -> Component:
-    actions = [
-        ("1-4", "选择手牌", "每次选择一张；最多把 0-4 连成 6 位输入。"),
-        (
-            "0",
-            "操作乐器",
-            "超级难度：0 丢弃乐器；其他难度：已装备时 0 卸下装备，未装备时 0 穿上装备。",
-        ),
-        ("5", "整日休息", "把当前手牌排到日程末尾；不能连续休息两天。"),
-        ("q", "退出", "结束当前巡演，不发放通关奖励。"),
-    ]
-    return _section(
-        kit,
-        "回合操作",
-        [_action_row(kit, key, name, detail) for key, name, detail in actions],
-    )
+    return _content_section(kit, 2)
 
 
 def _rules_and_rewards_panel(kit: BaseKit) -> Component:
-    return _section(
-        kit,
-        "乐器与奖励",
-        [
-            _rule(
-                kit,
-                "乐器",
-                "巡演消耗 max(0, 难度 - 底力)；同一乐器后续必须严格低于上次演出难度。",
-            ),
-            _rule(
-                kit,
-                "通关奖励",
-                "初级 20 Pt；中级 40 Pt；高级 60 Pt；超级 80 Pt，并获得等量 XP。",
-            ),
-            _rule(
-                kit,
-                "失败奖励",
-                "体力耗尽或超时时，按已完成演出场数发放 Pt：每场 1 Pt。",
-            ),
-            _rule(
-                kit,
-                "生日加成",
-                "角色生日当天，通关奖励和 XP 均为 2 倍。",
-            ),
-        ],
-    )
+    return _content_section(kit, 3)
 
 
 def _section(kit: BaseKit, title: str, rows: list[Component]) -> Component:
@@ -213,4 +136,16 @@ def _action_row(kit: BaseKit, key: str, name: str, detail: str) -> Component:
         ],
         gap=18,
         align="center",
+    )
+
+
+def _content_section(kit: BaseKit, index: int) -> Component:
+    title, rows = RULE_SECTIONS[index]
+    return _section(
+        kit,
+        title,
+        [
+            _action_row(kit, key, label, text) if key else _rule(kit, label, text)
+            for key, label, text in rows
+        ],
     )

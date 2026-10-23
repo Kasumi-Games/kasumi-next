@@ -12,6 +12,8 @@ from uniseg.graphemecluster import (
 FORBIDDEN_LINE_START = set(",.;:!?)]}，。！？、；：）】》」』〉〕］｝〗〙〛…")
 FORBIDDEN_LINE_END = set("([{（【《「『〈〔［｛〖〘〚")
 HANGING_LINE_END = set(",.;:!?，。！？、；：…")
+
+
 @dataclass(frozen=True)
 class _BreakCandidate:
     line: str
@@ -131,6 +133,8 @@ def draw_text_line(
 def _wrap_raw_line(text: str, font, max_width: int) -> list[str]:
     if not text:
         return [""]
+    if _adjusted_line_width(text, font) <= max_width:
+        return [text]
     legal_breaks = set(_line_breaks(text))
     legal_breaks.add(len(text))
     grapheme_breaks = _grapheme_boundaries(text)
@@ -164,7 +168,7 @@ def _wrap_raw_line(text: str, font, max_width: int) -> list[str]:
             penalty += 20000.0
         if not is_last and line[-1] in FORBIDDEN_LINE_END:
             penalty += 20000.0
-        if not is_last and _is_lonely_cjk_line(line):
+        if _is_lonely_cjk_line(line):
             penalty += 2500.0
         if adjusted_width < max_width and not is_last:
             remaining = (max_width - adjusted_width) / max_width
@@ -231,7 +235,10 @@ def _hanging_suffix_start(text: str) -> int:
 
 
 def _is_lonely_cjk_line(text: str) -> bool:
-    return len(text) == 1 and east_asian_width(text) in {"F", "W"}
+    # A final "片。" is just as conspicuous as a final "片". Prefer moving
+    # another glyph down when a paragraph has to wrap.
+    content = text.rstrip("".join(HANGING_LINE_END))
+    return len(content) == 1 and east_asian_width(content) in {"F", "W"}
 
 
 def _line_breaks(text: str) -> list[int]:
@@ -262,21 +269,11 @@ def _grapheme_boundaries(text: str) -> list[int]:
 def _cached_text_width(text: str, font, cache: dict[str, int]) -> int:
     width = cache.get(text)
     if width is None:
-        if _has_wide_character(text) and not getattr(font, "letter_spacing", 0):
-            width = sum(_cached_char_width(char, font, cache) for char in text)
-        else:
-            width = text_width(text, font)
+        # Glyph ink boxes are not advances. Adding individual boxes counts
+        # side bearings repeatedly ("乐器" is 45 that way, but actually 44).
+        # Use the same run metrics as measurement and painting, otherwise a
+        # fit-to-content Frame wraps again and ellipsizes a perfectly fitting
+        # label when it is drawn.
+        width = text_width(text, font)
         cache[text] = width
     return width
-
-
-def _cached_char_width(char: str, font, cache: dict[str, int]) -> int:
-    width = cache.get(char)
-    if width is None:
-        width = text_width(char, font)
-        cache[char] = width
-    return width
-
-
-def _has_wide_character(text: str) -> bool:
-    return any(east_asian_width(char) in {"F", "W"} for char in text)

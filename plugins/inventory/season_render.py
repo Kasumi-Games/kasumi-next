@@ -3,7 +3,8 @@
 matplotlib still draws the line geometry (a time-series polyline is exactly
 what it is good at), but nothing visual is matplotlib's own: the figure is
 transparent, every line, tick, and legend entry takes its color from the
-active kit's palette, chart text uses the shared CJK font, and the raster is
+active kit's palette, chart text uses an explicit theme font or the shared CJK
+font, and the raster is
 embedded in a themed :func:`utils.cards.card_page` with the season name, the
 per-rank threshold rows, and a snapshot-window footer — a card in the
 player's theme, not a naked chart.
@@ -29,6 +30,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from typing import Sequence
+from pathlib import Path
 from dataclasses import dataclass
 
 import matplotlib
@@ -197,9 +199,7 @@ def render_season_trend(
     return season_trend_page(data, kit).render()
 
 
-def season_trend_page(
-    data: SeasonTrendData, kit: BaseKit | None = None
-) -> AutoPage:
+def season_trend_page(data: SeasonTrendData, kit: BaseKit | None = None) -> AutoPage:
     """Build the season trend page without rendering it.
 
     The handler uses this so the raster is offloaded to
@@ -214,6 +214,11 @@ def season_trend_page(
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "inventory.trend", data)) is not None:
+        return themed
     rows: list[Component] = [
         kit.image(
             _chart_image(data, kit),
@@ -259,7 +264,9 @@ def _footer(kit: BaseKit, data: SeasonTrendData) -> Component:
     )
 
 
-def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
+def _chart_image(
+    data: SeasonTrendData, kit: BaseKit, *, font_path: Path | None = None
+) -> Image.Image:
     """Rasterize the threshold polylines with the kit's palette.
 
     The figure is fully transparent so the kit's panel fill shows through;
@@ -280,7 +287,7 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
     text = _mpl_color(kit.text_color)
     muted = _mpl_color(kit.muted_text_color)
     accent = _mpl_color(getattr(kit, "primary", None) or kit.text_color)
-    tick_font = _font_properties(_pt(LABEL_SIZE))
+    tick_font = _font_properties(_pt(LABEL_SIZE), font_path)
 
     figure_width = INNER_WIDTH * _CHART_SCALE
     figure_height = _CHART_HEIGHT * _CHART_SCALE
@@ -349,10 +356,7 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
     # Candidate time ticks at the upper bound; the final set is cut down to
     # what the measured label width says fits.
     times = sorted({ts for series in data.series for ts, _ in series.points})
-    candidates = [
-        times[index]
-        for index in _spread_tick_indices(times, _MAX_X_TICKS)
-    ]
+    candidates = [times[index] for index in _spread_tick_indices(times, _MAX_X_TICKS)]
     x_labels = _set_time_ticks(ax, candidates, tick_font, text)
 
     legend = None
@@ -371,10 +375,7 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
     renderer = canvas.get_renderer()
     axes_box = ax.get_window_extent(renderer)
     left_overhang = max(
-        (
-            axes_box.x0 - label.get_window_extent(renderer).x0
-            for label in y_labels
-        ),
+        (axes_box.x0 - label.get_window_extent(renderer).x0 for label in y_labels),
         default=0.0,
     )
     y_label_height = max(
@@ -386,10 +387,7 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
         default=0.0,
     )
     bottom_overhang = max(
-        (
-            axes_box.y0 - label.get_window_extent(renderer).y0
-            for label in x_labels
-        ),
+        (axes_box.y0 - label.get_window_extent(renderer).y0 for label in x_labels),
         default=0.0,
     )
 
@@ -402,10 +400,7 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
         # of clipping when the config-driven rank numbers run wide.
         available = (right - left) * figure_width
         columns = min(len(data.series), _LEGEND_COLUMNS)
-        while (
-            columns > 1
-            and legend.get_window_extent(renderer).width > available
-        ):
+        while columns > 1 and legend.get_window_extent(renderer).width > available:
             columns -= 1
             legend = _build_legend(ax, columns, tick_font, text)
             canvas.draw()
@@ -421,9 +416,7 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
     if legend is not None:
         # Anchor the legend a fixed gap above the (now final) axes top.
         axes_height = (top - bottom) * figure_height
-        legend.set_bbox_to_anchor(
-            (0.0, 1.0 + _LEGEND_GAP / axes_height, 1.0, 0.0)
-        )
+        legend.set_bbox_to_anchor((0.0, 1.0 + _LEGEND_GAP / axes_height, 1.0, 0.0))
 
     # Final time ticks at the final geometry: the largest evenly spread set
     # whose rendered labels all clear each other, backing off one tick at a
@@ -437,12 +430,9 @@ def _chart_image(data: SeasonTrendData, kit: BaseKit) -> Image.Image:
     time_span = xlim[1] - xlim[0]
     ticks = [times[0]]
     for count in range(min(_MAX_X_TICKS, len(times)), 1, -1):
-        candidate = [
-            times[index] for index in _spread_tick_indices(times, count)
-        ]
+        candidate = [times[index] for index in _spread_tick_indices(times, count)]
         positions = [
-            axes_left + (tick - xlim[0]) / time_span * axes_width
-            for tick in candidate
+            axes_left + (tick - xlim[0]) / time_span * axes_width for tick in candidate
         ]
         spans = _label_spans(positions, x_label_width)
         kept = _thin_label_spans(spans, _X_TICK_GAP)
@@ -527,9 +517,7 @@ def _spread_tick_indices(values: Sequence[int], limit: int) -> list[int]:
     return sorted(picked)
 
 
-def _label_spans(
-    positions: Sequence[float], width: float
-) -> list[tuple[float, float]]:
+def _label_spans(positions: Sequence[float], width: float) -> list[tuple[float, float]]:
     """Horizontal extents of tick labels under the edge-alignment rule.
 
     The first label is left-aligned at its tick, the last right-aligned, and
@@ -548,9 +536,7 @@ def _label_spans(
     return spans
 
 
-def _thin_label_spans(
-    spans: Sequence[tuple[float, float]], gap: float
-) -> list[int]:
+def _thin_label_spans(spans: Sequence[tuple[float, float]], gap: float) -> list[int]:
     """Indices of labels that fit without crowding, first and last pinned.
 
     Greedy left-to-right: a middle label survives only when it clears the
@@ -588,15 +574,18 @@ def _mpl_color(color: ColorLike) -> tuple[float, float, float, float]:
     return (red / 255.0, green / 255.0, blue / 255.0, alpha / 255.0)
 
 
-def _font_properties(size: float) -> font_manager.FontProperties:
-    """The shared CJK font at ``size`` points, degrading like ``load_font``.
+def _font_properties(
+    size: float, font_path: Path | None = None
+) -> font_manager.FontProperties:
+    """The requested theme font, defaulting to the shared CJK font.
 
     A missing bundle falls back to matplotlib's default font instead of
     raising, mirroring how the kits themselves degrade.
     """
 
-    if CHINESE_FONT.exists():
-        return font_manager.FontProperties(fname=str(CHINESE_FONT), size=size)
+    font_path = font_path or CHINESE_FONT
+    if font_path.exists():
+        return font_manager.FontProperties(fname=str(font_path), size=size)
     return font_manager.FontProperties(size=size)
 
 

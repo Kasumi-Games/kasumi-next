@@ -39,6 +39,11 @@ def render_theme_preview(data: ThemePreviewData, kit: BaseKit) -> Image.Image:
 def theme_preview_page(data: ThemePreviewData, kit: BaseKit) -> AutoPage:
     """Build a sample card entirely from the theme being offered."""
 
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "ryuseido.preview", data)) is not None:
+        return themed
+
     sample = kit.panel(
         VStack(
             [
@@ -128,9 +133,7 @@ def theme_preview_page(data: ThemePreviewData, kit: BaseKit) -> AutoPage:
         VStack([sample, surfaces, offer], gap=18, align="stretch"),
     )
     footer_text = data.footer or (
-        f"已拥有 · /装扮 装备 {data.name}"
-        if data.owned
-        else f"/流星堂 购买 {data.sku}"
+        f"已拥有 · /装扮 装备 {data.name}" if data.owned else f"/流星堂 购买 {data.sku}"
     )
     subtitle = f"主题 · {data.name}"
     if data.notice:

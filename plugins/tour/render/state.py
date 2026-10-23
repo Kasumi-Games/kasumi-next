@@ -54,15 +54,22 @@ def _card_cell(kit: BaseKit, index: int, card: TourCard | None) -> Component:
             value = f"体力 +{card.value}"
         children = [
             HStack(
-                [cards.badge(kit, str(index), width=42, height=38), kit.text(label, font_size=22)],
+                [
+                    cards.badge(kit, str(index), width=42, height=38),
+                    kit.text(label, font_size=22),
+                ],
                 gap=10,
                 align="center",
             ),
             kit.text(card.name, font_size=25, wrap=False, max_lines=1),
-            kit.text(value, font_size=22, color=kit.muted_text_color, wrap=False, max_lines=1),
+            kit.text(
+                value, font_size=22, color=kit.muted_text_color, wrap=False, max_lines=1
+            ),
         ]
     return kit.panel(
-        Frame(VStack(children, gap=8, align="start"), align_x="start", align_y="center"),
+        Frame(
+            VStack(children, gap=8, align="start"), align_x="start", align_y="center"
+        ),
         width=Fixed(350),
         padding=18,
         radius=18,
@@ -118,7 +125,9 @@ def _instrument_panel(kit: BaseKit, snapshot: TourSnapshot) -> Component:
     status = (
         "无乐器"
         if snapshot.instrument is None
-        else "已装备" if snapshot.instrument_equipped else "未装备"
+        else "已装备"
+        if snapshot.instrument_equipped
+        else "未装备"
     )
     rows: list[Component] = [
         HStack(
@@ -139,7 +148,9 @@ def _instrument_panel(kit: BaseKit, snapshot: TourSnapshot) -> Component:
         rows.append(
             HStack(
                 [
-                    kit.separator(orientation="vertical", length=Fixed(54), thickness=4),
+                    kit.separator(
+                        orientation="vertical", length=Fixed(54), thickness=4
+                    ),
                     kit.text(
                         "选择乐器牌后会自动装备。",
                         font_size=24,
@@ -168,8 +179,19 @@ def _instrument_panel(kit: BaseKit, snapshot: TourSnapshot) -> Component:
                         Frame(
                             VStack(
                                 [
-                                    kit.text("底力", font_size=22, color=kit.muted_text_color, wrap=False, max_lines=1),
-                                    kit.text(f"+{snapshot.instrument.value}", font_size=24, wrap=False, max_lines=1),
+                                    kit.text(
+                                        "底力",
+                                        font_size=22,
+                                        color=kit.muted_text_color,
+                                        wrap=False,
+                                        max_lines=1,
+                                    ),
+                                    kit.text(
+                                        f"+{snapshot.instrument.value}",
+                                        font_size=24,
+                                        wrap=False,
+                                        max_lines=1,
+                                    ),
                                 ],
                                 gap=4,
                                 align="start",
@@ -178,11 +200,19 @@ def _instrument_panel(kit: BaseKit, snapshot: TourSnapshot) -> Component:
                             align_x="start",
                             align_y="center",
                         ),
-                        kit.separator(orientation="vertical", length=Fixed(52), thickness=2),
+                        kit.separator(
+                            orientation="vertical", length=Fixed(52), thickness=2
+                        ),
                         Frame(
                             VStack(
                                 [
-                                    kit.text("契合度", font_size=22, color=kit.muted_text_color, wrap=False, max_lines=1),
+                                    kit.text(
+                                        "契合度",
+                                        font_size=22,
+                                        color=kit.muted_text_color,
+                                        wrap=False,
+                                        max_lines=1,
+                                    ),
                                     kit.text(
                                         "可演出任意难度"
                                         if snapshot.last_performance is None
@@ -278,10 +308,19 @@ def render_state(
     detail: str | None = None,
 ) -> Image.Image:
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (
+        themed := page_for(kit, "tour.state", data, identity=identity, detail=detail)
+    ) is not None:
+        return themed.render()
     snapshot = data.snapshot
     sections: list[Component] = []
     if identity is not None:
-        sections.append(cards.game_identity(kit, identity, width=BOARD_WIDTH, detail=detail))
+        sections.append(
+            cards.game_identity(kit, identity, width=BOARD_WIDTH, detail=detail)
+        )
     sections.extend(
         [
             _status_panel(kit, snapshot),

@@ -188,10 +188,7 @@ def attachment_summary(
     """
 
     return summarize(
-        [
-            (item.item_id, item.quantity)
-            for item in dedupe_attachments(attachments)
-        ],
+        [(item.item_id, item.quantity) for item in dedupe_attachments(attachments)],
         limit=limit,
         separator=separator,
     )
@@ -384,6 +381,41 @@ def section_band(
     )
 
 
+def attachment_results(
+    attachments: Sequence, results: Sequence
+) -> list[tuple[object, object | None]]:
+    """Pair grants before scope-aware deduplication for every presentation."""
+    ordered = list(results)
+    seen = set()
+    paired = []
+    for index, attachment in enumerate(attachments):
+        key = (
+            attachment.item_id,
+            getattr(attachment, "scope_type", "") or "",
+            getattr(attachment, "scope_id", "") or "",
+        )
+        if key not in seen:
+            paired.append(
+                (attachment, ordered[index] if index < len(ordered) else None)
+            )
+            seen.add(key)
+    return paired
+
+
+def receipt_lines(attachments: Sequence, results: Sequence) -> list[str]:
+    """Actual grant outcomes, including owned and previously claimed items."""
+    lines = []
+    for attachment, result in attachment_results(attachments, results):
+        name = item_facts(attachment.item_id)[0]
+        if result is None:
+            lines.append(f"{name} · 已领取")
+        elif result.granted > 0:
+            lines.append(item_display(result.item_id, result.granted))
+        else:
+            lines.append(f"{name} · 已拥有")
+    return lines
+
+
 def tiles_for_attachments(
     kit: BaseKit,
     attachments: Sequence,
@@ -406,19 +438,8 @@ def tiles_for_attachments(
         Tiles in attachment order, one per item+scope.
     """
 
-    ordered = list(results)
-    seen: set[tuple[str, str, str]] = set()
     tiles: list[Component] = []
-    for index, attachment in enumerate(attachments):
-        key = (
-            attachment.item_id,
-            getattr(attachment, "scope_type", "") or "",
-            getattr(attachment, "scope_id", "") or "",
-        )
-        if key in seen:
-            continue
-        seen.add(key)
-        result = ordered[index] if index < len(ordered) else None
+    for attachment, result in attachment_results(attachments, results):
         if result is None:
             tiles.append(
                 reward_tile(

@@ -443,13 +443,20 @@ def render(
         graph=session.graph,
     )
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (
+        themed := page_for(
+            kit, "one_stroke.board", session, identity=identity, detail=detail
+        )
+    ) is not None:
+        return themed.render()
     title = (
         f"{session.difficulty_name} | {session.drawn_count}/{session.total_edges} | "
         f"奖励 {live_reward}/{session.reward}"
     )
-    sections: list[Component] = [
-        _title_bar(kit, "一笔画", title, width=560, height=57)
-    ]
+    sections: list[Component] = [_title_bar(kit, "一笔画", title, width=560, height=57)]
     if identity is not None:
         sections.append(
             cards.game_identity(kit, identity, width=BOARD_WIDTH, detail=detail)

@@ -450,6 +450,21 @@ class BlackjackRenderer:
         detail: Optional[str] = None,
     ) -> Image.Image:
         """生成手牌的图片"""
+
+        from plugins.render.kits.manosaba.layouts import page_for
+
+        if (
+            themed := page_for(
+                self.kit,
+                "blackjack.table",
+                self,
+                hand,
+                hidden=second_card_back,
+                identity=identity,
+                detail=detail,
+            )
+        ) is not None:
+            return themed.render()
         if second_card_back:
             score_text = f"共 {hand.cards[0].get_value()} + ? 点"
         else:
@@ -458,9 +473,7 @@ class BlackjackRenderer:
         sections: list[Component] = []
         if isinstance(self.kit, MewtypeKit):
             sections.append(self.kit.article_header("BLACKKASUMI", width=panel_width))
-        strip = self._identity_strip(
-            identity, detail, width=panel_width
-        )
+        strip = self._identity_strip(identity, detail, width=panel_width)
         if strip is not None:
             sections.append(strip)
         sections.append(
@@ -470,9 +483,7 @@ class BlackjackRenderer:
                 self.RenderLayout.DEALER_TAG_COLOR,
             )
         )
-        sections.append(
-            self._cards_panel(hand, second_card_back, width=panel_width)
-        )
+        sections.append(self._cards_panel(hand, second_card_back, width=panel_width))
         page = AutoPage(
             padding=self.RenderLayout.PAGE_PADDING,
             background=self.kit.background(),
@@ -700,6 +711,22 @@ class BlackjackRenderer:
         detail: Optional[str] = None,
     ) -> Image.Image:
         """生成包含庄家和玩家手牌的游戏桌面"""
+
+        from plugins.render.kits.manosaba.layouts import page_for
+
+        if (
+            themed := page_for(
+                self.kit,
+                "blackjack.table",
+                self,
+                dealer_hand,
+                player_hand,
+                hidden=dealer_card_back,
+                identity=identity,
+                detail=detail,
+            )
+        ) is not None:
+            return themed.render().convert("RGB")
         if dealer_card_back:
             dealer_score = f"共 {dealer_hand.cards[0].get_value()} + ? 点"
         else:

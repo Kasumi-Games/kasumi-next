@@ -71,7 +71,9 @@ def _body(kit: BaseKit, data: TourResultData) -> Component:
                     cards.stat_row(kit, "难度", snapshot.difficulty),
                     cards.stat_row(kit, "完成场数", f"{snapshot.tour_played_count}/26"),
                     cards.stat_row(kit, "耗时", f"{data.elapsed_seconds:.0f} 秒"),
-                    cards.stat_row(kit, "剩余体力", f"{snapshot.stamina}/{snapshot.max_stamina}"),
+                    cards.stat_row(
+                        kit, "剩余体力", f"{snapshot.stamina}/{snapshot.max_stamina}"
+                    ),
                     cards.stat_row(kit, "当前余额", f"{data.balance} Pt"),
                 ],
                 gap=14,
@@ -97,7 +99,9 @@ def _body(kit: BaseKit, data: TourResultData) -> Component:
                 cards.gain_rows(kit, [(f"+{data.reward_pt} Pt", "巡演奖励")]),
             ]
         )
-        sections.append(cards.panel_section(kit, VStack(reward_rows, gap=14, align="stretch")))
+        sections.append(
+            cards.panel_section(kit, VStack(reward_rows, gap=14, align="stretch"))
+        )
     rewards: list[Component] = []
     if data.task_name:
         rewards.append(cards.task_progress(kit, f"每日任务 · {data.task_name}", 1, 1))
@@ -111,7 +115,9 @@ def _body(kit: BaseKit, data: TourResultData) -> Component:
     if sticker_gains:
         rewards.append(cards.gain_rows(kit, sticker_gains))
     if rewards:
-        sections.append(cards.panel_section(kit, VStack(rewards, gap=14, align="stretch")))
+        sections.append(
+            cards.panel_section(kit, VStack(rewards, gap=14, align="stretch"))
+        )
     return VStack(sections, gap=20, align="stretch")
 
 
@@ -121,6 +127,11 @@ def result_page(
     identity: PlayerIdentity | None = None,
 ) -> AutoPage:
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "tour.result", data, identity=identity)) is not None:
+        return themed
     sections: list[Component] = []
     if identity is not None:
         sections.append(

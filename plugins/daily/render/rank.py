@@ -95,6 +95,11 @@ def rank_page(data: RankData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "daily.rank", data)) is not None:
+        return themed
     if not data.rows:
         body: Component = panel_section(
             kit, empty_state(kit, "还没有人上榜\n发送 /签到 赚取第一份 XP")
@@ -118,10 +123,7 @@ def _ladder(kit: BaseKit, data: RankData) -> Component:
     children: list[Component] = [
         ladder_rows(
             kit,
-            [
-                (row.rank, row.name, _value(row), row.identity)
-                for row in data.rows
-            ],
+            [(row.rank, row.name, _value(row), row.identity) for row in data.rows],
             highlight=data.viewer_name,
         )
     ]

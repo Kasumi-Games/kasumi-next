@@ -20,8 +20,8 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render.types import ImageSource
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 
 @dataclass(frozen=True)
@@ -60,6 +60,11 @@ def inventory_list_page(
     data: InventoryListData, kit: BaseKit | None = None
 ) -> AutoPage:
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "inventory.list", data)) is not None:
+        return themed
     children: list[Component] = []
     if data.equipped_summary:
         children.append(

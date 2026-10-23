@@ -53,8 +53,8 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 from ..entries import SUPPORT_GROUP
 from ..entries import HelpEntry
@@ -105,9 +105,7 @@ _NARROW_GLYPH = 0.55
 _ALIAS_SEPARATOR = " · "
 
 
-def board_page(
-    entries: Sequence[HelpEntry], kit: BaseKit | None = None
-) -> AutoPage:
+def board_page(entries: Sequence[HelpEntry], kit: BaseKit | None = None) -> AutoPage:
     """Build the command board page.
 
     Args:
@@ -119,6 +117,11 @@ def board_page(
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "help.board", entries)) is not None:
+        return themed
     groups = commands_by_category(entries)
     compact = _use_compact_tiles(entries)
     if groups:
@@ -168,9 +171,7 @@ def _use_compact_tiles(entries: Sequence[HelpEntry]) -> bool:
 def _category_section(
     kit: BaseKit, category: str, commands: Sequence[HelpCommand], compact: bool
 ) -> Component:
-    children: list[Component] = [
-        _section_head(kit, category, f"{len(commands)} 项")
-    ]
+    children: list[Component] = [_section_head(kit, category, f"{len(commands)} 项")]
     # Yumemita's c-article-head is already the section delimiter.  The source
     # places content after it without a second horizontal rule.
     if not isinstance(kit, MewtypeKit):
@@ -204,9 +205,7 @@ def _section_head(kit: BaseKit, title: str, count: str) -> Component:
         HStack(
             [
                 Frame(
-                    kit.text(
-                        title, font_size=SUBTITLE_SIZE, wrap=False, max_lines=1
-                    ),
+                    kit.text(title, font_size=SUBTITLE_SIZE, wrap=False, max_lines=1),
                     width=Fill(),
                     align_x="start",
                     align_y="center",
@@ -231,12 +230,18 @@ def _section_head(kit: BaseKit, title: str, count: str) -> Component:
 
 
 def _tile(kit: BaseKit, command: HelpCommand, compact: bool = False) -> Component:
+    command_tile = getattr(kit, "command_tile", None)
+    if callable(command_tile):
+        return command_tile(
+            command.command,
+            detail="" if compact else _sub_line(command),
+            width=TILE_WIDTH,
+            height=COMPACT_TILE_HEIGHT if compact else TILE_HEIGHT,
+        )
     if compact:
         return kit.panel(
             Frame(
-                kit.text(
-                    command.command, font_size=BODY_SIZE, wrap=False, max_lines=1
-                ),
+                kit.text(command.command, font_size=BODY_SIZE, wrap=False, max_lines=1),
                 width=Fill(),
                 height=Fill(),
                 align_x="start",
@@ -250,9 +255,7 @@ def _tile(kit: BaseKit, command: HelpCommand, compact: bool = False) -> Componen
     return kit.panel(
         VStack(
             [
-                kit.text(
-                    command.command, font_size=BODY_SIZE, wrap=False, max_lines=1
-                ),
+                kit.text(command.command, font_size=BODY_SIZE, wrap=False, max_lines=1),
                 kit.text(
                     _sub_line(command),
                     font_size=LABEL_SIZE,
@@ -297,9 +300,7 @@ def _sub_line(command: HelpCommand) -> str:
 
 
 def _text_width(text: str, font_size: int) -> float:
-    units = sum(
-        _WIDE_GLYPH if ord(char) >= 0x2E80 else _NARROW_GLYPH for char in text
-    )
+    units = sum(_WIDE_GLYPH if ord(char) >= 0x2E80 else _NARROW_GLYPH for char in text)
     return units * font_size
 
 

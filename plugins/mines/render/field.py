@@ -11,7 +11,6 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
-from plugins.render.kits.kasumi import KasumiKit
 from plugins.render.kits.mewtype import MewtypeKit
 from plugins.render.kits.bangdream import BG_DIR
 from plugins.render.kits.bangdream import BanGDreamKit
@@ -54,11 +53,7 @@ def generate_unrevealed_field(
             kit.text(
                 str(index),
                 font_size=font_size,
-                color=(
-                    (169, 205, 245, 255)
-                    if is_mewtype
-                    else (255, 255, 255, 255)
-                ),
+                color=((169, 205, 245, 255) if is_mewtype else (255, 255, 255, 255)),
                 align="center",
                 max_lines=1,
             ),
@@ -89,9 +84,7 @@ def generate_revealed_field(
     radius = max(8, round(16 * cell_size / DEFAULT_CELL_SIZE))
     return kit.panel(
         Frame(
-            kit.image(
-                stamp_path, width=Fixed(stamp_size), height=Fixed(stamp_size)
-            ),
+            kit.image(stamp_path, width=Fixed(stamp_size), height=Fixed(stamp_size)),
             align_x="center",
             align_y="center",
         ),
@@ -123,8 +116,9 @@ def _title_bar(
             "ARISA'S WAREHOUSE",
             width=BOARD_WIDTH,
         )
-    if isinstance(kit, KasumiKit):
-        return kit.game_title(title, subtitle, width=width, height=height)
+    game_title = getattr(kit, "game_title", None)
+    if callable(game_title):
+        return game_title(title, subtitle, width=width, height=height)
     if isinstance(kit, BanGDreamKit):
         return kit.title_pill(
             title,
@@ -195,6 +189,13 @@ def render(
     detail: str | None = None,
 ) -> Image.Image:
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (
+        themed := page_for(kit, "mines.board", field, identity=identity, detail=detail)
+    ) is not None:
+        return themed.render()
     cells = []
     cell_size, cell_gap = _cell_layout(max(field.width, field.height))
 

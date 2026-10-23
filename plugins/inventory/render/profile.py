@@ -22,8 +22,8 @@ from utils.cards import stat_row
 from utils.cards import card_page
 from utils.cards import player_card
 from utils.cards import panel_section
-from plugins.render import Frame
 from plugins.render import Fixed
+from plugins.render import Frame
 from plugins.render import HStack
 from plugins.render import VStack
 from plugins.render import BaseKit
@@ -31,10 +31,9 @@ from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
 from plugins.render.types import ImageSource
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.kasumi import KasumiKit
+from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.kasumi.components import STANDING_ART
-
 
 _WIDE_CONTENT_WIDTH = 1364
 _ART_WIDTH = 680
@@ -118,6 +117,11 @@ def profile_page(data: ProfileData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "inventory.profile", data)) is not None:
+        return themed
 
     art = data.standing_art
     if art is None and isinstance(kit, KasumiKit):
@@ -221,9 +225,7 @@ def _xp_row(kit: BaseKit, data: ProfileData) -> Component:
 
     return VStack(
         [
-            stat_row(
-                kit, "等级经验", f"{data.xp_in_level}/{data.xp_level_span} XP"
-            ),
+            stat_row(kit, "等级经验", f"{data.xp_in_level}/{data.xp_level_span} XP"),
             meter(
                 kit,
                 value=data.xp_in_level,

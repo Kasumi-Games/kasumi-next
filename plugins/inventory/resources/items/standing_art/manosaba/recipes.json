@@ -1,0 +1,145 @@
+[
+  {
+    "prefab": "Ema",
+    "character_id": "manosaba_ema",
+    "name": "樱羽艾玛 未竟的证言",
+    "rarity": 6,
+    "keys": [
+      "Smile1",
+      "ArmL5",
+      "ArmR1"
+    ]
+  },
+  {
+    "prefab": "Hiro",
+    "character_id": "manosaba_hiro",
+    "name": "二阶堂希罗 不落的誓约",
+    "rarity": 6,
+    "keys": [
+      "Normal1",
+      "ArmL1",
+      "ArmR4"
+    ]
+  },
+  {
+    "prefab": "Hanna",
+    "character_id": "manosaba_hanna",
+    "name": "汉娜 微光的舞台",
+    "rarity": 5,
+    "keys": [
+      "Normal1",
+      "ArmL1",
+      "ArmR4"
+    ]
+  },
+  {
+    "prefab": "Sherry",
+    "character_id": "manosaba_sherry",
+    "name": "雪莉 掌心的温度",
+    "rarity": 5,
+    "keys": [
+      "Smile1",
+      "ArmL1",
+      "ArmR9"
+    ]
+  },
+  {
+    "prefab": "Noah",
+    "character_id": "manosaba_noah",
+    "name": "诺亚 画布之外",
+    "rarity": 5,
+    "keys": [
+      "Smile1",
+      "ArmL1",
+      "ArmR4"
+    ]
+  },
+  {
+    "prefab": "Coco",
+    "character_id": "manosaba_coco",
+    "name": "可可 视线所及",
+    "rarity": 5,
+    "keys": [
+      "Pensive1",
+      "ArmL5",
+      "ArmR6"
+    ]
+  },
+  {
+    "prefab": "Meruru",
+    "character_id": "manosaba_meruru",
+    "name": "梅露露 花与祈愿",
+    "rarity": 4,
+    "keys": [
+      "Smile1",
+      "ArmL7",
+      "ArmR8_1"
+    ]
+  },
+  {
+    "prefab": "Alisa",
+    "character_id": "manosaba_alisa",
+    "name": "亚里沙 不灭的心火",
+    "rarity": 4,
+    "keys": [
+      "Normal1",
+      "ArmL3",
+      "ArmR5"
+    ]
+  },
+  {
+    "prefab": "Leia",
+    "character_id": "manosaba_leia",
+    "name": "蕾雅 从容的旁观",
+    "rarity": 4,
+    "keys": [
+      "Normal1",
+      "ArmL7",
+      "ArmR3"
+    ]
+  },
+  {
+    "prefab": "Nanoka",
+    "character_id": "manosaba_nanoka",
+    "name": "奈叶香 雾中的回声",
+    "rarity": 4,
+    "keys": [
+      "Pensive1",
+      "ArmL1",
+      "ArmR3"
+    ]
+  },
+  {
+    "prefab": "AnAn",
+    "character_id": "manosaba_anan",
+    "name": "安安 静静的守候",
+    "rarity": 4,
+    "keys": [
+      "Normal1",
+      "ArmL3",
+      "ArmR4"
+    ]
+  },
+  {
+    "prefab": "Margo",
+    "character_id": "manosaba_margo",
+    "name": "玛格 沉默的注脚",
+    "rarity": 4,
+    "keys": [
+      "Normal1",
+      "ArmL1",
+      "ArmR2"
+    ]
+  },
+  {
+    "prefab": "Miria",
+    "character_id": "manosaba_miria",
+    "name": "米莉亚 午后的来信",
+    "rarity": 4,
+    "keys": [
+      "Flushed1",
+      "ArmL8",
+      "ArmR3"
+    ]
+  }
+]

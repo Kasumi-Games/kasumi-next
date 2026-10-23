@@ -126,9 +126,7 @@ def pull(user_id: str, count: int = 1) -> list[GachaResult]:
         raise ValueError(f"星星贴纸不足，需要 {total_cost} 张")
 
     base_cost, remainder = divmod(total_cost, count)
-    pull_costs = [
-        base_cost + (1 if index < remainder else 0) for index in range(count)
-    ]
+    pull_costs = [base_cost + (1 if index < remainder else 0) for index in range(count)]
     batch_key = uuid.uuid4().hex
     results = []
     for index, cost in enumerate(pull_costs):
@@ -222,7 +220,9 @@ def pull_with_currency(
         raise
 
 
-def get_history(user_id: str, page: int, page_size: int = DEFAULT_PAGE_SIZE) -> HistoryPage:
+def get_history(
+    user_id: str, page: int, page_size: int = DEFAULT_PAGE_SIZE
+) -> HistoryPage:
     page = max(1, page)
     session = get_session()
     query = session.query(GachaPull).filter(GachaPull.user_id == user_id)
@@ -243,7 +243,11 @@ def current_rates(banner: GachaBanner, pity_count: int) -> dict[int, float]:
     rarity6 = _rarity6_rate(banner, pity_count)
     extra = max(0.0, rarity6 - rates.get(6, 0.0))
     rates[6] = rarity6
-    for rarity in (4, 3, 2, 1):
+    if rarity6 >= 1.0:
+        return {rarity: 1.0 if rarity == 6 else 0.0 for rarity in rates}
+    # Keep the existing lower-tier reduction order, then consume five-star
+    # probability when the six-star pity boost exhausts those tiers.
+    for rarity in (4, 3, 2, 1, 5):
         if extra <= 0:
             break
         available = rates.get(rarity, 0.0)
@@ -530,10 +534,10 @@ def _register_bestdori_standing_art(card) -> None:
 
     import json
 
-    from ..inventory.database import get_session
-    from ..inventory.models import CosmeticItem
-    from ..inventory.models import Item
     from .standing_art import standing_art_cache
+    from ..inventory.models import Item
+    from ..inventory.models import CosmeticItem
+    from ..inventory.database import get_session
 
     if standing_art_cache is None:
         raise RuntimeError("Bestdori 立绘缓存尚未初始化")
@@ -559,9 +563,7 @@ def _register_bestdori_standing_art(card) -> None:
         ensure_ascii=False,
     )
     cosmetic = (
-        session.query(CosmeticItem)
-        .filter(CosmeticItem.item_id == card.item_id)
-        .first()
+        session.query(CosmeticItem).filter(CosmeticItem.item_id == card.item_id).first()
     )
     if cosmetic is None:
         cosmetic = CosmeticItem(item_id=card.item_id)
@@ -575,7 +577,6 @@ def _register_bestdori_entry(entry: GachaEntry) -> None:
     """Register only the selected dynamic reward, not the whole catalogue."""
 
     from .standing_art import standing_art_cache
-
     from ..inventory.service import get_item
 
     # Curated fixed-pool rewards already have stable catalog ids and resolve

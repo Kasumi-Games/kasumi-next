@@ -102,6 +102,13 @@ def mail_page(
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (
+        themed := page_for(kit, "mailbox.mail", mail, results, ordinal=ordinal)
+    ) is not None:
+        return themed
     results = list(results)
 
     sections: list[Component] = [_letter_panel(kit, mail)]
@@ -162,9 +169,7 @@ def _letter_panel(kit: BaseKit, mail: ServiceMail) -> Component:
     )
 
 
-def _reward_panel(
-    kit: BaseKit, mail: ServiceMail, results: Sequence
-) -> Component:
+def _reward_panel(kit: BaseKit, mail: ServiceMail, results: Sequence) -> Component:
     tiles = tiles_for_attachments(kit, mail.attachments, results)
     return panel_section(
         kit,

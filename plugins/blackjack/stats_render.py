@@ -102,9 +102,7 @@ class StatsCardData:
     recent_games: Sequence["BlackjackGameRecord"]
 
 
-def stats_card_data(
-    stats: "BlackjackStats", identity: PlayerIdentity
-) -> StatsCardData:
+def stats_card_data(stats: "BlackjackStats", identity: PlayerIdentity) -> StatsCardData:
     """Map service stats onto the card's data.
 
     Args:
@@ -162,6 +160,11 @@ def stats_page(data: StatsCardData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "blackjack.stats", data)) is not None:
+        return themed
     sections: list[Component] = [
         game_identity(kit, data.identity, width=CONTENT_WIDTH),
         _record_panel(kit, data),
@@ -252,9 +255,7 @@ def _recent_form_panel(kit: BaseKit, data: StatsCardData) -> Component | None:
         return Spacer(width=Fixed(_FORM_CELL_WIDTH), height=Fixed(_FORM_BAR_HEIGHT))
 
     top = [bar(WIN_COLOR) if record.amount > 0 else slot() for record in records]
-    bottom = [
-        bar(LOSS_COLOR) if record.amount < 0 else slot() for record in records
-    ]
+    bottom = [bar(LOSS_COLOR) if record.amount < 0 else slot() for record in records]
 
     strip = VStack(
         [

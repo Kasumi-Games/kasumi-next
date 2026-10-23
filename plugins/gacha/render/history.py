@@ -197,6 +197,11 @@ def history_page(data: HistoryPageData, kit: BaseKit | None = None) -> AutoPage:
 
     kit = kit or BanGDreamKit()
 
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "gacha.history", data)) is not None:
+        return themed
+
     if not data.rows:
         return card_page(
             kit,

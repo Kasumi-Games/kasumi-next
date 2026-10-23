@@ -41,7 +41,9 @@ class GachaServiceTest(unittest.TestCase):
         self.gacha_session = gacha_database.session
 
         self._original_load_seasons_config = season_service.load_seasons_config
-        season_service.load_seasons_config = lambda: copy.deepcopy(self._season_config())
+        season_service.load_seasons_config = lambda: copy.deepcopy(
+            self._season_config()
+        )
 
         self._add_currency(STAR_STICKER_ITEM_ID, "星星贴纸", "permanent")
         self._add_currency(BONSAI_ITEM_ID, "盆栽", "permanent")
@@ -96,9 +98,7 @@ class GachaServiceTest(unittest.TestCase):
             return original_pull_once(*args, **kwargs)
 
         with patch("plugins.gacha.service.random.random", return_value=0.99):
-            with patch(
-                "plugins.gacha.service._pull_once", side_effect=fail_on_eighth
-            ):
+            with patch("plugins.gacha.service._pull_once", side_effect=fail_on_eighth):
                 with self.assertRaisesRegex(RuntimeError, "simulated pull failure"):
                     pull("u1", 10)
 
@@ -126,10 +126,14 @@ class GachaServiceTest(unittest.TestCase):
         first_banner = self._banner("banner-a", "season-a")
         second_banner = self._banner("banner-b", "season-b")
 
-        with patch("plugins.gacha.service.get_current_banner", return_value=first_banner):
+        with patch(
+            "plugins.gacha.service.get_current_banner", return_value=first_banner
+        ):
             with patch("plugins.gacha.service.random.random", return_value=0.99):
                 pull("u1", 1)
-        with patch("plugins.gacha.service.get_current_banner", return_value=second_banner):
+        with patch(
+            "plugins.gacha.service.get_current_banner", return_value=second_banner
+        ):
             with patch("plugins.gacha.service.random.random", return_value=0.99):
                 results = pull("u1", 1)
 
@@ -329,9 +333,7 @@ class GachaServiceTest(unittest.TestCase):
             ],
         }
 
-    def _add_currency(
-        self, item_id: str, name: str, currency_kind: str
-    ) -> None:
+    def _add_currency(self, item_id: str, name: str, currency_kind: str) -> None:
         self.inventory_session.add(
             Item(
                 item_id=item_id,
@@ -354,9 +356,7 @@ class GachaServiceTest(unittest.TestCase):
         )
         self.inventory_session.commit()
 
-    def _add_cosmetic(
-        self, item_id: str, cosmetic_type: str, rarity: int
-    ) -> None:
+    def _add_cosmetic(self, item_id: str, cosmetic_type: str, rarity: int) -> None:
         self.inventory_session.add(
             Item(
                 item_id=item_id,
@@ -401,7 +401,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
         # 扬帆起航 was scrapped before launch; 星之鼓动 is the real season 1.
         self.assertEqual(
             [season.season_key for season in seasons],
-            ["2026-s01", "2026-s02", "2026-s03"],
+            ["2026-s01", "2026-s02", "2026-s03", "2026-s04"],
         )
 
     def test_scrapped_planned_season_is_pruned_from_the_database(self) -> None:
@@ -465,9 +465,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
         self.assertEqual(banner.ten_cost, 1200)
         self.assertEqual(banner.soft_pity_start, 70)
         self.assertEqual(banner.hard_pity, 90)
-        self.assertEqual(
-            banner.base_rates, {6: 0.01, 5: 0.09, 4: 0.30, 3: 0.60}
-        )
+        self.assertEqual(banner.base_rates, {6: 0.01, 5: 0.09, 4: 0.30, 3: 0.60})
 
         featured = [entry for entry in banner.entries if entry.featured]
         self.assertEqual(
@@ -477,9 +475,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
         self.assertEqual(featured[0].rarity, 6)
         # Season 1 retains its six existing rewards while additional standard
         # standing art may be appended to the configured normal pool.
-        fillers = {
-            entry.item_id for entry in banner.entries if not entry.featured
-        }
+        fillers = {entry.item_id for entry in banner.entries if not entry.featured}
         self.assertTrue(
             {
                 "standing_art_placeholder_r3_001",
@@ -494,9 +490,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
     def test_starbeat_rank_rewards_also_grant_the_theme(self) -> None:
         config = season_service.load_seasons_config()
         starbeat = next(
-            entry
-            for entry in config["seasons"]
-            if entry["season_key"] == "2026-s01"
+            entry for entry in config["seasons"] if entry["season_key"] == "2026-s01"
         )
         self.assertEqual(starbeat["gacha_theme_item_id"], "theme_kasumi_starbeat")
         self.assertEqual(
@@ -523,7 +517,9 @@ class StarbeatRealConfigTest(unittest.TestCase):
         self.assertEqual(tiers["rank_11_50"]["star_sticker"], 300)
         self.assertEqual(tiers["rank_11_50"]["frame_starbeat_top50"], 1)
 
-    def test_mewtype_season_builds_with_the_requested_rarities_and_weights(self) -> None:
+    def test_mewtype_season_builds_with_the_requested_rarities_and_weights(
+        self,
+    ) -> None:
         sync_catalog()
         season_service.sync_seasons_config()
         season = season_service.get_season_by_key("2026-s02")
@@ -555,9 +551,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
         self.assertIsNotNone(banner)
         gacha_service._validate_banner_rewards(banner)  # must not raise
         limited_five_star = [
-            entry
-            for entry in banner.entries
-            if entry.featured and entry.rarity == 5
+            entry for entry in banner.entries if entry.featured and entry.rarity == 5
         ]
         standard_five_star = [
             entry
@@ -618,9 +612,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
     def test_mewtype_theme_is_a_top_ten_reward(self) -> None:
         config = season_service.load_seasons_config()
         mewtype = next(
-            entry
-            for entry in config["seasons"]
-            if entry["season_key"] == "2026-s02"
+            entry for entry in config["seasons"] if entry["season_key"] == "2026-s02"
         )
         tier_items = {
             tier["tier_key"]: {item["item_id"] for item in tier["items"]}
@@ -715,9 +707,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
 
         config = season_service.load_seasons_config()
         roselia = next(
-            entry
-            for entry in config["seasons"]
-            if entry["season_key"] == "2026-s03"
+            entry for entry in config["seasons"] if entry["season_key"] == "2026-s03"
         )
         tier_items = {
             tier["tier_key"]: {item["item_id"] for item in tier["items"]}
@@ -792,8 +782,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
         config = season_service.load_seasons_config()
         seasons = {season["season_key"]: season for season in config["seasons"]}
         season_one_ids = {
-            entry["item_id"]
-            for entry in seasons["2026-s01"]["gacha_banner"]["entries"]
+            entry["item_id"] for entry in seasons["2026-s01"]["gacha_banner"]["entries"]
         }
         self.assertTrue(expected.isdisjoint(season_one_ids))
 

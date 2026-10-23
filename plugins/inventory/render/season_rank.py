@@ -30,8 +30,8 @@ from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
 from plugins.render import PlayerIdentity
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 
 @dataclass(frozen=True)
@@ -99,6 +99,11 @@ def season_rank_page(data: SeasonRankData, kit: BaseKit | None = None) -> AutoPa
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "inventory.season_rank", data)) is not None:
+        return themed
     if not data.rows:
         body: Component = panel_section(
             kit, empty_state(kit, "本赛季还没有 Pt 记录\n玩一局游戏赚取第一份 Pt")
@@ -125,10 +130,7 @@ def _ladder(kit: BaseKit, data: SeasonRankData) -> Component:
     children: list[Component] = [
         ladder_rows(
             kit,
-            [
-                (row.rank, row.name, _value(row), row.identity)
-                for row in data.rows
-            ],
+            [(row.rank, row.name, _value(row), row.identity) for row in data.rows],
             highlight=data.viewer_name,
         )
     ]

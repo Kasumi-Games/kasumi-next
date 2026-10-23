@@ -17,7 +17,7 @@ def test_help_card_renders_in_every_kit(kit_name: str) -> None:
     image = render_help(KITS[kit_name]())
 
     assert image.mode == "RGBA"
-    assert image.width == CARD_WIDTH
+    assert image.width == (1240 if kit_name == "manosaba" else CARD_WIDTH)
     assert 700 < image.height < 1800
 
 

@@ -23,9 +23,9 @@ from typing import Sequence
 from PIL import Image
 
 from utils.cards import BODY_SIZE
-from utils.cards import CONTENT_WIDTH
 from utils.cards import LABEL_SIZE
 from utils.cards import INNER_WIDTH
+from utils.cards import CONTENT_WIDTH
 from utils.cards import SUBTITLE_SIZE
 from utils.cards import badge
 from utils.cards import card_page
@@ -41,8 +41,8 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 from ..models import ServiceMail
 from .rewards import attachment_summary
@@ -83,9 +83,7 @@ def render_inbox(
     return inbox_page(mails, kit).render()
 
 
-def inbox_page(
-    mails: Sequence[ServiceMail], kit: BaseKit | None = None
-) -> AutoPage:
+def inbox_page(mails: Sequence[ServiceMail], kit: BaseKit | None = None) -> AutoPage:
     """Build the inbox page without rendering it.
 
     Handlers use this so the tree — which reads the inventory catalog for item
@@ -101,6 +99,11 @@ def inbox_page(
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "mailbox.inbox", mails)) is not None:
+        return themed
     mails = list(mails)
 
     if not mails:
@@ -126,9 +129,7 @@ def inbox_page(
     if len(mails) > MAX_ROWS:
         rows.append(_overflow_row(kit, len(mails) - len(shown)))
 
-    list_panel = panel_section(
-        kit, VStack(rows, gap=ROW_GAP, align="stretch")
-    )
+    list_panel = panel_section(kit, VStack(rows, gap=ROW_GAP, align="stretch"))
     subtitle: str | None = _subtitle(mails, unclaimed)
     body: Component = list_panel
     if isinstance(kit, MewtypeKit):
@@ -149,12 +150,8 @@ def inbox_page(
     )
 
 
-def _subtitle(
-    mails: Sequence[ServiceMail], unclaimed: Sequence[ServiceMail]
-) -> str:
-    notices = [
-        mail for mail in mails if not mail.is_read and not mail.attachments
-    ]
+def _subtitle(mails: Sequence[ServiceMail], unclaimed: Sequence[ServiceMail]) -> str:
+    notices = [mail for mail in mails if not mail.is_read and not mail.attachments]
     parts: list[str] = []
     if unclaimed:
         parts.append(f"{len(unclaimed)} 封未领取")
@@ -286,9 +283,7 @@ def _dense_row(kit: BaseKit, index: int, mail: ServiceMail) -> Component:
     return Frame(
         HStack(
             [
-                _index_cell(
-                    kit, index, mail, size=DENSE_CHIP, font_size=LABEL_SIZE
-                ),
+                _index_cell(kit, index, mail, size=DENSE_CHIP, font_size=LABEL_SIZE),
                 Frame(
                     kit.text(
                         mail.title,
@@ -408,6 +403,7 @@ def _expiry_cell(
         wrap=False,
         max_lines=1,
     )
+
 
 def expiry_state(expire_time: datetime.datetime) -> tuple[str, bool]:
     """Describe how long a mail has left.

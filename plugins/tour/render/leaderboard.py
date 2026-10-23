@@ -108,6 +108,11 @@ def leaderboard_page(
     kit: BaseKit | None = None,
 ) -> AutoPage:
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "tour.rank", rows_by_difficulty)) is not None:
+        return themed
     panels = tuple(
         _ranking_panel(kit, difficulty, rows_by_difficulty.get(difficulty, []))
         for difficulty in ("初级", "中级", "高级", "超级")

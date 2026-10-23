@@ -202,6 +202,11 @@ def pull_page(data: PullPageData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "gacha.pull", data)) is not None:
+        return themed
     is_ten = len(data.pulls) >= 10
     page_width = TEN_PULL_CONTENT_WIDTH if is_ten else CONTENT_WIDTH
     return card_page(

@@ -65,6 +65,15 @@ _DETAIL_HEIGHT = 320
 
 
 @dataclass(frozen=True)
+class BannerFeaturedArt:
+    """One highest-rarity featured character available in the banner."""
+
+    name: str
+    rarity: int
+    image: Path | None = None
+
+
+@dataclass(frozen=True)
 class BannerPageData:
     """Everything the banner showcase shows, assembled by :func:`banner_page_data`.
 
@@ -90,6 +99,8 @@ class BannerPageData:
             season avatar-frame ring — shown under the bundle line so the
             card shows the frame instead of only naming it. ``None`` hides
             the preview.
+        featured_items: All highest-rarity featured characters and their art,
+            for themes with a multi-character showcase.
     """
 
     banner_name: str
@@ -104,6 +115,7 @@ class BannerPageData:
     pity_count: int
     hard_pity: int
     frame_art: Path | None = None
+    featured_items: tuple[BannerFeaturedArt, ...] = ()
 
 
 def banner_page_data(
@@ -164,6 +176,15 @@ def banner_page_data(
         frame_art=next(
             (art[item_id] for item_id in bundle_item_ids if item_id in art), None
         ),
+        featured_items=tuple(
+            BannerFeaturedArt(
+                names.get(entry.item_id, entry.name),
+                entry.rarity,
+                art.get(entry.item_id),
+            )
+            for entry in banner.entries
+            if entry.featured and featured and entry.rarity == featured.rarity
+        ),
     )
 
 
@@ -209,6 +230,11 @@ def banner_page(data: BannerPageData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "gacha.banner", data)) is not None:
+        return themed
     sections: list[Component] = []
     showcase = _showcase(kit, data)
     if showcase is not None:

@@ -125,6 +125,28 @@
       }
     },
     {
+      "item_id": "theme_manosaba",
+      "category": "cosmetic",
+      "name": "魔法少女的魔女审判",
+      "description": "旧纸与墨迹之间，蔷薇色的证言静候审判。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 173,
+      "cosmetic": {
+        "cosmetic_type": "theme",
+        "rarity": 6
+      },
+      "metadata": {
+        "kit": "manosaba",
+        "aliases": [
+          "manosaba",
+          "魔女审判",
+          "魔女裁判",
+          "魔法少女的魔女审判"
+        ]
+      }
+    },
+    {
       "item_id": "theme_roselia",
       "category": "cosmetic",
       "name": "Roselia · 蔷薇穹庭",
@@ -138,7 +160,11 @@
       },
       "metadata": {
         "kit": "roselia",
-        "aliases": ["roselia", "ロゼリア", "蔷薇穹庭"]
+        "aliases": [
+          "roselia",
+          "ロゼリア",
+          "蔷薇穹庭"
+        ]
       }
     },
     {
@@ -1039,6 +1065,372 @@
       "metadata": {
         "bestdori_card_id": 90025,
         "bestdori_variant": "normal"
+      }
+    },
+    {
+      "item_id": "frame_manosaba_champion",
+      "category": "cosmetic",
+      "name": "未竟证言冠军头像框",
+      "description": "第四赛季冠军限定；金色天平与蔷薇封蜡。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 310,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_manosaba_champion.png"
+      }
+    },
+    {
+      "item_id": "frame_manosaba_podium",
+      "category": "cosmetic",
+      "name": "未竟证言前三头像框",
+      "description": "第四赛季前三限定；银链与三枚证言菱印。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 311,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_manosaba_podium.png"
+      }
+    },
+    {
+      "item_id": "frame_manosaba_top10",
+      "category": "cosmetic",
+      "name": "未竟证言前十头像框",
+      "description": "第四赛季前十限定；蔷薇、银叶与封蜡。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 312,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_manosaba_top10.png"
+      }
+    },
+    {
+      "item_id": "frame_manosaba_top50",
+      "category": "cosmetic",
+      "name": "未竟证言前五十头像框",
+      "description": "第四赛季前五十限定；档案封印与银链。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 313,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 3
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_manosaba_top50.png"
+      }
+    },
+    {
+      "item_id": "frame_manosaba_character",
+      "category": "cosmetic",
+      "name": "魔女审判 双生誓约头像框",
+      "description": "第四赛季首次获得六星角色时附赠；黑白缎带承接艾玛与希罗的誓约。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 314,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_manosaba_character.png"
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_ema",
+      "category": "cosmetic",
+      "name": "樱羽艾玛 未竟的证言",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定6星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 320,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/ema.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Smile1",
+          "ArmL5",
+          "ArmR1"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_hiro",
+      "category": "cosmetic",
+      "name": "二阶堂希罗 不落的誓约",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定6星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 321,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/hiro.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Normal1",
+          "ArmL1",
+          "ArmR4"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_hanna",
+      "category": "cosmetic",
+      "name": "汉娜 微光的舞台",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定5星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 322,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/hanna.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Normal1",
+          "ArmL1",
+          "ArmR4"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_sherry",
+      "category": "cosmetic",
+      "name": "雪莉 掌心的温度",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定5星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 323,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/sherry.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Smile1",
+          "ArmL1",
+          "ArmR9"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_meruru",
+      "category": "cosmetic",
+      "name": "梅露露 花与祈愿",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定4星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 324,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/meruru.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Smile1",
+          "ArmL7",
+          "ArmR8_1"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_noah",
+      "category": "cosmetic",
+      "name": "诺亚 画布之外",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定5星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 325,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/noah.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Smile1",
+          "ArmL1",
+          "ArmR4"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_alisa",
+      "category": "cosmetic",
+      "name": "亚里沙 不灭的心火",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定4星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 326,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/alisa.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Normal1",
+          "ArmL3",
+          "ArmR5"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_leia",
+      "category": "cosmetic",
+      "name": "蕾雅 从容的旁观",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定4星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 327,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/leia.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Normal1",
+          "ArmL7",
+          "ArmR3"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_nanoka",
+      "category": "cosmetic",
+      "name": "奈叶香 雾中的回声",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定4星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 328,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/nanoka.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Pensive1",
+          "ArmL1",
+          "ArmR3"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_coco",
+      "category": "cosmetic",
+      "name": "可可 视线所及",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定5星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 329,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/coco.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Pensive1",
+          "ArmL5",
+          "ArmR6"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_anan",
+      "category": "cosmetic",
+      "name": "安安 静静的守候",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定4星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 330,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/anan.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Normal1",
+          "ArmL3",
+          "ArmR4"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_margo",
+      "category": "cosmetic",
+      "name": "玛格 沉默的注脚",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定4星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 331,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/margo.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Normal1",
+          "ArmL1",
+          "ArmR2"
+        ]
+      }
+    },
+    {
+      "item_id": "standing_art_manosaba_miria",
+      "category": "cosmetic",
+      "name": "米莉亚 午后的来信",
+      "description": "第四赛季「魔女审判 · 未竟的证言」限定4星立绘。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 332,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/manosaba/miria.png",
+        "source": "manosaba-sprite-synth",
+        "composition_keys": [
+          "Flushed1",
+          "ArmL8",
+          "ArmR3"
+        ]
       }
     }
   ]

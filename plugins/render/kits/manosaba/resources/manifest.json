@@ -1,0 +1,256 @@
+{
+  "game": "Magical Girl Witch Trials / 魔法少女的魔女审判",
+  "steam_app_id": 3101040,
+  "extractor": "UnityPy 1.25.3",
+  "notice": "Game artwork remains owned by its original rights holders; it is not covered by the repository MIT license. Source Han Serif is an Adobe font under SIL OFL 1.1.",
+  "assets": [
+    {
+      "file": "SourceHanSerifSC.otf",
+      "asset": "SourceHanSerifSC",
+      "type": "Font",
+      "path_id": -8425531159408891386,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-fonts-sourcehanserifsc_assets_all.bundle",
+      "bundle_sha256": "58b3e23190bc9250be0f0138facf9d3beac76ec0594f1c42c435514067e9f7e0",
+      "sha256": "faf16caeaf207e1926e01af8d9f1a8e71b0e9d8f51bf3b5d9a78f9f30e7e3e31",
+      "transform": "Unmodified Unity Font.m_FontData"
+    },
+    {
+      "file": "book.png",
+      "asset": "Background_1",
+      "type": "Sprite",
+      "path_id": -765597548943877494,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "8dc5bf609bf990e4e6345b71d736ab88616884162d3d6d5422fd69e3b9752dda",
+      "size": [
+        2560,
+        1440
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "choice.png",
+      "asset": "ChoiceFrame_Default",
+      "type": "Sprite",
+      "path_id": -5799764432586127298,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "44184b7c0042a881be112390bb61000d7438f56511f56632a39fcbee02858a71",
+      "size": [
+        1297,
+        220
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "choice_active.png",
+      "asset": "ChoicesFrame_Highlighted",
+      "type": "Sprite",
+      "path_id": 9155950323878536437,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "8af3634d8671ac0a3a54f11b770ed70d42512e5c38383240af1d3c7a35a32cbe",
+      "size": [
+        1300,
+        220
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "crest.png",
+      "asset": "GaugeDecoration",
+      "type": "Sprite",
+      "path_id": 8072295721705006893,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "072f6d31fdbd60a2b68af503155fd8f2ab1e12858f2f4a1e09713448bf02fc70",
+      "size": [
+        58,
+        57
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "diamond.png",
+      "asset": "InitialFrame",
+      "type": "Sprite",
+      "path_id": 7311916134673368787,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "3783edcd7f63fafdf50d2080f91a6f7db09f050fdfee41e5b2864309da6095ea",
+      "size": [
+        139,
+        139
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "flourish_left.png",
+      "asset": "NormalPrinter_Grass_2",
+      "type": "Sprite",
+      "path_id": -6135865260694375137,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "2b3592c40f243890f13b1b9bc63db1bdd249f5f24d73a327a66b525dec6e26c1",
+      "size": [
+        371,
+        429
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "flourish_right.png",
+      "asset": "NormalPrinter_Grass_1",
+      "type": "Sprite",
+      "path_id": 1817269562434646537,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "96ad50c31530a9f5112525d9b23d49bb8d8fe200cd1ac1b70fef1037c9b1842c",
+      "size": [
+        365,
+        371
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "paper.png",
+      "asset": "DialogBase",
+      "type": "Sprite",
+      "path_id": -8078081763205288956,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "d36940e4775f1150c8d4820cf1b87bdfad73f13c2ebefc9f0238f5dee8cd4b4b",
+      "size": [
+        2560,
+        1440
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "portrait_ema.png",
+      "asset": "ChoicePortrait_Ema",
+      "type": "Sprite",
+      "path_id": 9109422505858872441,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "450038eb40990251f19b30b60c051264a2b28c1fc80b0b9dfda24109d3547b4f",
+      "size": [
+        754,
+        1440
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "portrait_frame.png",
+      "asset": "PersonFrame",
+      "type": "Sprite",
+      "path_id": -2732401789468609549,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "bb1bf22bd6432f49f3349c990566b2731c0c332bd3f742d2440d7bbdeeeb6b69",
+      "size": [
+        986,
+        1037
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "portrait_hiro.png",
+      "asset": "ChoicePortrait_Hiro",
+      "type": "Sprite",
+      "path_id": -2028080500894888505,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "ce2ddfe4a1008655612a0aa80c270b52937137d4679443db92b421b75b126155",
+      "size": [
+        791,
+        1440
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "rule.png",
+      "asset": "Note_TitleUnderline",
+      "type": "Sprite",
+      "path_id": -4247423274320377092,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "aa2927f857bfa33d1aacba2bd081bc6986482b128e5578978a3c5749797a150c",
+      "size": [
+        533,
+        107
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "tab.png",
+      "asset": "ButtonBase_Default",
+      "type": "Sprite",
+      "path_id": -1340893258398794311,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "b3115c4d9084313d95e33197bcb4379558cb3072ede24e744849521fdcc6858b",
+      "size": [
+        505,
+        120
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "tab_active.png",
+      "asset": "ButtonBase_Highlighted",
+      "type": "Sprite",
+      "path_id": 6526849743381152645,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "017c9120d9503a46468c56e020b0a4dcc1841b0a58f27d11f7e0f8bd06c27f53",
+      "size": [
+        505,
+        120
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "thorns_bottom.png",
+      "asset": "BottomFrame",
+      "type": "Sprite",
+      "path_id": 751477942659217447,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "483762b8723207ad85f948184cb75e24f42b4c9ae9bb07839ac3ecf14e40fc56",
+      "size": [
+        2560,
+        429
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "thorns_top.png",
+      "asset": "TopFrame",
+      "type": "Sprite",
+      "path_id": 7628031822734933536,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "bfd749936a3c2dbc6d4b3b67f69a0ac8cdd2a49a07d4eae0d819a670cf3d09fe",
+      "size": [
+        2560,
+        429
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    },
+    {
+      "file": "title_ornament.png",
+      "asset": "Rule_TitleBack",
+      "type": "Sprite",
+      "path_id": -1699313438976441024,
+      "bundle": "StreamingAssets/aa/StandaloneOSX/general-sprites_assets_all.bundle",
+      "bundle_sha256": "0f5e32b10062c88a46235b0cbc5174b3c45c0523d4920a4eea369a7ac94881f2",
+      "sha256": "8c764a87d72ce4dc6af483348d0fb423fe0a400525aab54d2e748505976abc67",
+      "size": [
+        708,
+        304
+      ],
+      "transform": "UnityPy Sprite.image (atlas crop/unpack), RGBA PNG; no resizing"
+    }
+  ]
+}

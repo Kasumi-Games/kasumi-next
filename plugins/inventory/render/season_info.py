@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from PIL import Image
 
 from utils.cards import BODY_SIZE
-from utils.cards import CONTENT_WIDTH
 from utils.cards import LABEL_SIZE
+from utils.cards import CONTENT_WIDTH
 from utils.cards import stat_row
 from utils.cards import card_page
 from utils.cards import panel_section
@@ -52,20 +52,21 @@ class SeasonInfoData:
     featured_names: tuple[str, ...] = ()
 
 
-def render_season_info(
-    data: SeasonInfoData, kit: BaseKit | None = None
-) -> Image.Image:
+def render_season_info(data: SeasonInfoData, kit: BaseKit | None = None) -> Image.Image:
     """Render a season overview card."""
 
     return season_info_page(data, kit).render()
 
 
-def season_info_page(
-    data: SeasonInfoData, kit: BaseKit | None = None
-) -> AutoPage:
+def season_info_page(data: SeasonInfoData, kit: BaseKit | None = None) -> AutoPage:
     """Build the season overview page for sync or async rendering."""
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "inventory.season_info", data)) is not None:
+        return themed
     sections: list[Component] = [
         _status_panel(kit, data),
         _standing_panel(kit, data),
@@ -179,18 +180,14 @@ def _standing_panel(kit: BaseKit, data: SeasonInfoData) -> Component:
                 max_lines=1,
             )
         )
-    return panel_section(
-        kit, VStack(rows, gap=18, align="stretch")
-    )
+    return panel_section(kit, VStack(rows, gap=18, align="stretch"))
 
 
 def _rewards_panel(kit: BaseKit, data: SeasonInfoData) -> Component:
     children: list[Component] = [_section_label(kit, "排名奖励")]
     for row in data.reward_rows:
         children.append(_reward_row(kit, row))
-    return panel_section(
-        kit, VStack(children, gap=16, align="stretch")
-    )
+    return panel_section(kit, VStack(children, gap=16, align="stretch"))
 
 
 def _reward_row(kit: BaseKit, row: SeasonRewardRow) -> Component:

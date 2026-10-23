@@ -1,28 +1,27 @@
-from collections import Counter
-from contextlib import contextmanager
 from datetime import datetime
+from contextlib import contextmanager
+from collections import Counter
 from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from plugins.gacha import database as gacha_database
 from plugins.gacha import service as gacha_service
-from plugins.gacha.models import Base as GachaBase
+from plugins.gacha import database as gacha_database
 from plugins.inventory import database as inventory_database
 from plugins.inventory import season_service
-from plugins.inventory.catalog import sync_catalog
+from plugins.gacha.models import Base as GachaBase
+from plugins.inventory.models import SEASON_SCOPE_TYPE
 from plugins.inventory.models import OFFSEASON_SCOPE_TYPE
 from plugins.inventory.models import SEASON_POINT_ITEM_ID
-from plugins.inventory.models import SEASON_SCOPE_TYPE
 from plugins.inventory.models import STAR_STICKER_ITEM_ID
 from plugins.inventory.models import Base as InventoryBase
 from plugins.inventory.models import Item
 from plugins.inventory.models import SeasonRanking
-from plugins.inventory.service import get_quantity
+from plugins.inventory.catalog import sync_catalog
 from plugins.inventory.service import grant_item
-
+from plugins.inventory.service import get_quantity
 
 USER_ID = "season-transition-test-user"
 
@@ -132,9 +131,7 @@ def test_real_s2_offseason_s3_transition_and_gacha_state(
         )
         gacha_service._validate_banner_rewards(s2_banner)
         assert {
-            entry.character_id
-            for entry in s2_banner.entries
-            if entry.featured
+            entry.character_id for entry in s2_banner.entries if entry.featured
         } == {
             "nakamachi_arale",
             "fuji_miyako",
@@ -283,7 +280,7 @@ def test_real_s2_offseason_s3_transition_and_gacha_state(
         grant_item(USER_ID, SEASON_POINT_ITEM_ID, 10, "transition_test")
 
     # Also close the loop: the S3 end removes its banner, settles once, and
-    # creates the after-last-season wallet without mutating any prior scope.
+    # creates the S3 -> S4 offseason wallet without mutating any prior scope.
     with at_time(S3_END):
         assert gacha_service.get_current_banner() is None
         with patch(
@@ -295,7 +292,7 @@ def test_real_s2_offseason_s3_transition_and_gacha_state(
         assert season_service.get_current_season() is None
         assert season_service.get_point_scope()[:2] == (
             OFFSEASON_SCOPE_TYPE,
-            "2026-s03_to_after-last-season",
+            "2026-s03_to_2026-s04",
         )
         assert get_quantity(USER_ID, SEASON_POINT_ITEM_ID) == 100
         assert get_quantity(USER_ID, SEASON_POINT_ITEM_ID, s2_scope) == 150

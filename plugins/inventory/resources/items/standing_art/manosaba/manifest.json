@@ -1,0 +1,488 @@
+{
+  "source_project": "manosaba-sprite-synth",
+  "source_revision": null,
+  "source_modules": {
+    "__init__.py": "dd6c5b90fff75eee0ca1fbf2631c0d855f03b8362defa25ff33ef8a4fa7f7b15",
+    "composition.py": "63ed6d3931f0297653794dd413654622950a4d428ec41c88d0fdef7d074c3c9a",
+    "models.py": "0fa967d80fd9d82b18a520f6737501d5b21c3595a035cf1dc5a62f4d9cb5cf6e",
+    "renderer.py": "1f632f6c966ed42aa1f3b0cf4d3c9d168768d3f894e6e73b4a140a28b346b7b6",
+    "synthesizer.py": "81162bb2430518a9cf4865e10fdf25e0a572590a8a91d0dd45b6810a408ab125",
+    "types.py": "2a2e99f9671adb6a399d4f948de514ebee8c80d23a6024afde6ec2f4a9beb5c2",
+    "utils.py": "47bb98a33c1bb1b6f78fe69fa184acc0fe4608074d6627065582fcea6594e31a"
+  },
+  "transformation": "Prefab.synthesize with default layers; trim alpha bounds; proportional Lanczos downscale to 2024px content height; 12px transparent margin",
+  "assets": [
+    {
+      "file": "ema.png",
+      "prefab": "Ema",
+      "keys": [
+        "Smile1",
+        "ArmL5",
+        "ArmR1"
+      ],
+      "size": [
+        641,
+        2048
+      ],
+      "alpha_bounds": [
+        204,
+        0,
+        1397,
+        3915
+      ],
+      "sha256": "4c958b4eab6359d6c4daa8838080dc2de030ac38ea7cd00b6ea87918bf500d25",
+      "composition_sha256": "2b91b53f54cfffc387aa87d56f2388eed376f1a884bb5240c5509cc2738c14be",
+      "character_sha256": "070240828c2e3429e67d6053deaedd0ccd719e7df9c7bf0b39d7d5d6d4b3b3e3",
+      "sprites_sha256": {
+        "ArmR01": "b7c691a13d4a58f260bdfdcd159dcd25ccd0701bf332b26d6cd8b633c071ab50",
+        "ArmL05": "3f7f10b8dd99f974f6a0dde217c75ab929eee9f8f80af078d1ede1c574023973",
+        "FacialLineDrawing01": "a2e5eacbb2ba941cf61e6ac16119aad137e344a07d9071be4f20080b0cd55a28",
+        "HairClippingMask01": "bec5473af006dc5435dfbd57205774a03e158be984cf6f71e12ca5cc09c0b583",
+        "Eyes01_Smile_Closed01": "f32b9565d054f0af08da3906cdfc65868ed8d791a3f035b6df41599e1f26cbe8",
+        "Mouth01_Smile_Open": "ed9f73cc8cece2c956e2794f10cffec2982aa8d22b28b6bb18c9216b43c5a16f",
+        "Cheeks01_Normal": "c3b5a8a36fa14345bc8b09b6b22d28cdfa8c63d778e96775aadeb5b00a191531",
+        "HeadBase01": "6621f9a662dce0f6fd994cc3492766570df1f15127dbb214a538352cdf6b6323",
+        "Body": "99b0a246376d8f38f5e68b11f3b0cdc26088481783af059fa70ac9200f8ac7e2"
+      }
+    },
+    {
+      "file": "hiro.png",
+      "prefab": "Hiro",
+      "keys": [
+        "Normal1",
+        "ArmL1",
+        "ArmR4"
+      ],
+      "size": [
+        779,
+        2048
+      ],
+      "alpha_bounds": [
+        299,
+        0,
+        1481,
+        3169
+      ],
+      "sha256": "fabe195cb215de1666fc81a611c685fcee150d22576e414550e08b3d5cdf44d7",
+      "composition_sha256": "3d935c12a3f6b15af6e2057d7d5dcde712542159365e6e55af021bef796469ef",
+      "character_sha256": "bb5d9086a69a2a6bfd068e0b5828308295268a85e11b38015d94287273109b77",
+      "sprites_sha256": {
+        "Blending01": "2e3bda6dffd19ce904ec23aebb1c3e0d68e11a4e3b31e358db8a92197e755c66",
+        "Blending02": "991dcc29460b245de6fec0e806807e808a5f485ff37f652995972d9df11ba484",
+        "ArmL01": "b04876545c58366a9ee88b961b648c79f5d4693299e421eb7d2ba56b71051852",
+        "ArmR04": "1014475e59bb72f72e4b915e3095e6d915214cee917fbf8a55bd3a64c2de02a0",
+        "HairClippingMask01": "25bf8b5b89728d68333315cfc8222cb69028450492592dfa2d1ca0ae7f6ab664",
+        "Eyes01_Normal_Open": "63b759fa9ee2514d2b1ff7369776fd7c0a6a4a0a0d9f6093c1ef23fc34460090",
+        "Mouth01_Normal_Closed": "82e91135b93af966dae5714da11f8897ca4b1fb9bf43a4190a49eb3244a50354",
+        "Cheeks01_Normal": "cd7fa2b902da5ad75701dc60bf1ca2356cd9c3e02ce5792b77bba2732502603c",
+        "HeadBase01": "3e56511c4579ffcf7cf1bf52579266c634b5ce3969fed632d4c1f554f7e240e9",
+        "OptionB_Head01": "163c4ab5734c9cd328365bf005e237dbb2b71ac239b5aa0fd391f2877602cbad",
+        "Body": "bc51d43cba601cf27b4a169840ac3a8858a2e224c824dec90535393456d411d9"
+      }
+    },
+    {
+      "file": "hanna.png",
+      "prefab": "Hanna",
+      "keys": [
+        "Normal1",
+        "ArmL1",
+        "ArmR4"
+      ],
+      "size": [
+        1326,
+        2048
+      ],
+      "alpha_bounds": [
+        1,
+        5,
+        2400,
+        3733
+      ],
+      "sha256": "328589fa5e768a36534caf842abc2665559de74a19fe77fb442bee26ead55d8f",
+      "composition_sha256": "a0727a051bbf0a8aeb8a052ebb2abb629fddb56c3df34d0b31794e87da62faad",
+      "character_sha256": "78ea9fa74624fc70e09455bb29fa72b2895b020f4ce99fb97e9d63bf27cefda9",
+      "sprites_sha256": {
+        "Blending01": "a6f084177e5f9d2edc5bf4c9ef7c402caa51c1857cebe4604a784ea5debf2a3f",
+        "ArmL01_Softlight": "1d46fd2aefc6a342174f00f62af2bd2403ef5a7aa517fdd11f82819a36a18ece",
+        "ArmL01": "e736795a0cae7e4389a4996474fa44907c2673253e3b14a9f9c3276416ce97f2",
+        "ArmR04": "e21839070f01bc8351187cb2fa58da0301caa584239861f1abc0cef26cbe67e6",
+        "Facial01_Softlight": "c109fcc4a06705c9e8d53fc4389ba4296aa4a24864ee732a97ab3ba03ba67db5",
+        "HairClippingMask01": "e1b045670e2d74316cf7f73abada4bf27be6098b4c1ed647d951bee72c02b386",
+        "Eyes01_Normal_Open": "742538c2149804ac9dc2b6990de149dcc0f97c25268ab898ab3d346520f32f5b",
+        "Mouth01_Normal_Open": "c4f77449a70e68a0df599b2b6bbabd042673d0651713c547a12a8b7db63cbab7",
+        "Cheeks01_Normal": "a05b56147330932c69853915623e0bf7fcbef66483c2e1053fae40399e573695",
+        "HeadBase01": "547b0caf5efa78e0d0c8ad4ddde52c64ba75c084211861c71ac551044488456f",
+        "Body": "030cc9f56da77027c26645f0dae9a479d760a9af1f181c2c2e8556c9a3af8fef",
+        "HairB01": "5c51296e08893e4b1e7b78b9b5918bb3e44c215a893af663b0778106612fcdb7"
+      }
+    },
+    {
+      "file": "sherry.png",
+      "prefab": "Sherry",
+      "keys": [
+        "Smile1",
+        "ArmL1",
+        "ArmR9"
+      ],
+      "size": [
+        899,
+        2048
+      ],
+      "alpha_bounds": [
+        88,
+        0,
+        1795,
+        3948
+      ],
+      "sha256": "aad3412fd750a41bed63fda53c2f11dd936518d76a3eee4c3ebd88e1bb99426e",
+      "composition_sha256": "96ba8513e75d61ae451666f238548a34795d1d5cfcb23f3ee03396378edbcde9",
+      "character_sha256": "a7bc434ab47dfbbbe6b772194ac26791287da5fc73906753b039d13455b58160",
+      "sprites_sha256": {
+        "RootBlendingOverlay": "ea57b61e7789f9761656b02cc0d00a75ae79d74cf791a5b3de158b9cebd3cc28",
+        "RootBlendingSoftlight": "f064872f087d754627813fce39ac61dd932036c23b7e39431678bf62672400b0",
+        "ArmL01": "c40c826754fe715b8b4823fdcb5b4dc1479fe87b4531063f6f4d6de0fb079a70",
+        "ArmR09": "4b95cc20e655de9fa270777859b3b0de3bac7ef8e070b6c643e4ef0228345033",
+        "HairLineClippingMask": "dd68e572be35dcf1ac4918cb56170388d03a0d8a0d7964c330f861891ea45b85",
+        "HairColoringClippingMask": "b2985ea849be955e2a642e4c5f4e0cd303f865c7d743d4ca7aa6bee215b218ca",
+        "Eyes_Smile_Closed01": "836bbd557a9593e677ad08bfd8e2d70b92ac2aa015a05ce0fb4f95e22d5f16ea",
+        "Mouth_Normal_Open": "95d59a84e8262be0f6ddeec251f026e914a98a41f584d7a7bd39471febe66afd",
+        "Cheeks_Normal": "08fd0c19a566bdae85329075c445d654f2697af4f016c5c8d8c9d621de1f9136",
+        "Body": "63a061ede474bf538ece76cfc837c2f16a63d0cc1fc3e5421d1f5d5d60e7acb2"
+      }
+    },
+    {
+      "file": "meruru.png",
+      "prefab": "Meruru",
+      "keys": [
+        "Smile1",
+        "ArmL7",
+        "ArmR8_1"
+      ],
+      "size": [
+        837,
+        2048
+      ],
+      "alpha_bounds": [
+        3,
+        2,
+        1258,
+        3126
+      ],
+      "sha256": "b9342cde9c50cdf8c532b5a05361dd344a24ed39d7317dabe53d85948f0f3768",
+      "composition_sha256": "3efe01418f281dab05ff2f034b48ce3bbe4def236e42ff8a0f7c8faae98aaf4e",
+      "character_sha256": "3a3090dfa81eacd7b08383b1b83e51dea299bed24f44de15f98e56390749a406",
+      "sprites_sha256": {
+        "ClippingMask_Angle01_01": "1902694a5b3c71e9052b8d6c5c41deb20dc4759832e3ce8c928701b53ddd515b",
+        "ClippingMask_Angle01_02": "7bb59fb82b8dfa927504cb94828e89bc12b08b168645cc29e9cf5bd45ef4d2a0",
+        "OptionF_Head01_ArmR08": "ac9eece6bc038f7f2fca0db3c593ea07e0ac1809816e4505c07a573735e01247",
+        "ArmR08": "ee23971eafbb436fa3a063378baf31727a87f90054b2bef227650d79101ecadc",
+        "ArmL07": "fca22863403a8d8d97cfb8e69af8471f21464ee2d92a549b7fe6f12004009871",
+        "ClippingMask_Facial01_01": "d08d07fe401f4653e23b8ceadd2a7c7e024d18689ace0664fe9e3d53f9203d65",
+        "ClippingMask_Eyes01_01": "1d0117bf2148be24da54f1c45efe3183f08ad789752c003420ff222aa5029509",
+        "Eyes01_Normal_Open03": "045dee08398f2022067af232cbc14f82316ce22aa86cd597a745cd5313d0147d",
+        "Mouth01_Smile_Closed01": "142f9fd66c0f8dcbe2e9dab1c3130760a95ac6d4e15ef4fbb57b995c31946ef9",
+        "Cheeks01_Normal": "178fe106df49dcff226336d1a9f9fc93eb43492fe63b83157f937fd9776cbbc4",
+        "HeadBase01": "c05f55692df73b637e5ad14e4a77429815ce209cdaa72284566a030e9c482995",
+        "Body": "349fb53b2a6e6e86e109b81b060b6dc7f0c705d217f765631d4474e4839a0161"
+      }
+    },
+    {
+      "file": "noah.png",
+      "prefab": "Noah",
+      "keys": [
+        "Smile1",
+        "ArmL1",
+        "ArmR4"
+      ],
+      "size": [
+        1093,
+        2048
+      ],
+      "alpha_bounds": [
+        177,
+        3,
+        2159,
+        3755
+      ],
+      "sha256": "235aafd334722be108810d7151dbf289890eadeb03eaf9d144bb03b3ecd835e4",
+      "composition_sha256": "bf0b9813c88ec42d090f6bc6702109e0b0f106cf4157ebec64f4407c7f701577",
+      "character_sha256": "4546c6892046605fe41dcb86815d9617483938037b7149c998a461d8b78e22d4",
+      "sprites_sha256": {
+        "ClippingMask_Effect_Root_01": "55d62fc0b5c3dea159e6c17e8900d8cba89ea7a197ffab2d8f62f8c7d09428ea",
+        "ClippingMask_Effect_Root_02": "09f88dd11c2fdf5c54e4a5eb4bfdb9273859913537dadfd6e3191947ee8a351b",
+        "ClippingMask_Effect_Root_03": "813040a493c2e98b9292644e0b9c0bee71ec73be769b7c3c1c445ff79e3717c5",
+        "ClippingMask_Effect_Root_04": "55fa6da1b20b453550dbf91e0b28019fcdeb6ef87395f108171b080fb502ebf4",
+        "Effect_Front_ArmL01": "6734a20fb04b0ea20e9d34b8cfd824a821dbe853d780a830416df4d608915ee7",
+        "Effect_Front_ArmR04": "2b53c3c78bb8cf333abd3c8d850d0f00520f85730ac4fb69a9d78a43c973e47b",
+        "ArmL01": "3bd748e7c57fd60d626b0e77088397e7dcf06e3a1191b42a78df8fbfb16c78f8",
+        "ArmR04": "72999da590136575acdb85d0876769f50900463d497c6346e4e0166b2d2420ea",
+        "ClippingMask_Facial_01": "9f6caf339e5274a08029e56750eacc70ff462b6306fa260ffe35a4759964f097",
+        "ClippingMask_Facial_02": "783b1e6c67379ba78611f867c6f583112fe358949c32c316ee192b282824b6d7",
+        "ClippingMask_Eyes": "3faf87d87709fe8dde9d62d44ecf80e556f50344a9237f6a8b178c47b8636d69",
+        "Eyes_Smile_Closed01": "3b94f9ab5ea6095894276ee993395163ea8992028cf6ae4fb3d53e358cefcc37",
+        "Mouth_Smile_Open01": "d850d3d4ca44671b5587eb4afe7063508825d95c5e7322190fb261963a15a71a",
+        "Cheeks_Normal": "f591ed95ce9b558f0d11aabee2e669bf3378eea51359d9653c5fb19aa4f05ea3",
+        "Body": "717d0b4f523aa66c62f3e362dcb18cb97924f1dcb6ec2267fda1e2b1ce0e226c"
+      }
+    },
+    {
+      "file": "alisa.png",
+      "prefab": "Alisa",
+      "keys": [
+        "Normal1",
+        "ArmL3",
+        "ArmR5"
+      ],
+      "size": [
+        781,
+        2048
+      ],
+      "alpha_bounds": [
+        0,
+        0,
+        1436,
+        3837
+      ],
+      "sha256": "fe8a23de74207a997228525f07d2f42aad4bfb5781f4dfff8d495fdc531fde86",
+      "composition_sha256": "c6a978c74c904a7b3c2de342c26f81fc5d3fc7577ed862443301dfaeb2639d9b",
+      "character_sha256": "6fa34ebc06f94530815bccc7f5f965698025de86aadb0f360ce929ac01f8c3f0",
+      "sprites_sha256": {
+        "ClippingMask_Root_01": "8b0db43e178bbb690bccc6263ce831d6f1169f36587d1e458fd7825b1b66aeda",
+        "ClippingMask_Root_02": "643afd8f0c305fa136ff73a7d7cdfa2588a5a9bf5fa86c21b950d96a1a915046",
+        "ArmR05": "7ca268029321886596efb7dcb3269b488767ae7a347f14f6df57bb1a14c7be22",
+        "ArmL03": "91482eae17b32bef3af8dee5289161c41b27d7e779f58bff24a1be83d89ad9de",
+        "ClippingMask_Facial_01": "7c1f63d7bd343200bb21c77f6ecf898592137ac87fe1ae1a588f1e66da4d899b",
+        "ClippingMask_Facial_02": "7d4aee5bf5fcc2385a587b38ce2c56ee7ae923fbed65b4d5959ed5c8ccaa0f9e",
+        "Mask01": "d0f44b2a8a6db188213676e2291a35e562f650a2e7028ba46d548d60f42cc036",
+        "ClippingMask_Eyes": "1fe065bf1e79deada61a255bf021ce394ed368545fefd5b60a95774561d28c88",
+        "Eyes_Normal_Open01": "4744e284e660204187d007841650454dd7e08c8822cc47492ae85b9fa29d6a56",
+        "Mouth_Normal_Closed": "a2c1ed884eedfe315a4eb012b2e6fd45fb7fbac5102c98d36c3e668459b1ca27",
+        "Cheeks_Normal": "341ffd95243be9fab0c945365c228463000360446d2d58cc00028bd04d707cc7",
+        "Effect_Back_Arms01": "3ee06ad67b8a29e6bfcd3a605b1a59a35e3aa6cf8d40eb6d5bb06ddd7a599cf3",
+        "Effect_Back_ArmR05": "960d7a5a24461469d69ab47e1d748bbd9f99e1a2e737e8514bc4087cc4eee06a",
+        "Body": "0b3c845081d08e3c7ccd6ffe0f1b2adff2f52e9aa1401a657798f86c6c31fced"
+      }
+    },
+    {
+      "file": "leia.png",
+      "prefab": "Leia",
+      "keys": [
+        "Normal1",
+        "ArmL7",
+        "ArmR3"
+      ],
+      "size": [
+        874,
+        2048
+      ],
+      "alpha_bounds": [
+        161,
+        1,
+        1800,
+        3904
+      ],
+      "sha256": "22db9e0bdb2d5c971473920b5ec65185b20c48dafee77b6ba438dc8026622bcf",
+      "composition_sha256": "871ac098e9914ee7255a6ae12f059b4d796077b05099733d20a3d2c8be211042",
+      "character_sha256": "519ec75915677c142d4f8fa1670013786d0d7ae0ffb094fbb74b3b7243ea8225",
+      "sprites_sha256": {
+        "ClippingMask_Root_Overlay01": "40c6a8dd9993f2c75b55aa02002bfc8c63b9a857e8a650cbc932610786b265fb",
+        "ClippingMask_Root_Overlay02": "3c3df2e24f0aab4004cdba6b6bcaf7b03ec08cb4e7606d4d1566ba1cf9f64bcd",
+        "ClippingMask_Root_Softlight": "eb1433fd032df54a6c83a7444feab48be03cf2a05b3bb7a8c7163cb73cb8bd0d",
+        "ArmL07": "920275ff89d458a1a87b68851b798dd8ef166ca4343a2bd16af1852af02e7c57",
+        "ArmR03": "a99db47beab83cc5282f92c1bb199750b23b47c0439af0382e6a240b291788dd",
+        "ClippingMask_Facial_Normal01": "3bcd540b149da5f64b255de75b02853c00ae18623319b28de1ff2b78b790f892",
+        "ClippingMask_Facial_Multiply": "ec53f78f5e46ded16121f99d9f397102a45666795e5ff09875565ce806386b93",
+        "ClippingMask_Facial_Normal02": "fcf5ddc77b9a141fa7bd6be29ab79c67b206833a7f0062fc23a2ec7c53f6995b",
+        "Eyes_Normal_Open01": "84eb8cc34fb230fadd4820a2c2bb659d876bb7aa69e3c0991b9fc01d7ff4b7c8",
+        "Mouth_Normal_Closed": "d4a9e98a7bfe377bfbefaa573c36bc65dd34ac07a3beaaf83a16a045bf4bd8b7",
+        "Normal": "9a97e45c787673bd33ed2048ec2c60eea8d9633078049b79ccce82eb376276fe",
+        "Body": "c16120b776a571d4c7ee2e0affe4b905bf72e9d765c80fc89dc67f19b9bc1333"
+      }
+    },
+    {
+      "file": "nanoka.png",
+      "prefab": "Nanoka",
+      "keys": [
+        "Pensive1",
+        "ArmL1",
+        "ArmR3"
+      ],
+      "size": [
+        873,
+        2048
+      ],
+      "alpha_bounds": [
+        224,
+        75,
+        1535,
+        3199
+      ],
+      "sha256": "115e410eae6da045e4dd63a1c61664e4a8adbdf038f2da7e9aeae67f478a00f3",
+      "composition_sha256": "8a2a2eeff2812edccb72f69ed4ca22229b61ae5fa255c020b56965402963a91a",
+      "character_sha256": "bd167391aee0ce476708b85eb8f212cea5bf152bdf46ced5c75bd3c86e47824b",
+      "sprites_sha256": {
+        "ClippingMask_Angle01_01": "ef0d1ac7dd26ce1959b90ba092e97c70136cc9924be973f5cdccc163fdf8847d",
+        "ClippingMask_Angle01_02": "32e67d3182d271fcddd79ac1cc8e120ba8bfa6cf4f3f1f3ce0712737c8b624d0",
+        "ClippingMask_Angle01_03": "1da7648c8a11609bc64fb609a6c7cebe21e550e6b232d99c849f99effd02b09c",
+        "ArmL01": "265cc1e0023e876d724edbc9529a0a126e02733cc47687c3b9a9959678e107de",
+        "ArmR03": "479bb1198068611923f73d053741b83773caaa5551d838e06c9a7deb888dc7a6",
+        "FacialLineDrawing01": "c95b1d45b291f89dc571425e5c30a684305273bb1c5cbe9d717988d72cfb639b",
+        "ClippingMask_Facial01_01": "88e75418069005eb31b5d2357cf461e772e6925722d3c3bf6e81f0156621f43e",
+        "ClippingMask_Facial01_02": "17736ebc29f61dae109a5130580f58048a4a0d21c814c3584aadd22b83b6ed63",
+        "Eyes01_Pensive_Open01": "c9dfa29d0d3544f03f9fbb5a3285b4f7b32b41379849c972b3538feb458a888d",
+        "Mouth01_Pensive_Closed01": "e0f22c90b4fb06e7b4046cc8547196b968cc2f3278cc07dc7cf99e6a917cb870",
+        "Cheeks01_Normal": "915d65b9ffaf8daca54f2778d2e404497f95c3b345ee367ddf8f078b73de1f14",
+        "HeadBase01": "d13c4697a207d6a5b449a97e5485844ffebb70e1b505f37f1988920b4603d4fc",
+        "OptionB_Body01": "7856b4fa3819d68a4a60bd60e0a50c881b8b896daef9631613195bc6cff1a4f2",
+        "Body01": "9cbc859af1681a3da26fc6184f9e8f51666a900633b54c3dd718d8d4d00e79b3"
+      }
+    },
+    {
+      "file": "coco.png",
+      "prefab": "Coco",
+      "keys": [
+        "Pensive1",
+        "ArmL5",
+        "ArmR6"
+      ],
+      "size": [
+        732,
+        2048
+      ],
+      "alpha_bounds": [
+        88,
+        0,
+        1446,
+        3881
+      ],
+      "sha256": "386b99470b56658b52a3d47c12f1338b987b904ace54c768ca814996b8319529",
+      "composition_sha256": "2909639cb92a9a8969f9d757eb0e178cb2669450c45c679495b2c9338081ec24",
+      "character_sha256": "ce5b64f6b2f387eddbde486461475d4a7b8c54f52010c7565fbb171e8ed6d234",
+      "sprites_sha256": {
+        "ClippingMask_Root_Overlay": "345b7af1c6978256537d06e606151c14723096396757608c89dc49d6e8e0d104",
+        "ClippingMask_Root_Softlight": "df937952713855191f6e3beb956bc09e5b39e6dd6bf7c0237bce960b998ae224",
+        "ArmR06": "d695ef6781c9b8cf1eb6e5384a950174b1580add3bd9bae16aeda0ea85a26232",
+        "ArmL05": "e6cf7b2e5da54c668ade6a9290b27f7e5fa869697abf574e8a7ad5db5521e355",
+        "Hair_Normal": "6f1791d064cfe113f01f51de7184aaebd7ba0bc2a88b2794c5936f55acf31b90",
+        "Hair_Multiply": "a435777d1514fe7ad19d42b310adaa903a3d3f8bf04fb04fd70c07b5c9d645cb",
+        "Cheeks_Normal": "88145d631544ea38c8d79b480965ad8da236a3fed27d032861d2da1ee0d6baa3",
+        "ClippingMask_Eyes_Normal": "b81f9f8d51141c482f8b66c0cf99a0d0bd4d9c20d1fd0c34ca9720d36a610e09",
+        "Eyes_Pensive_Open01": "22b44fdf3c8ccea34b98a1fe1523815fd73f09090de30e40f11df76e52a9dbbc",
+        "Mouth_Pensive_Middle": "15903f4a9aa60052559c1ce2d317249f82a3ed3726b5164dfc2303802bbcc14b",
+        "Effect_Back_ArmL05": "49cbdd44f46efb49b243807a50b9aa5887e1375a6a524ec638cfb841d8570134",
+        "Body": "c35a8675bf63a9c45a2b3a759d4c3de51101578bdb2aaee7ffbe4fe72af7c8ad"
+      }
+    },
+    {
+      "file": "anan.png",
+      "prefab": "AnAn",
+      "keys": [
+        "Normal1",
+        "ArmL3",
+        "ArmR4"
+      ],
+      "size": [
+        1418,
+        2048
+      ],
+      "alpha_bounds": [
+        1,
+        1,
+        2416,
+        3507
+      ],
+      "sha256": "4fef328a9eb6476e5edbcec6a534c07387405c48b776b174533b5539327874c6",
+      "composition_sha256": "7cbd8428c93310bf0bf0c9b059801784ca46315d9e203f9e9cb0568ddd4f7dfd",
+      "character_sha256": "8544565c36f3740478a80f69138a38a6c0a726bedbf4b195eec7c8faf7acb8fe",
+      "sprites_sha256": {
+        "ClippingMask_Root_Overlay": "246ba9b936bde028dbd691166a776d13145b7371d55dd05f6293ae84317c7359",
+        "ClippingMask_Root_Softlight01": "02226022a605c20afde735f66495343ff312a4d83bb8e145e0f0b21b29b745b5",
+        "ClippingMask_Root_Softlight02": "5743497ac6896f9ad26a87e30584e9dd005bf4a728226bb1909c230a2329828c",
+        "ClippingMask_Root_Multiply": "086f21a121387867a24ae7a455a957d463266f9b3339c9f4ead63e7f9b122f7f",
+        "ArmR04": "c8f01f17bf1775b3e6b55040a873b9f288bb1b7fd2938965d7a4f26ebc01d25a",
+        "Option_ArmR01_01_Front": "147c73f000bc9f5c4cb3cd9038e259c357b980de9fe29be7ecac8d7cbd5e9c13",
+        "Option_ArmR01_01_Back": "84a60fc2ca1994b961b007f5bf75aa42de23bde384b0b6ff1e1281f01cf96557",
+        "Option_ArmR01_02_Front": "204bdd9f6b9c4c981c3e14c5c3c0fff8b4b0cae72cc8f87c010a684440f554f6",
+        "Option_ArmR01_02_Back": "0849c2ef515cd1536058a5f39dc0a5371e60ffc8a0276bb7cccb2c721b5ae948",
+        "ArmL03": "2db44231427a9cd4cc0f9766852561e8a1e21408109507f20d452de79501a1e0",
+        "ClippingMask_Facial_Normal01": "97ea91eff05f10d11ba850e29225d09e7afbfd4bba58611ddf403ee4c521f880",
+        "ClippingMask_Facial_Multiply": "5801513220be113b2109835fc7eab3ffe080d35510c0eccd8b594351ae2c9632",
+        "ClippingMask_Facial_Normal02": "d4686c56ff4acd52550e59d3fbbe8c134c22b62a36b255776131f5595a4c80de",
+        "Eyes_Normal_Open01": "6ffdcc1945c862edf1d0ab8c067fd62e0c847e73ce63b3daf7052c7e941340fc",
+        "Mouth_Normal_Closed": "ff719b6e6333e3c146f32355641c1e078b03cd2656ee0b22ed54381228877fd3",
+        "HeadBase": "b40023e1f391d901c0a687111371428659da010451fedcc4f988212985e710c8",
+        "Effect_Back_ArmR04": "b08eb099989f182817208d654381c68b97e3809446820f5ffac02f2464d60bbf",
+        "Body": "aae15935890f92d2d9f3b2e3e18bb0000b6b3809ea41965520bb91a81a9c030e"
+      }
+    },
+    {
+      "file": "margo.png",
+      "prefab": "Margo",
+      "keys": [
+        "Normal1",
+        "ArmL1",
+        "ArmR2"
+      ],
+      "size": [
+        902,
+        2048
+      ],
+      "alpha_bounds": [
+        19,
+        0,
+        1746,
+        3980
+      ],
+      "sha256": "6cc3fd686fdbee0b809a41d7595f27f11587b74a8af1484fc028639f273f4ecc",
+      "composition_sha256": "0f54bb1147ab8d354e4c5410ab73db507a93de10db8548fbdc7816f51a3cbf70",
+      "character_sha256": "49eb0fee7b5585903d449c94198afe6b9e81f490a6473738245825e9a85ac6cc",
+      "sprites_sha256": {
+        "Effect_Front_ArmR02": "1af5a14b4eebe7521485154c03c8a888e995560d563459a0d2b5e29127358970",
+        "ArmL01": "afc5fe125885cd3da639a000cdcdd7f1a67dadb7c88d395e5650c1cb0c84fca4",
+        "ArmR02": "f568b31a01fe622ca24bee2a38e26dcf609357409f547fdc5705359328e27029",
+        "ClippingMask_Facial_Normal01": "b0867f7a5ea143b43fe3f8e405bb95db125eb5ca981db1ce895f63f3c93fdff4",
+        "ClippingMask_Facial_Multiply": "d5bba2c687021d41e739846426dc924cf989d2dece96ebaa6f467200b0c6ff16",
+        "ClippingMask_Facial_Normal03": "52b28a8a79cd53d2060b08bfa61d6791688d958dd0ffc485f8e16344e159d56d",
+        "Eyes_Normal_Open": "1a51932a14073b1227561360baa7402146ac667b48d92e5edf576c94b606013b",
+        "Mouth_Normal_Closed": "5be409dcd74cd7088e96df186df8f55dcf86f40c9ad8f6c195a0fbad77335f6c",
+        "Cheeks_Normal": "bc222ac42d7334fd08f9a6f5ac930384a92d0b1d481eef8c9c2ea9f2d92b2935",
+        "Effect_Back_ArmR02": "278483b377f56c7c1d7324a1c260d6609f28a9949f316d0920ddf1ba9c895f52",
+        "Body": "bc368601d1c20d400250ae452ad8f4a2355208b52615a84a2aad9e927f797d86"
+      }
+    },
+    {
+      "file": "miria.png",
+      "prefab": "Miria",
+      "keys": [
+        "Flushed1",
+        "ArmL8",
+        "ArmR3"
+      ],
+      "size": [
+        734,
+        2048
+      ],
+      "alpha_bounds": [
+        133,
+        0,
+        1507,
+        3919
+      ],
+      "sha256": "409ac1f5d62e72e1410560a55fd8cf47a47e50b631ecc6801467be3f495e095b",
+      "composition_sha256": "7db05afa942dd6e61a017eb71b21e5f8c25f991d6ba6b404716bbdd57ee651a6",
+      "character_sha256": "fd2691de5af401f4238aba0a38564dd77908e2cebb6741aafa9ac8f3babb705c",
+      "sprites_sha256": {
+        "ClippingMask_Effect_Root_01": "e5af001b7cce7611c16c71549bf278a54a362978ae25a4b051f4a6a9a824f18c",
+        "ClippingMask_Effect_Root_02": "79ca532ee06c7518f064facec34038c017f81377164130932f6ce0f7b2e672ad",
+        "ArmL08": "f6f8c577dc89bcb26b562ecad97977c3975cacf1755191f5a52a0a52bac66228",
+        "ArmR03": "b701a2650e7ec98b134b89ef6e2f50c69f06ba312c996e380783785af455183d",
+        "ClippingMask_Facial": "c139e9f5ac1bd0a0b83774fe3271893374f12c4bfff6052c1255dd744f0d2a14",
+        "Cheeks_Flushed": "2d3983a5091b3de5d439548ce24a6d4daa1c24a9fd16b11addcf0f1648e066a2",
+        "ClippingMask_Eyes": "78ca936879dbd4e9475337a33a9351099000310c15d62214abaf077e7e95ef9a",
+        "Eyes_Flushed_Open": "1e7ddfcf38351c210a22e4851ecbe85907b784939c180076edf342d890a7f635",
+        "Mouth_Flushed_Closed": "7cc6aebdea236fa35d849cea1629f472299f69c42e9beeeae0d0518d6e8876fd",
+        "Body": "d594010bacb757be654d27b32de495db8b80ca1ac0ade8f88ff43a708e31a29a"
+      }
+    }
+  ]
+}

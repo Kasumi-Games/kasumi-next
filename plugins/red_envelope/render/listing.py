@@ -128,6 +128,11 @@ def list_page(
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "red_envelope.list", items)) is not None:
+        return themed
     items = list(items)
 
     if not items:

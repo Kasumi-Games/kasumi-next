@@ -53,9 +53,7 @@ TITLE_COLUMN = 232
 ROW_GAP = 18
 
 
-def render_claim_all(
-    outcome: ClaimOutcome, kit: BaseKit | None = None
-) -> Image.Image:
+def render_claim_all(outcome: ClaimOutcome, kit: BaseKit | None = None) -> Image.Image:
     """Render the result of claiming every claimable mail.
 
     Args:
@@ -69,9 +67,7 @@ def render_claim_all(
     return claim_all_page(outcome, kit).render()
 
 
-def claim_all_page(
-    outcome: ClaimOutcome, kit: BaseKit | None = None
-) -> AutoPage:
+def claim_all_page(outcome: ClaimOutcome, kit: BaseKit | None = None) -> AutoPage:
     """Build the claim-all page without rendering it.
 
     Args:
@@ -83,6 +79,11 @@ def claim_all_page(
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "mailbox.claim", outcome)) is not None:
+        return themed
 
     if not outcome.claimed:
         return card_page(

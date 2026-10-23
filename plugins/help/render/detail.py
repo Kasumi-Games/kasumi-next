@@ -39,8 +39,8 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
 
 from ..entries import HelpEntry
 
@@ -76,6 +76,11 @@ def detail_page(entry: HelpEntry, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "help.detail", entry)) is not None:
+        return themed
     sections: list[Component] = [_usage_panel(kit, entry)]
     if entry.params:
         sections.append(_params_panel(kit, entry))
@@ -217,9 +222,7 @@ def _section_head(kit: BaseKit, title: str, count: str) -> Component:
         HStack(
             [
                 Frame(
-                    kit.text(
-                        title, font_size=SUBTITLE_SIZE, wrap=False, max_lines=1
-                    ),
+                    kit.text(title, font_size=SUBTITLE_SIZE, wrap=False, max_lines=1),
                     width=Fill(),
                     align_x="start",
                     align_y="center",
@@ -246,5 +249,7 @@ def _section_head(kit: BaseKit, title: str, count: str) -> Component:
 def _meta_panel(kit: BaseKit) -> Component:
     return panel_section(
         kit,
-        kit.text("输入 /help 查看全部功能", font_size=BODY_SIZE, wrap=False, max_lines=1),
+        kit.text(
+            "输入 /help 查看全部功能", font_size=BODY_SIZE, wrap=False, max_lines=1
+        ),
     )

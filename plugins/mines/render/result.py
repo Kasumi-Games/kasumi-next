@@ -135,6 +135,11 @@ def result_page(
 
     kit = kit or BanGDreamKit()
 
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "mines.result", data, identity=identity)) is not None:
+        return themed
+
     sections: list[Component] = []
     if identity is not None:
         sections.append(

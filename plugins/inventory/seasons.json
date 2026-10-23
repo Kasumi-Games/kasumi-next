@@ -214,7 +214,7 @@
           }
         ]
       },
-    "reward_tiers": [
+      "reward_tiers": [
         {
           "tier_key": "rank_1",
           "from_rank": 1,
@@ -1129,6 +1129,230 @@
             },
             {
               "item_id": "frame_roselia_top50",
+              "quantity": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "season_key": "2026-s04",
+      "number": 4,
+      "name": "魔女审判 · 未竟的证言",
+      "starts_at": "2026-10-27T00:00:00+08:00",
+      "ends_at": "2026-11-24T00:00:00+08:00",
+      "starting_points": 100,
+      "snapshot_interval_minutes": 5,
+      "snapshot_ranks": [
+        10,
+        50
+      ],
+      "featured_characters": [
+        {
+          "character_id": "manosaba_ema",
+          "name": "樱羽艾玛",
+          "standing_art_item_id": "standing_art_manosaba_ema",
+          "rarity": 6
+        },
+        {
+          "character_id": "manosaba_hiro",
+          "name": "二阶堂希罗",
+          "standing_art_item_id": "standing_art_manosaba_hiro",
+          "rarity": 6
+        }
+      ],
+      "gacha_character_frame_item_id": "frame_manosaba_character",
+      "gacha_theme_item_id": "theme_manosaba",
+      "gacha_banner": {
+        "banner_key": "2026-s04-limited",
+        "name": "未竟的证言 限定卡池",
+        "single_cost": 120,
+        "ten_cost": 1200,
+        "soft_pity_start": 70,
+        "hard_pity": 90,
+        "rates": [
+          {
+            "rarity": 6,
+            "rate": 0.01
+          },
+          {
+            "rarity": 5,
+            "rate": 0.2
+          },
+          {
+            "rarity": 4,
+            "rate": 0.79
+          }
+        ],
+        "entries": [
+          {
+            "item_id": "standing_art_manosaba_ema",
+            "character_id": "manosaba_ema",
+            "name": "樱羽艾玛 未竟的证言",
+            "rarity": 6,
+            "weight": 1,
+            "featured": true
+          },
+          {
+            "item_id": "standing_art_manosaba_hiro",
+            "character_id": "manosaba_hiro",
+            "name": "二阶堂希罗 不落的誓约",
+            "rarity": 6,
+            "weight": 1,
+            "featured": true
+          },
+          {
+            "item_id": "standing_art_manosaba_hanna",
+            "character_id": "manosaba_hanna",
+            "name": "汉娜 微光的舞台",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_sherry",
+            "character_id": "manosaba_sherry",
+            "name": "雪莉 掌心的温度",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_noah",
+            "character_id": "manosaba_noah",
+            "name": "诺亚 画布之外",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_coco",
+            "character_id": "manosaba_coco",
+            "name": "可可 视线所及",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_meruru",
+            "character_id": "manosaba_meruru",
+            "name": "梅露露 花与祈愿",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_alisa",
+            "character_id": "manosaba_alisa",
+            "name": "亚里沙 不灭的心火",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_leia",
+            "character_id": "manosaba_leia",
+            "name": "蕾雅 从容的旁观",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_nanoka",
+            "character_id": "manosaba_nanoka",
+            "name": "奈叶香 雾中的回声",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_anan",
+            "character_id": "manosaba_anan",
+            "name": "安安 静静的守候",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_margo",
+            "character_id": "manosaba_margo",
+            "name": "玛格 沉默的注脚",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_manosaba_miria",
+            "character_id": "manosaba_miria",
+            "name": "米莉亚 午后的来信",
+            "rarity": 4,
+            "weight": 1
+          }
+        ]
+      },
+      "reward_tiers": [
+        {
+          "tier_key": "rank_1",
+          "from_rank": 1,
+          "to_rank": 1,
+          "title": "赛季冠军奖励",
+          "items": [
+            {
+              "item_id": "star_sticker",
+              "quantity": 2400
+            },
+            {
+              "item_id": "frame_manosaba_champion",
+              "quantity": 1
+            },
+            {
+              "item_id": "theme_manosaba",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "tier_key": "rank_2_3",
+          "from_rank": 2,
+          "to_rank": 3,
+          "title": "赛季前三奖励",
+          "items": [
+            {
+              "item_id": "star_sticker",
+              "quantity": 1200
+            },
+            {
+              "item_id": "frame_manosaba_podium",
+              "quantity": 1
+            },
+            {
+              "item_id": "theme_manosaba",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "tier_key": "rank_4_10",
+          "from_rank": 4,
+          "to_rank": 10,
+          "title": "赛季前十奖励",
+          "items": [
+            {
+              "item_id": "star_sticker",
+              "quantity": 600
+            },
+            {
+              "item_id": "frame_manosaba_top10",
+              "quantity": 1
+            },
+            {
+              "item_id": "theme_manosaba",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "tier_key": "rank_11_50",
+          "from_rank": 11,
+          "to_rank": 50,
+          "title": "赛季前五十奖励",
+          "items": [
+            {
+              "item_id": "star_sticker",
+              "quantity": 300
+            },
+            {
+              "item_id": "frame_manosaba_top50",
               "quantity": 1
             }
           ]

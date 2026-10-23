@@ -21,8 +21,10 @@ from plugins.render import VStack
 from plugins.render import BaseKit
 from plugins.render import AutoPage
 from plugins.render import Component
-from plugins.render.kits.bangdream import BanGDreamKit
 from plugins.render.kits.mewtype import MewtypeKit
+from plugins.render.kits.bangdream import BanGDreamKit
+
+from .help_content import RULE_SECTIONS
 
 _ROW_GAP = 18
 _SECTION_GAP = 24
@@ -39,6 +41,11 @@ def help_page(kit: BaseKit | None = None) -> AutoPage:
     """Build the BlackKasumi rules card without rendering it."""
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.manosaba.layouts import page_for
+
+    if (themed := page_for(kit, "blackjack.help")) is not None:
+        return themed
     section_gap = 18 if isinstance(kit, MewtypeKit) else _SECTION_GAP
     return card_page(
         kit,
@@ -60,76 +67,22 @@ def help_page(kit: BaseKit | None = None) -> AutoPage:
 
 
 def _getting_started_panel(kit: BaseKit) -> Component:
-    return _section(
-        kit,
-        "目标与开局",
-        [
-            _rule(
-                kit,
-                "游戏目标",
-                "手牌不超过 21 点，并尽量高于 Kasumi；Kasumi 会补牌到至少 17 点。",
-            ),
-            _rule(
-                kit,
-                "开始游戏",
-                "/黑香澄 <下注 Pt>，例如 /黑香澄 10。",
-            ),
-        ],
-    )
+    return _content_section(kit, 0)
 
 
 def _actions_panel(kit: BaseKit) -> Component:
-    actions = [
-        ("h", "补牌", "再抽一张牌。"),
-        ("s", "停牌", "结束你的回合，交给 Kasumi。"),
-        ("d", "双倍", "仅限最初两张牌；加注一倍、补一张牌后停牌。"),
-        ("q", "投降", "仅限最初两张牌；结束本手并损失一半下注。"),
-    ]
-    return _section(
-        kit,
-        "回合操作",
-        [_action_row(kit, key, name, detail) for key, name, detail in actions],
-    )
+    return _content_section(kit, 1)
 
 
 def _special_rules_panel(kit: BaseKit) -> Component:
-    return _section(
-        kit,
-        "特殊规则",
-        [
-            _rule(
-                kit,
-                "BlackKasumi",
-                "玩家最初两张牌为 21 点时获得 1.5 倍下注奖励；"
-                "Kasumi 若初始 21 点会立即亮牌结算。",
-            ),
-            _rule(
-                kit,
-                "分牌",
-                "最初两张牌点数相同时可分成两手；需要追加同额下注，并分别结算。",
-            ),
-        ],
-    )
+    return _content_section(kit, 2)
 
 
 def _card_values_panel(kit: BaseKit) -> Component:
-    return _section(
-        kit,
-        "牌面点数",
-        [
-            _rule(kit, "星星", "黄星 1 点，彩星 2 点。"),
-            _rule(
-                kit,
-                "Kasumi",
-                "红框 Kasumi 可计作 1 或 11 点，系统会自动选择不爆牌的最优值。",
-            ),
-        ],
-    )
+    return _content_section(kit, 3)
 
 
-def _section(
-    kit: BaseKit, title: str, rows: list[Component]
-) -> Component:
+def _section(kit: BaseKit, title: str, rows: list[Component]) -> Component:
     return panel_section(
         kit,
         VStack(
@@ -166,9 +119,7 @@ def _rule(kit: BaseKit, label: str, detail: str) -> Component:
     )
 
 
-def _action_row(
-    kit: BaseKit, key: str, name: str, detail: str
-) -> Component:
+def _action_row(kit: BaseKit, key: str, name: str, detail: str) -> Component:
     return HStack(
         [
             badge(
@@ -199,4 +150,16 @@ def _action_row(
         ],
         gap=18,
         align="center",
+    )
+
+
+def _content_section(kit: BaseKit, index: int) -> Component:
+    title, rows = RULE_SECTIONS[index]
+    return _section(
+        kit,
+        title,
+        [
+            _action_row(kit, key, label, text) if key else _rule(kit, label, text)
+            for key, label, text in rows
+        ],
     )

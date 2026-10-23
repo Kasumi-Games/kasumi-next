@@ -91,7 +91,7 @@ def test_entries_from_tolerates_an_undocumented_plugin() -> None:
 def test_board_renders_in_every_kit(kit_name: str) -> None:
     image = render_board(HELP_ENTRIES, KITS[kit_name]())
     assert image.mode == "RGBA"
-    assert image.width == 864
+    assert image.width == (1240 if kit_name == "manosaba" else 864)
     # ~1700 is the density-mitigation budget from the board's design spec
     # (docs/design/image-responses/15-cluster-utility.md); past the compact
     # threshold the board must stay under it. Measured 1503-1549 at 31 commands.

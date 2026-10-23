@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from collections.abc import Callable
 
 import pytest
@@ -9,9 +10,11 @@ from PIL import Image
 
 from utils import PassiveGenerator
 from utils.images import image_segment
+from plugins.render import RenderContext
 from plugins.render.kits import MangaKit
 from plugins.render.kits import KasumiKit
 from plugins.render.kits import MinimalKit
+from plugins.render.kits import ManosabaKit
 from plugins.render.kits import MidnightKit
 from plugins.render.kits import BanGDreamKit
 from plugins.inventory.models import Season
@@ -52,6 +55,34 @@ def _snapshots() -> list[SeasonRankSnapshot]:
 
 def _data(**overrides):
     return season_trend_data(_season(), _snapshots(), **overrides)
+
+
+@pytest.mark.parametrize("kit_cls", [ManosabaKit, MinimalKit])
+def test_chart_uses_the_page_font_for_ticks_and_legend(monkeypatch, kit_cls):
+    from plugins.inventory import season_render
+    from plugins.render.kits.fonts import CHINESE_FONT
+    from plugins.render.kits.manosaba.components import SERIF
+
+    figures = []
+    original = season_render.Figure
+
+    def capture(*args, **kwargs):
+        figure = original(*args, **kwargs)
+        figures.append(figure)
+        return figure
+
+    monkeypatch.setattr(season_render, "Figure", capture)
+    season_trend_page(_data(), kit_cls()).render(RenderContext(pixel_ratio=1))
+    axes = figures[-1].axes[0]
+    labels = (
+        axes.get_xticklabels() + axes.get_yticklabels() + axes.get_legend().get_texts()
+    )
+    expected = SERIF if kit_cls is ManosabaKit else CHINESE_FONT
+    assert labels
+    assert all(
+        Path(label.get_fontproperties().get_file()).resolve() == expected.resolve()
+        for label in labels
+    )
 
 
 def test_no_snapshots_raise_for_the_text_empty_state() -> None:
@@ -187,15 +218,23 @@ def _clustered_snapshots() -> list[SeasonRankSnapshot]:
     return rows
 
 
+@pytest.mark.parametrize(
+    "snapshots", [_six_digit_snapshots, _wide_legend_snapshots, _clustered_snapshots]
+)
+def test_manosaba_serif_chart_keeps_ink_off_every_canvas_edge(snapshots):
+    from plugins.render.kits.manosaba.components import SERIF
+
+    data = season_trend_data(_season(), snapshots())
+    _assert_edge_band_clean(_chart_image(data, ManosabaKit(), font_path=SERIF))
+
+
 @pytest.mark.parametrize("kit_cls", [BanGDreamKit, KasumiKit])
 @pytest.mark.parametrize(
     "snapshots",
     [_six_digit_snapshots, _wide_legend_snapshots, _clustered_snapshots],
     ids=["six-digit-values", "wide-legend-ranks", "clustered-times"],
 )
-def test_worst_case_charts_keep_ink_off_every_canvas_edge(
-    kit_cls, snapshots
-) -> None:
+def test_worst_case_charts_keep_ink_off_every_canvas_edge(kit_cls, snapshots) -> None:
     data = season_trend_data(_season(), snapshots())
     chart = _chart_image(data, kit_cls())
     assert chart.size == (1440, 720)
