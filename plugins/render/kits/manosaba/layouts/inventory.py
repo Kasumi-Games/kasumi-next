@@ -16,7 +16,7 @@ def profile(f, data):
     if data.standing_art is not None:
         return _profile_with_art(f, data)
     y = f.title("人物档案", "PERSONAL DOSSIER", data.season_name or "尚未参加赛季")
-    left, right = 58, 438
+    left, right = 58, 470
     identity = replace(
         data.identity, avatar_frame=data.avatar_frame or data.identity.avatar_frame
     )
@@ -32,29 +32,29 @@ def profile(f, data):
     a = f.metric("盆栽", f"{data.bonsai:,} 盆", left, a + 20, 310, size=36)
     if data.season_rank is not None:
         a = f.text(f"赛季第 {data.season_rank} 名", left, a + 24, 310, 24, ROSE)
-    b = f.section("个人简介", right, y, 624)
+    b = f.section("个人简介", right, y, 592)
     b = f.text(
         data.description.strip() or "尚未留下证言。",
         right,
         b,
-        624,
+        592,
         28,
         MUTED if not data.description.strip() else INK,
         lines=12,
     )
-    b = f.section("已装备的装扮", right, max(b + 42, y + 210), 624)
-    b = f.facts(data.equipped or (("装扮", "尚未装备"),), right, b, 624)
+    b = f.section("已装备的装扮", right, max(b + 42, y + 210), 592)
+    b = f.facts(data.equipped or (("装扮", "尚未装备"),), right, b, 592)
     if data.xp_level_span > 0:
         b = f.meter(
             data.xp_in_level,
             data.xp_level_span,
             right,
             b + 18,
-            624,
+            592,
             f"等级经验 {data.xp_in_level}/{data.xp_level_span}",
         )
     bottom = max(a, b)
-    f.box(400, y, 1, bottom - y, (185, 156, 156, 255))
+    f.gutter(378, 470, y, bottom)
     f.footer("/资料 简介 <文本> 修改个人简介 · /装扮 查看已拥有的装扮", bottom + 40)
 
 
@@ -64,27 +64,27 @@ def _profile_with_art(f, data):
     identity = replace(
         data.identity, avatar_frame=data.avatar_frame or data.identity.avatar_frame
     )
-    a = f.person(identity, 58, y, 500)
+    a = f.person(identity, 58, y, 480)
     a = f.metric(
         "休赛期临时 Pt" if data.offseason else "赛季积分",
         f"{data.current_pt:,} Pt",
         58,
         a + 30,
-        500,
+        480,
     )
     a = f.facts(
         (("星星贴纸", f"{data.star_stickers:,} 张"), ("盆栽", f"{data.bonsai:,} 盆")),
         58,
         a + 24,
-        500,
+        480,
     )
     if data.season_rank is not None:
-        a = f.text(f"赛季第 {data.season_rank} 名", 58, a + 10, 500, 24, ROSE)
-    a = f.section("个人简介", 58, a + 24, 500)
-    a = f.text(data.description.strip() or "尚未留下证言。", 58, a, 500, 25, lines=12)
-    a = f.section("已装备的装扮", 58, a + 28, 500)
+        a = f.text(f"赛季第 {data.season_rank} 名", 58, a + 10, 480, 24, ROSE)
+    a = f.section("个人简介", 58, a + 24, 480)
+    a = f.text(data.description.strip() or "尚未留下证言。", 58, a, 480, 25, lines=12)
+    a = f.section("已装备的装扮", 58, a + 28, 480)
     a = f.facts(
-        data.equipped or (("装扮", "尚未装备"),), 58, a, 500, size=22, label_width=110
+        data.equipped or (("装扮", "尚未装备"),), 58, a, 480, size=22, label_width=110
     )
     if data.xp_level_span > 0:
         a = f.meter(
@@ -92,12 +92,12 @@ def _profile_with_art(f, data):
             data.xp_level_span,
             58,
             a + 18,
-            500,
+            480,
             f"等级经验 {data.xp_in_level}/{data.xp_level_span}",
         )
-    b = f.section("收藏立绘", 630, y, 432)
-    b = f.image(data.standing_art, 630, b + 12, 432, 780)
-    f.box(596, y, 1, max(a, b) - y, (185, 156, 156, 255))
+    b = f.section("收藏立绘", 650, y, 412)
+    b = f.image(data.standing_art, 650, b + 12, 412, 780)
+    f.gutter(538, 650, y, max(a, b))
     f.footer("/资料 简介 <文本> 修改个人简介 · /装扮 查看已拥有的装扮", max(a, b) + 30)
 
 
@@ -188,6 +188,7 @@ def season_rank(f, data):
                 i for i, r in enumerate(data.nearby) if r.rank == data.viewer_rank
             ),
         )
+    f.gutter(708, 770, y, max(left, right), padding=20)
     f.footer("/赛季趋势 查看积分门槛的变化 · /赛季 查看本期奖励", max(left, right) + 24)
 
 
@@ -203,7 +204,7 @@ def season_info(f, data):
         _countdown(target - data.now),
         58,
         y + 100,
-        440,
+        424,
         size=42,
     )
     left = f.facts(
@@ -213,7 +214,7 @@ def season_info(f, data):
         ),
         58,
         left + 30,
-        440,
+        424,
     )
     if data.state == "active":
         left = f.facts(
@@ -223,16 +224,17 @@ def season_info(f, data):
             ),
             58,
             left + 12,
-            440,
+            424,
         )
-    right = f.section("排名奖励", 562, y, 540)
+    right = f.section("排名奖励", 578, y, 524)
     for reward in data.reward_rows:
-        right = f.text(reward.placement, 562, right, 540, 29, ROSE)
-        right = f.text("\n".join(reward.rewards), 590, right + 7, 512, 24) + 28
+        right = f.text(reward.placement, 578, right, 524, 29, ROSE)
+        right = f.text("\n".join(reward.rewards), 606, right + 7, 496, 24) + 28
     if data.banner_name or data.featured_names:
-        right = f.section("本期限定卡池", 562, right + 16, 540)
-        right = f.text(data.banner_name or "", 562, right, 540, 28)
-        right = f.text(" · ".join(data.featured_names), 562, right + 12, 540, 24, MUTED)
+        right = f.section("本期限定卡池", 578, right + 16, 524)
+        right = f.text(data.banner_name or "", 578, right, 524, 28)
+        right = f.text(" · ".join(data.featured_names), 578, right + 12, 524, 24, MUTED)
+    f.gutter(482, 578, y, max(left, right))
     f.footer("/赛季排行 · /赛季趋势 · /抽卡", max(left, right) + 30)
 
 

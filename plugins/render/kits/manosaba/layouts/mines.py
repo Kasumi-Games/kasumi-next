@@ -96,6 +96,7 @@ def result(f, data, *, identity=None):
         right = f.facts(gains, 524, right, 538)
     if data.payout_capped:
         right = f.text("本次入账已达到奖励上限", 524, right + 18, 538, 23, ROSE)
+    f.gutter(458, 524, y, max(left, right), padding=22)
     f.footer("/探险 开始新的探索 · /探险统计 查看战绩", max(left, right) + 28)
 
 

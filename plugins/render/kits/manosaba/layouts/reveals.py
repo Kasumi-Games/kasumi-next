@@ -41,6 +41,7 @@ def cck(f, data):
     if data.winner_attempt:
         b = f.text(f"第 {data.winner_attempt} 次答对", 664, b + 25, 518, 24, MUTED)
     b = _reward_receipt(f, data, 664, b + 36, 518)
+    f.gutter(578, 664, y, max(a, b))
     f.footer("/猜卡面 开始下一次挑战", max(a, b) + 30)
 
 
@@ -70,4 +71,5 @@ def chart(f, data):
     if stats:
         b = f.text(stats, 582, b + 12, 600, 23, MUTED)
     b = _reward_receipt(f, data, 582, b + 38, 600)
+    f.gutter(498, 582, y, max(a, b))
     f.footer("/猜谱面 开始下一次挑战", max(a, b) + 28)

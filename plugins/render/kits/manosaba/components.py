@@ -81,6 +81,31 @@ def paper_surface(width: int, height: int) -> Image.Image:
     return Image.blend(texture, Image.new("RGBA", (width, height), PAPER), 0.76)
 
 
+def book_paper(width: int, height: int, *, spine: float = 0.495) -> Image.Image:
+    """Fit both complete leaves to a layout's binding position.
+
+    The original binding is at 49.5% of the source. Resize each facing page
+    independently, keeping its torn edges, stains, shadows and curved fold.
+    No texture is discarded or painted back as an isolated separator.
+    """
+    if not 0 < spine < 1:
+        raise ValueError("Book spine must lie strictly inside the page")
+    width, height = max(2, width), max(1, height)
+    source = asset("book.png")
+    split = round(source.width * 0.495)
+    target = max(1, min(width - 1, round(width * spine)))
+    canvas = Image.new("RGBA", (width, height))
+    for start, end, left, right in (
+        (0, split, 0, target),
+        (split, source.width, target, width),
+    ):
+        leaf = source.crop((start, 0, end, source.height))
+        canvas.paste(
+            leaf.resize((right - left, height), Image.Resampling.LANCZOS), (left, 0)
+        )
+    return canvas
+
+
 @dataclass(frozen=True)
 class ManosabaBackground:
     fill: ColorLike | None = None
@@ -121,6 +146,7 @@ class ManosabaPanel:
     border: ColorLike = (128, 105, 108, 255)
     weight: int = 1
     texture: str | None = None
+    book_spine: float = 0.495
 
     def measure(self, ctx: RenderContext, constraints: Constraints) -> Size:
         return Frame(
@@ -147,7 +173,11 @@ class ManosabaPanel:
             width=stroke,
         )
         if self.texture is not None and self.radius is None:
-            paper = resized(self.texture, rect.width, rect.height)
+            paper = (
+                book_paper(rect.width, rect.height, spine=self.book_spine)
+                if self.texture == "book.png"
+                else resized(self.texture, rect.width, rect.height)
+            )
             layer = Image.blend(layer, paper, 0.16)
             draw = ImageDraw.Draw(layer)
         padding = as_insets(self.padding)

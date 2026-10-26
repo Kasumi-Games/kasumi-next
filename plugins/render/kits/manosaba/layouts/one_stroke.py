@@ -106,4 +106,5 @@ def result(f, data, *, identity=None):
     if gains:
         b = f.section("任务与成长", 570, b + 20, 532)
         b = f.facts(gains, 570, b, 532)
+    f.gutter(498, 570, y, max(a, b), padding=24)
     f.footer("/一笔画 开始新的挑战 · /一笔画排行榜 查看竞速名册", max(a, b) + 28)

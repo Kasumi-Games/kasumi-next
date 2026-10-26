@@ -75,6 +75,8 @@ def banner(f, data):
         half,
         size=38,
     )
+    if has_art:
+        f.gutter(568, 626, y, max(a, c, rate_bottom, y + 605), padding=18)
     y = max(a, c, rate_bottom, y + (640 if has_art else 0)) + 34
     f.meter(
         data.pity_count,
@@ -139,6 +141,7 @@ def pull(f, data):
         b = f.text(" · ".join(states), 650, b + 34, 612, 25, ROSE)
         if item.note:
             b = f.text(item.note, 650, b + 24, 612, 25)
+        f.gutter(578, 650, y, max(y + 510, b), padding=24)
         y = max(y + 540, b)
     else:
         # A rare featured exhibit owns a full facing page; the remaining pulls
@@ -187,6 +190,8 @@ def pull(f, data):
                     )
                 )
             row_y = max(ends) + 22
+        if featured is not None and len(items) >= 6:
+            f.gutter(832, 886, y, max(row_y, right), padding=16)
         y = max(row_y, right)
     if data.bonus_grants:
         y = f.text(" · ".join(data.bonus_grants), 58, y + 18, 1204, 23, ROSE)

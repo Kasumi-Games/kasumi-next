@@ -155,6 +155,8 @@ uvx ruff check plugins/render/kits/manosaba scripts/extract_manosaba_assets.py s
 
 业务布局审计以真实测试夹具调用各插件入口，检查 34 个布局均被选中、54 张页面的实际字形边界与文字重叠；报告写入 `.cache/manosaba-layout-audit.json`。另有异步邮件目录访问、头像框、领取数量、待办任务和隐藏地雷的回归检查。自动几何检查仍需配合画廊中的人工视觉复核。
 
+书页保留完整原始素材，以原图 49.5% 处的书脊为界，按布局所需的位置分别拉伸左右两页；破边、水渍、纸张阴影与弯曲折痕随各自纸页一起变形。双栏布局通过 `Sheet.gutter(left, right, top, bottom)` 声明正文空隙，整张背景的书脊随之移动，不另画分隔线或粘贴窄折痕。资料页通常保留至少 32px 的页缝侧距；牌桌等紧凑布局显式指定侧距。通栏信件、签到与多列图录把左页压缩到页边，保留完整右页的层次。基础名片和单抽面板同样按实际内容设置 `book_spine`。布局审计检查字形、图片与框体到页缝的距离，并输出各页书脊位置；中文标点的绘制与换行使用同一套行宽规则。回归测试覆盖左右纸页细节保留、非对称拉伸、整页书脊移动及 1×/2× 渲染。
+
 ## 第四赛季
 
 第四赛季「魔女审判 · 未竟的证言」使用双六星并列卡池展陈，以及完整立绘独占面对页的装备档案。13 位角色立绘由本机 `manosaba-sprite-synth` 合成，配套五款原创头像框。配置、概率、来源与重建说明见[赛季素材说明](../../../inventory/resources/items/standing_art/manosaba/README.md)。执行 `.venv/bin/python scripts/preview_manosaba_season.py` 可生成 `output/manosaba-season/index.html`，查看实际赛季的卡池、角色和奖励。

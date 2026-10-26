@@ -27,6 +27,7 @@ def audit():
         sheet = page.compose(RenderContext(pixel_ratio=1))
         boxes = sheet.glyph_boxes()
         errors = []
+        errors.extend(sheet.gutter_conflicts())
         for text, rect in boxes:
             if (
                 rect.x < 18
@@ -52,6 +53,8 @@ def audit():
                 "width": sheet.width,
                 "height": sheet.height + 24,
                 "text_runs": len(sheet.texts),
+                "gutters": len(sheet.gutters),
+                "book_spine": sheet.book_spine if sheet.book else None,
                 "errors": errors,
             }
         )

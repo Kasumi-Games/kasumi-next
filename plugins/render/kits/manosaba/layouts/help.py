@@ -21,6 +21,7 @@ def board(f, entries):
             f.text(f"{index:02d}", x, bottom + 5, 38, 19, MUTED)
             bottom = f.text(command.command, x + 54, bottom, 470, 27) + 14
         columns[col] = bottom + 30
+    f.gutter(582, 658, y, max(columns) - 30)
     f.footer(
         f"/help 功能名 查看用法和示例 · 需要帮助？QQ 群 {SUPPORT_GROUP}",
         max(columns) + 20,
@@ -42,6 +43,7 @@ def detail(f, entry):
         b = f.section("输入示例", 748, b, 434)
         for example in entry.examples:
             b = f.text(example, 748, b, 434, 24, ROSE) + 18
+    f.gutter(680, 748, y, max(a, b), padding=24)
     f.footer("/help 查看全部功能", max(a, b) + 28)
 
 
@@ -62,4 +64,5 @@ def rulebook(f, title, kicker, sections):
             end = f.text(text, left, end + 8, width, 23)
             bottom = max(bottom + (72 if key else 0), end + 26)
         columns[col] = bottom + 26
+    f.gutter(582, 658, y, max(columns) - 26)
     f.footer("输入对应指令开始游戏 · /help 查看其他功能", max(columns) + 10)

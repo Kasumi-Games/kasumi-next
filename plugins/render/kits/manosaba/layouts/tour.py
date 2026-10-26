@@ -93,6 +93,7 @@ def state(f, data, *, identity=None, detail=None):
             MUTED,
         )
     f.text(f"已完成 {s.tour_played_count}/26 场", 386, route_y + 92, 996, 24)
+    f.gutter(328, 386, y, max(side, route_y + 135), padding=18)
     f.footer(
         "1–4 选择手牌 · 0 操作乐器 · 5 休息 · q 退出 · 可连续输入最多 6 个 0–4",
         max(side, route_y + 135) + 28,
@@ -135,6 +136,7 @@ def result(f, data, *, identity=None):
     if gains:
         b = f.section("任务与成长", 564, b + 24, 538)
         b = f.facts(gains, 564, b, 538)
+    f.gutter(478, 564, y, max(a, b))
     f.footer("/巡演 开始新的行程 · /巡演排行榜 查看竞速记录", max(a, b) + 30)
 
 
@@ -165,6 +167,7 @@ def rank(f, rows_by_difficulty):
                 end = f.text("尚无通关记录", x, end + 20, 524, 24, MUTED) + 45
             ends.append(end)
         top = max(ends) + 36
+    f.gutter(582, 658, y, top - 36)
     f.footer("按难度分别记录个人最快通关时间", top)
 
 

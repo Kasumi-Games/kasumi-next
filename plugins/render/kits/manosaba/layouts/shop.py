@@ -102,4 +102,5 @@ def preview(f, data):
     if data.notice:
         right = f.text(data.notice, 658, right + 24, 524, 23, ROSE)
     action = f"/装扮 装备 {data.name}" if data.owned else f"/流星堂 购买 {data.sku}"
+    f.gutter(558, 658, y, max(left, right))
     f.footer(data.footer or action, max(left, right) + 30)

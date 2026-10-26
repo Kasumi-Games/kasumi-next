@@ -20,14 +20,15 @@ from plugins.render.kits.atoms import KitImage
 from plugins.render.primitives import load_font
 from plugins.render.text_layout import ellipsis
 from plugins.render.text_layout import wrap_text
-from plugins.render.text_layout import text_width
+from plugins.render.text_layout import draw_text_line
+from plugins.render.text_layout import display_text_width
 
 from ..components import INK
 from ..components import ROSE
 from ..components import MUTED
 from ..components import SERIF
 from ..components import SURFACE
-from ..components import asset
+from ..components import book_paper
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,9 @@ class Sheet:
         self.ctx = ctx.for_root_render().activate_pixel_ratio()
         self.ops = []
         self.texts = []
+        self.blocks = []
+        self.gutters = []
+        self.gutter_padding = []
         self.height = 0
 
     def _op(self, bottom, paint):
@@ -115,16 +119,16 @@ class Sheet:
             draw = ImageDraw.Draw(canvas)
             face = load_font(self.ctx.scale_px(size), SERIF)
             for index, line in enumerate(content):
-                draw_width = text_width(line, face)
                 left = self.ctx.scale_px(x)
                 room = self.ctx.scale_px(width)
+                draw_width = display_text_width(line, face, room)
                 if align == "center":
                     left += max(0, (room - draw_width) // 2)
                 elif align == "right":
                     left += max(0, room - draw_width)
                 box = face.getbbox(line)
                 top = self.ctx.scale_px(y + index * leading) - box[1]
-                draw.text((left, top), line, font=face, fill=color)
+                draw_text_line(draw, (left, top), line, face, color, max_width=room)
 
         self._op(y + height, paint)
         return y + height
@@ -145,6 +149,7 @@ class Sheet:
         )
 
     def box(self, x, y, width, height, fill=SURFACE, border=None, weight=1):
+        self.blocks.append(("box", Rect(x, y, width, height)))
         self._op(
             y + height,
             lambda c: ImageDraw.Draw(c).rectangle(
@@ -178,6 +183,7 @@ class Sheet:
         )
 
     def component(self, component, x, y, width, height):
+        self.blocks.append((type(component).__name__, Rect(x, y, width, height)))
         self._op(
             y + height,
             lambda c: component.render(
@@ -299,6 +305,45 @@ class Sheet:
             return self.text(label, x, y + 20, width, 20, MUTED)
         return y + 8
 
+    def gutter(self, left, right, top, bottom, *, padding=32):
+        """Anchor the entire book background to the reserved column gap."""
+        if right - left < padding * 2 + 12:
+            raise ValueError("Book gutter needs room for its fold and padding")
+        if not self.book:
+            raise ValueError("Only book surfaces can request a gutter")
+        if bottom <= top:
+            return
+        if self.gutters:
+            raise ValueError("A book spread has one binding position")
+        width = min(20, right - left - padding * 2)
+        self.gutters.append(
+            Rect(round((left + right - width) / 2), top, width, bottom - top)
+        )
+        self.gutter_padding.append(padding)
+
+    @property
+    def book_spine(self):
+        # Full-width letters and multi-column registers use the broad right
+        # leaf, with the facing page compressed into the outer margin.
+        if not self.gutters:
+            return 28
+        gutter = self.gutters[0]
+        return gutter.x + gutter.width / 2
+
+    def gutter_conflicts(self):
+        errors = []
+        for gutter, padding in zip(self.gutters, self.gutter_padding, strict=True):
+            for label, rect in [*self.glyph_boxes(), *self.blocks]:
+                dx = min(gutter.right + padding, rect.right) - max(
+                    gutter.x - padding, rect.x
+                )
+                dy = min(gutter.bottom, rect.bottom) - max(gutter.y, rect.y)
+                if dx > 0 and dy > 0:
+                    errors.append(
+                        f"content too close to book gutter: {label!r} / {rect}"
+                    )
+        return errors
+
     def footer(self, text, y=None):
         y = max(self.height + 34, y or 0)
         self.line(52, y, self.width - 104, MUTED)
@@ -313,8 +358,11 @@ class Sheet:
             self.ctx, self.ctx.scale_size(Size(self.width, logical_height))
         )
         if self.book:
-            texture = asset("book.png").resize(canvas.size, Image.Resampling.LANCZOS)
-            canvas = Image.blend(canvas, texture, 0.10)
+            canvas = Image.blend(
+                canvas,
+                book_paper(*canvas.size, spine=self.book_spine / self.width),
+                0.10,
+            )
         for paint in self.ops:
             paint(canvas)
         if self.ctx.render_ratio > 1:
@@ -333,7 +381,7 @@ class Sheet:
                 if not line.strip():
                     continue
                 bounds = face.getbbox(line)
-                width = bounds[2] - bounds[0]
+                width = display_text_width(line, face, run.rect.width)
                 offset = (
                     max(0, (run.rect.width - width) // 2)
                     if run.align == "center"

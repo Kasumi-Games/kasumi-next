@@ -466,6 +466,9 @@ class ManosabaKit(BaseKit):
             border=ROSE,
             weight=2,
             texture="book.png",
+            book_spine=(total - pad - art_width - 9) / total
+            if art_width
+            else pad / 2 / total,
         )
 
     def pull_reveal(
@@ -558,6 +561,7 @@ class ManosabaKit(BaseKit):
             border=ROSE,
             weight=3 if pull.rarity >= 6 else 1,
             texture="book.png",
+            book_spine=256 / _pixels(width, 784),
         )
 
     def _avatar(

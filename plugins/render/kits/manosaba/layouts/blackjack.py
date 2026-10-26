@@ -37,6 +37,7 @@ def table(
                 f.image(image, 390 + (index - start) * 186, cursor, 166, 233)
             cursor += 260
         cursor += 14
+    f.gutter(338, 390, y, max(cursor, y + 480), padding=16)
     f.footer("/黑香澄 -h 查看规则 · 牌面与点数沿用当前对局", max(cursor, y + 480) + 24)
 
 
@@ -106,5 +107,6 @@ def stats(f, data):
         b,
         578,
     )
+    f.gutter(448, 524, y, max(a, b))
     end = recent_form(f, data.recent_games, 58, max(a, b) + 36, 1044)
     f.footer("/黑香澄 <下注 Pt> 再来一局", end + 24)

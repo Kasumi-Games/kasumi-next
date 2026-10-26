@@ -22,6 +22,7 @@ def create(f, data):
     right = f.text(
         f"发送「抢红包 {data.channel_index}」领取", 566, right + 48, 416, 32, ROSE
     )
+    f.gutter(488, 566, y, max(left, right))
     f.footer("领取结果将在红包结算后公布", max(left, right) + 40)
 
 
@@ -92,4 +93,5 @@ def completion(f, data):
     )
     if len(claims) > 10:
         b = f.text(f"另有 {len(claims) - 10} 人已领取", 516, b + 14, 606, 23, MUTED)
+    f.gutter(448, 516, y, max(a, b), padding=24)
     f.footer("本次赠礼已分配完毕 · /红包列表 查看其他红包", max(a, b) + 30)
