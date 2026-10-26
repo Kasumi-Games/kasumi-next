@@ -25,6 +25,7 @@ from utils.images import image_segment_async  # noqa: E402
 from utils.theming import kit_for_user  # noqa: E402
 from utils.identity import identity_for  # noqa: E402
 from utils.identity import identities_for  # noqa: E402
+from utils.response_timing import ResponseTiming  # noqa: E402
 
 from .utils import is_number  # noqa: E402
 from .render import RankRow  # noqa: E402
@@ -74,20 +75,30 @@ async def info(matcher: Matcher, event: MessageEvent):
     # The same card as /资料: assembly (DB) stays on the event loop thread —
     # the inventory/monetary sessions are process-global and not thread safe —
     # and only the raster is offloaded. Render failures degrade to text.
-    kit = kit_for_user(user_id)
-    data = assemble_profile(user_id, avatar=await get_avatar(user_id))
-    try:
-        image = await profile_page(data, kit).render_async()
-    except Exception:
-        logger.opt(exception=True).warning("info card render failed")
-        await matcher.finish(
-            _info_text(data) + passive_generator.element,
-            referrer=passive_generator.event.referrer,
-        )
-    await matcher.finish(
-        await image_segment_async(image) + passive_generator.element,
-        referrer=passive_generator.event.referrer,
-    )
+    with ResponseTiming("info") as timing:
+        with timing.stage("theme"):
+            kit = kit_for_user(user_id)
+        with timing.stage("avatar"):
+            avatar = await get_avatar(user_id)
+        with timing.stage("data"):
+            data = assemble_profile(user_id, avatar=avatar)
+        try:
+            with timing.stage("render"):
+                image = await profile_page(data, kit).render_async()
+        except Exception:
+            logger.opt(exception=True).warning("info card render failed")
+            with timing.stage("send"):
+                await matcher.finish(
+                    _info_text(data) + passive_generator.element,
+                    referrer=passive_generator.event.referrer,
+                )
+        with timing.stage("encode"):
+            segment = await image_segment_async(image)
+        with timing.stage("send"):
+            await matcher.finish(
+                segment + passive_generator.element,
+                referrer=passive_generator.event.referrer,
+            )
 
 
 def _info_text(data: ProfileData) -> str:

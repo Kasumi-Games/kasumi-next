@@ -20,6 +20,7 @@ import time
 import asyncio
 from io import BytesIO
 from pathlib import Path
+from weakref import WeakValueDictionary
 
 import aiohttp
 from PIL import Image
@@ -44,7 +45,10 @@ _MAX_MEMORY_ENTRIES = 512
 _memory: dict[str, Image.Image] = {}
 _negative: dict[str, float] = {}
 _default_fingerprints: set[bytes] | None = None
-_lock = asyncio.Lock()
+# Waiting for another player's network request must never delay this player's
+# card. Weak references retain a lock only while callers are using/waiting on it.
+_locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
+_fingerprint_lock = asyncio.Lock()
 
 
 def _cache_dir() -> Path:
@@ -84,8 +88,12 @@ async def get_avatar(user_id: str) -> Image.Image | None:
     """
 
     try:
-        return await _get_avatar(user_id)
+        # Bound the entire lookup, including lock waits and the sentinel fetch,
+        # rather than granting a fresh timeout to each individual HTTP request.
+        async with asyncio.timeout(_FETCH_TIMEOUT_SECONDS):
+            return await _get_avatar(user_id)
     except Exception:
+        _negative[user_id] = time.monotonic() + _NEGATIVE_TTL_SECONDS
         logger.opt(exception=True).debug(f"avatar fetch failed for {user_id!r}")
         return None
 
@@ -97,6 +105,18 @@ async def _get_avatar(user_id: str) -> Image.Image | None:
     if _negative.get(user_id, 0.0) > time.monotonic():
         return None
 
+    lock = _locks.setdefault(user_id, asyncio.Lock())
+    async with lock:
+        # Re-check both caches after waiting: a failed fetch is also a result.
+        cached = _memory.get(user_id)
+        if cached is not None:
+            return cached
+        if _negative.get(user_id, 0.0) > time.monotonic():
+            return None
+        return await _load_avatar(user_id)
+
+
+async def _load_avatar(user_id: str) -> Image.Image | None:
     disk_path = _cache_dir() / f"{user_id}.png"
     if disk_path.exists() and time.time() - disk_path.stat().st_mtime < _DISK_TTL_SECONDS:
         try:
@@ -111,21 +131,16 @@ async def _get_avatar(user_id: str) -> Image.Image | None:
         _negative[user_id] = time.monotonic() + _NEGATIVE_TTL_SECONDS
         return None
 
-    async with _lock:
-        # Re-check after the lock: a concurrent handler may have fetched it.
-        cached = _memory.get(user_id)
-        if cached is not None:
-            return cached
-        payload = await _download(app_id, user_id)
-        if payload is None or await _is_default_penguin(app_id, payload):
-            # q.qlogo.cn answers unknown uids with 200 + the stock penguin
-            # rather than an error; the initial badge looks better than a
-            # generic penguin, so the stock image counts as "no avatar".
-            _negative[user_id] = time.monotonic() + _NEGATIVE_TTL_SECONDS
-            return None
-        image = await run_image_task(_decode_and_store, payload, disk_path)
-        _remember(user_id, image)
-        return image
+    payload = await _download(app_id, user_id)
+    if payload is None or await _is_default_penguin(app_id, payload):
+        # q.qlogo.cn answers unknown uids with 200 + the stock penguin
+        # rather than an error; the initial badge looks better than a
+        # generic penguin, so the stock image counts as "no avatar".
+        _negative[user_id] = time.monotonic() + _NEGATIVE_TTL_SECONDS
+        return None
+    image = await run_image_task(_decode_and_store, payload, disk_path)
+    _remember(user_id, image)
+    return image
 
 
 async def _download(app_id: str, user_id: str) -> bytes | None:
@@ -153,10 +168,12 @@ async def _is_default_penguin(app_id: str, payload: bytes) -> bool:
 
     global _default_fingerprints
     if _default_fingerprints is None:
-        sentinel = await _download(app_id, _SENTINEL_UID)
-        _default_fingerprints = (
-            {hashlib.sha256(sentinel).digest()} if sentinel else set()
-        )
+        async with _fingerprint_lock:
+            if _default_fingerprints is None:
+                sentinel = await _download(app_id, _SENTINEL_UID)
+                _default_fingerprints = (
+                    {hashlib.sha256(sentinel).digest()} if sentinel else set()
+                )
     return hashlib.sha256(payload).digest() in _default_fingerprints
 
 

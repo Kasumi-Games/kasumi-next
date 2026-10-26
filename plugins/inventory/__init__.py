@@ -25,6 +25,7 @@ from utils.theming import kit_for_user
 from utils.theming import theme_by_token
 from utils.identity import identity_for
 from utils.identity import identities_for
+from utils.response_timing import ResponseTiming
 
 require("nonebot_plugin_apscheduler")
 
@@ -1021,13 +1022,22 @@ async def handle_profile(
         # kit/identity/data on the event loop thread; only the raster is
         # offloaded — the inventory session is process-global and not
         # thread safe. The avatar fetch is async and cached (utils.avatar).
-        kit = kit_for_user(user_id)
-        data = assemble_profile(user_id, avatar=await get_avatar(user_id))
-        image = await profile_page(data, kit).render_async()
-        await matcher.finish(
-            await image_segment_async(image) + passive_generator.element,
-            referrer=passive_generator.event.referrer,
-        )
+        with ResponseTiming("profile") as timing:
+            with timing.stage("theme"):
+                kit = kit_for_user(user_id)
+            with timing.stage("avatar"):
+                avatar = await get_avatar(user_id)
+            with timing.stage("data"):
+                data = assemble_profile(user_id, avatar=avatar)
+            with timing.stage("render"):
+                image = await profile_page(data, kit).render_async()
+            with timing.stage("encode"):
+                segment = await image_segment_async(image)
+            with timing.stage("send"):
+                await matcher.finish(
+                    segment + passive_generator.element,
+                    referrer=passive_generator.event.referrer,
+                )
 
     parts = text.split(maxsplit=1)
     if parts[0] in {"简介", "description", "desc"}:
