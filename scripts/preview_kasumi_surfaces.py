@@ -7,18 +7,20 @@ cards without inventing a second set of stale demo models.
 
 from __future__ import annotations
 
-import argparse
 import os
-import random
-import runpy
 import sys
-from collections.abc import Callable
-from dataclasses import replace
+import runpy
+import random
+import argparse
 from pathlib import Path
+from dataclasses import replace
+from collections.abc import Callable
 
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
+
+RenderConsumer = Callable[[str, Callable[[], Image.Image]], None]
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -74,12 +76,14 @@ def _preview_card(
     return image
 
 
-def _preview_blackjack(kit_name: str, output_dir: Path) -> list[Path]:
+def _preview_blackjack(
+    kit_name: str, output_dir: Path, *, consumer: RenderConsumer | None = None
+) -> list[Path]:
+    from plugins.render import PlayerIdentity
+    from plugins.render.kits import KITS
     from plugins.blackjack.models import Card
     from plugins.blackjack.models import Hand
     from plugins.blackjack.render import BlackjackRenderer
-    from plugins.render import PlayerIdentity
-    from plugins.render.kits import KITS
 
     renderer = object.__new__(BlackjackRenderer)
     renderer.kit = KITS[kit_name]()
@@ -107,27 +111,39 @@ def _preview_blackjack(kit_name: str, output_dir: Path) -> list[Path]:
         output_dir / f"blackjack-hand-{kit_name}.png",
         output_dir / f"blackjack-table-{kit_name}.png",
     ]
-    renderer.generate_hand(
+    render_hand = lambda: renderer.generate_hand(
         dealer,
         second_card_back=True,
         identity=identity,
         detail="庄家回合 · 押注 120 Pt",
-    ).save(outputs[0])
-    renderer.generate_table(
+    )
+    render_table = lambda: renderer.generate_table(
         dealer,
         player,
         dealer_card_back=True,
         identity=identity,
         detail="押注 120 Pt · 玩家 15 点",
-    ).save(outputs[1])
+    )
+    for slug, render, output in zip(
+        ("blackjack-hand", "blackjack-table"),
+        (render_hand, render_table),
+        outputs,
+        strict=True,
+    ):
+        if consumer is None:
+            render().save(output)
+        else:
+            consumer(slug, render)
     return outputs
 
 
-def _preview_mines(kit_name: str, output_dir: Path) -> list[Path]:
-    from plugins.mines.models import Field
-    from plugins.mines.render.field import render
+def _preview_mines(
+    kit_name: str, output_dir: Path, *, consumer: RenderConsumer | None = None
+) -> list[Path]:
     from plugins.render import PlayerIdentity
     from plugins.render.kits import KITS
+    from plugins.mines.models import Field
+    from plugins.mines.render.field import render
 
     random.seed(7)
     field = Field(width=5, height=5, mines=4)
@@ -136,22 +152,28 @@ def _preview_mines(kit_name: str, output_dir: Path) -> list[Path]:
     field.reveal_all_mines()
 
     output = output_dir / f"mines-{kit_name}.png"
-    render(
+    render_board = lambda: render(
         field,
         kit=KITS[kit_name](),
         identity=PlayerIdentity(nickname="香澄", level=42),
         detail="押注 120 Pt · 剩 4 雷",
-    ).save(output)
+    )
+    if consumer is None:
+        render_board().save(output)
+    else:
+        consumer("mines-board", render_board)
     return [output]
 
 
-def _preview_one_stroke(kit_name: str, output_dir: Path) -> list[Path]:
-    from plugins.one_stroke.models import Graph
-    from plugins.one_stroke.render.graph import render
-    from plugins.one_stroke.render.leaderboard import render_leaderboard
-    from plugins.one_stroke.session import GameSession
+def _preview_one_stroke(
+    kit_name: str, output_dir: Path, *, consumer: RenderConsumer | None = None
+) -> list[Path]:
     from plugins.render import PlayerIdentity
     from plugins.render.kits import KITS
+    from plugins.one_stroke.models import Graph
+    from plugins.one_stroke.session import GameSession
+    from plugins.one_stroke.render.graph import render
+    from plugins.one_stroke.render.leaderboard import render_leaderboard
 
     nodes = {(row, column) for row in range(4) for column in range(4)}
     path = [
@@ -178,6 +200,10 @@ def _preview_one_stroke(kit_name: str, output_dir: Path) -> list[Path]:
         reward=120,
         graph=graph,
     )
+    # Rendering the census at different speeds must not change the live
+    # reward displayed by Manosaba's board or pollute benchmark comparisons.
+    session.elapsed_seconds = lambda: 12.34
+    session.created_at = 1793059200.0  # Also pins BanG Dream!'s background choice.
     for next_node in path[1:7]:
         edge = frozenset((session.current_pos, next_node))
         session.drawn_edges.add(edge)
@@ -186,25 +212,42 @@ def _preview_one_stroke(kit_name: str, output_dir: Path) -> list[Path]:
 
     board_output = output_dir / f"one-stroke-{kit_name}.png"
     leaderboard_output = output_dir / f"one-stroke-leaderboard-{kit_name}.png"
-    render(
+    render_board = lambda: render(
         session,
         kit=KITS[kit_name](),
         identity=PlayerIdentity(nickname="香澄", level=42),
         detail="难度 普通 · 奖励 120 Pt",
-    ).save(board_output)
-    render_leaderboard(
+    )
+    render_rank = lambda: render_leaderboard(
         [("kasumi", 12.34), ("arisa", 16.78), ("tae", 20.12)],
         [("a very very long player name", 23.45), ("rimi", 25.67)],
         [("saaya", 31.23)],
         kit=KITS[kit_name](),
-    ).save(leaderboard_output)
+    )
+    for slug, draw, output in zip(
+        ("one-stroke-board", "one-stroke-leaderboard"),
+        (render_board, render_rank),
+        (board_output, leaderboard_output),
+        strict=True,
+    ):
+        if consumer is None:
+            draw().save(output)
+        else:
+            consumer(slug, draw)
     return [board_output, leaderboard_output]
 
 
 def _render_gallery(
     output_dir: Path,
     kit_name: str = "kasumi",
+    *,
+    consumer: RenderConsumer | None = None,
 ) -> tuple[list[Path], list[str]]:
+    """Save the census, or pass render callables to an in-memory benchmark.
+
+    A consumer owns execution and errors; no fixture images are written in
+    that mode. The normal preview path renders and reports each image here.
+    """
     from plugins.render import PlayerIdentity
     from plugins.render.kits import KITS
 
@@ -216,6 +259,9 @@ def _render_gallery(
 
     def emit(slug: str, render: Callable[[], Image.Image]) -> None:
         nonlocal sequence
+        if consumer is not None:
+            consumer(slug, render)
+            return
         sequence += 1
         path = output_dir / f"{sequence:02d}-{slug}.png"
         try:
@@ -252,8 +298,8 @@ def _render_gallery(
     )
 
     daily = _test_namespace("test_daily_render.py")
-    from plugins.daily.render import render_checkin
     from plugins.daily.render import render_rank
+    from plugins.daily.render import render_checkin
 
     emit("daily-checkin", lambda: render_checkin(daily["_checkin"](), kit))
     emit(
@@ -309,9 +355,9 @@ def _render_gallery(
     # Help census and command detail.
     help_test = _test_namespace("test_help_render.py")
     from plugins.help import HELP_ENTRIES
-    from plugins.help.entries import find_entries
     from plugins.help.render import render_board
     from plugins.help.render import render_detail
+    from plugins.help.entries import find_entries
 
     emit("help-board", lambda: render_board(HELP_ENTRIES, kit))
     emit(
@@ -336,8 +382,8 @@ def _render_gallery(
     )
 
     gacha = _test_namespace("test_gacha_render.py")
-    from plugins.gacha.render import pull_page_data
     from plugins.gacha.render import render_pull
+    from plugins.gacha.render import pull_page_data
 
     kasumi_art = gacha["KASUMI_ART"]
     pull_art = {
@@ -393,13 +439,13 @@ def _render_gallery(
 
     # Mailbox list/detail/claim variants.
     mailbox = _test_namespace("test_mailbox_render.py")
-    from plugins.inventory.models import GrantResult
-    from plugins.mailbox.models import ClaimOutcome
     from plugins.mailbox.models import ClaimTotal
     from plugins.mailbox.models import ClaimedMail
-    from plugins.mailbox.render import render_claim_all
-    from plugins.mailbox.render import render_inbox
+    from plugins.mailbox.models import ClaimOutcome
     from plugins.mailbox.render import render_mail
+    from plugins.mailbox.render import render_inbox
+    from plugins.mailbox.render import render_claim_all
+    from plugins.inventory.models import GrantResult
 
     mails = [
         mailbox["_mail"](1, "维护补偿", attachments=[("season_point", 100)]),
@@ -434,9 +480,9 @@ def _render_gallery(
 
     # Red envelopes: creation, active list, empty list, completion.
     envelopes = _test_namespace("test_red_envelope_render.py")
-    from plugins.red_envelope.render import render_completion
-    from plugins.red_envelope.render import render_create
     from plugins.red_envelope.render import render_list
+    from plugins.red_envelope.render import render_create
+    from plugins.red_envelope.render import render_completion
 
     emit(
         "red-envelope-create",
@@ -486,12 +532,7 @@ def _render_gallery(
 
     blackjack_stats = _test_namespace("test_blackjack_stats_render.py")
     emit("blackjack-help", lambda: render_blackjack_help(kit))
-    blackjack_paths = _preview_blackjack(kit_name, output_dir)
-    for slug, original in zip(
-        ("blackjack-hand", "blackjack-table"), blackjack_paths, strict=True
-    ):
-        emit(slug, lambda original=original: Image.open(original).convert("RGBA"))
-        original.unlink(missing_ok=True)
+    _preview_blackjack(kit_name, output_dir, consumer=emit)
     emit(
         "blackjack-stats",
         lambda: render_blackjack_stats(
@@ -509,16 +550,11 @@ def _render_gallery(
 
     # Mines board, both settlements, and stats.
     from plugins.mines.models import GameResult
-    from plugins.mines.render.result import render_result as render_mines_result
     from plugins.mines.render.stats import render_stats as render_mines_stats
+    from plugins.mines.render.result import render_result as render_mines_result
 
     mines = _test_namespace("test_mines_render.py")
-    mines_paths = _preview_mines(kit_name, output_dir)
-    emit(
-        "mines-board",
-        lambda: Image.open(mines_paths[0]).convert("RGBA"),
-    )
-    mines_paths[0].unlink(missing_ok=True)
+    _preview_mines(kit_name, output_dir, consumer=emit)
     emit(
         "mines-result-cashout",
         lambda: render_mines_result(
@@ -549,9 +585,7 @@ def _render_gallery(
     emit(
         "mines-stats",
         lambda: render_mines_stats(
-            mines["_stats"](
-                mines["_records"]([120, -200, 0, 340, -80, 900, -60])
-            ),
+            mines["_stats"](mines["_records"]([120, -200, 0, 340, -80, 900, -60])),
             kit,
         ),
     )
@@ -560,14 +594,7 @@ def _render_gallery(
     from plugins.one_stroke.render.result import OneStrokeResultData
     from plugins.one_stroke.render.result import render_result as render_stroke_result
 
-    stroke_paths = _preview_one_stroke(kit_name, output_dir)
-    for slug, original in zip(
-        ("one-stroke-board", "one-stroke-leaderboard"),
-        stroke_paths,
-        strict=True,
-    ):
-        emit(slug, lambda original=original: Image.open(original).convert("RGBA"))
-        original.unlink(missing_ok=True)
+    _preview_one_stroke(kit_name, output_dir, consumer=emit)
     emit(
         "one-stroke-result",
         lambda: render_stroke_result(
@@ -623,17 +650,28 @@ def _render_gallery(
 
     importlib.import_module("plugins.daily_task")
     importlib.import_module("plugins.tour")
+    from plugins.tour.rules import DIFFICULTIES
     from plugins.tour.models import TourOutcome
     from plugins.tour.render import TourRenderData
     from plugins.tour.render import TourResultData
     from plugins.tour.render import render_help as render_tour_help
-    from plugins.tour.render import render_result as render_tour_result
     from plugins.tour.render import render_state as render_tour_state
-    from plugins.tour.rules import DIFFICULTIES
+    from plugins.tour.render import render_result as render_tour_result
+    from plugins.tour.render import render_leaderboard as render_tour_leaderboard
     from plugins.tour.session import TourSession
 
     tour_snapshot = TourSession("preview", DIFFICULTIES["初级"], seed=13).snapshot()
     emit("tour-help", lambda: render_tour_help(kit))
+    emit(
+        "tour-leaderboard",
+        lambda: render_tour_leaderboard(
+            {
+                difficulty: [("香澄", 12.34), ("有咲", 18.56), ("里美", 23.45)]
+                for difficulty in ("初级", "中级", "高级", "超级")
+            },
+            kit,
+        ),
+    )
     emit(
         "tour-state",
         lambda: render_tour_state(TourRenderData(tour_snapshot), kit),
@@ -658,11 +696,11 @@ def _render_gallery(
     )
 
     # Ryuseido home, catalogs, theme states, and season bonus pull.
-    from plugins.inventory.render import InventoryListData
-    from plugins.inventory.render import InventoryListRow
-    from plugins.inventory.render import render_inventory_list
     from plugins.ryuseido.render import ThemePreviewData
     from plugins.ryuseido.render import render_theme_preview
+    from plugins.inventory.render import InventoryListRow
+    from plugins.inventory.render import InventoryListData
+    from plugins.inventory.render import render_inventory_list
 
     shop_home = InventoryListData(
         title="流星堂",
@@ -866,8 +904,7 @@ def main() -> None:
     args = parser.parse_args()
 
     output_dir = (
-        args.output_dir
-        or ROOT / ".cache" / "render-previews" / f"{args.kit}-all"
+        args.output_dir or ROOT / ".cache" / "render-previews" / f"{args.kit}-all"
     ).resolve()
     outputs, failures = _render_gallery(output_dir, args.kit)
     print(f"\nGenerated {len(outputs)} images in {output_dir}")

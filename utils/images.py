@@ -10,9 +10,9 @@ bytes for the matplotlib chart pipeline. It is not a replacement for this.
 """
 
 import io
-from collections.abc import Callable
 from typing import TypeVar
 from typing import ParamSpec
+from collections.abc import Callable
 
 from PIL import Image
 from nonebot.adapters.satori import MessageSegment
@@ -21,6 +21,10 @@ from .image_tasks import run_image_task
 
 P = ParamSpec("P")
 T = TypeVar("T")
+
+# Level 3 keeps PNG lossless while avoiding level 6's expensive search on
+# textured themes. Opaque RGBA pages omit their redundant alpha channel.
+PNG_COMPRESSION_LEVEL = 3
 
 
 def image_bytes(image: Image.Image) -> bytes:
@@ -39,7 +43,9 @@ def image_bytes(image: Image.Image) -> bytes:
     """
 
     buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
+    if image.mode == "RGBA" and image.getchannel("A").getextrema() == (255, 255):
+        image = image.convert("RGB")
+    image.save(buffer, format="PNG", compress_level=PNG_COMPRESSION_LEVEL)
     return buffer.getvalue()
 
 
@@ -53,9 +59,7 @@ def image_segment(image: Image.Image) -> MessageSegment:
         Message segment carrying the PNG.
     """
 
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return MessageSegment.image(raw=buffer, mime="image/png")
+    return MessageSegment.image(raw=image_bytes(image), mime="image/png")
 
 
 async def render_image_segment(

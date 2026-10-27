@@ -68,7 +68,10 @@ def test_every_business_fixture_has_a_native_layout_without_text_overlaps(tmp_pa
     )
     assert result.returncode == 0, result.stdout + result.stderr
     data = json.loads(report.read_text())
-    assert len(data["pages"]) == 54
+    # The shared census includes the full tour leaderboard; the audit also
+    # exercises the existing partially filled leaderboard fixture below it.
+    assert len(data["pages"]) == 55
+    assert sum(page["layout"] == "tour.rank" for page in data["pages"]) == 2
     assert not data["missing"]
     assert not data["failures"]
     assert all(not page["errors"] for page in data["pages"])

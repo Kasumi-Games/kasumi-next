@@ -16,6 +16,7 @@ from plugins.render.color import normalize_color
 from plugins.render.types import ImageSource
 from plugins.render.primitives import load_font
 from plugins.render.primitives import alpha_composite_paste
+from plugins.render.raster_cache import cached_background
 
 KIT_DIR = Path(__file__).resolve().parent
 RESOURCES_DIR = KIT_DIR / "resources"
@@ -31,6 +32,7 @@ class BanGDreamPatternBackground:
     fill: ColorLike
     pattern: ImageSource
 
+    @cached_background
     def render(self, ctx: RenderContext, size: Size) -> Image.Image:
         canvas = Image.new(
             "RGBA", (size.width, size.height), normalize_color(self.fill)
@@ -68,6 +70,7 @@ class BanGDreamImageBackground:
     text_opacity: float = 0.5
     random_seed: int | None = 0
 
+    @cached_background
     def render(self, ctx: RenderContext, size: Size) -> Image.Image:
         canvas = Image.new(
             "RGBA", (size.width, size.height), normalize_color(self.fill)

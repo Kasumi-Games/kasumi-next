@@ -30,6 +30,7 @@ from plugins.render.sizing import SizeValue
 from plugins.render.spacing import InsetsLike
 from plugins.render.primitives import load_font
 from plugins.render.primitives import alpha_composite_paste
+from plugins.render.raster_cache import cached_background
 
 from ..atoms import mix_color
 from ..atoms import load_image
@@ -181,6 +182,7 @@ class KasumiBackground:
     dot_density: float = 0.00010
     random_seed: int = 425  # the card that started this theme
 
+    @cached_background
     def render(self, ctx: RenderContext, size: Size) -> Image.Image:
         canvas = vertical_gradient(size, self.top, self.bottom).convert("RGBA")
         if size.width <= 0 or size.height <= 0:

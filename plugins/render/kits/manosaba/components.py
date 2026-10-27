@@ -32,6 +32,8 @@ from plugins.render.primitives import load_font
 from plugins.render.primitives import alpha_composite_paste
 from plugins.render.text_layout import ellipsis
 from plugins.render.text_layout import text_width
+from plugins.render.raster_cache import STATIC_RASTERS
+from plugins.render.raster_cache import cached_background
 
 from ..atoms import KitText
 from ..atoms import fixed_or_bound
@@ -91,6 +93,13 @@ def book_paper(width: int, height: int, *, spine: float = 0.495) -> Image.Image:
     if not 0 < spine < 1:
         raise ValueError("Book spine must lie strictly inside the page")
     width, height = max(2, width), max(1, height)
+    return STATIC_RASTERS.get_or_create(
+        ("manosaba-book", width, height, spine),
+        lambda: _book_paper(width, height, spine),
+    )
+
+
+def _book_paper(width: int, height: int, spine: float) -> Image.Image:
     source = asset("book.png")
     split = round(source.width * 0.495)
     target = max(1, min(width - 1, round(width * spine)))
@@ -110,6 +119,7 @@ def book_paper(width: int, height: int, *, spine: float = 0.495) -> Image.Image:
 class ManosabaBackground:
     fill: ColorLike | None = None
 
+    @cached_background
     def render(self, ctx: RenderContext, size: Size) -> Image.Image:
         if size.width <= 0 or size.height <= 0:
             return Image.new("RGBA", (size.width, size.height))

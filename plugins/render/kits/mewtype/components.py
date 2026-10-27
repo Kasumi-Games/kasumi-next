@@ -2,9 +2,9 @@
 
 import math
 import random
-from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
+from functools import lru_cache
+from dataclasses import dataclass
 
 from PIL import Image
 from PIL import ImageDraw
@@ -24,6 +24,7 @@ from plugins.render.sizing import SizeValue
 from plugins.render.spacing import InsetsLike
 from plugins.render.primitives import load_font
 from plugins.render.primitives import alpha_composite_paste
+from plugins.render.raster_cache import cached_background
 
 
 @dataclass(frozen=True)
@@ -432,6 +433,7 @@ class MewtypeBackground:
     decoration_density: float = 0.000063
     random_seed: int = 0
 
+    @cached_background
     def render(self, ctx: RenderContext, size: Size) -> Image.Image:
         canvas = Image.new(
             "RGBA", (max(0, size.width), max(0, size.height)), self.fill

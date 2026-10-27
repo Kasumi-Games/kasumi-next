@@ -20,6 +20,7 @@ from plugins.render.layout import Frame
 from plugins.render.sizing import SizeValue
 from plugins.render.spacing import InsetsLike
 from plugins.render.primitives import alpha_composite_paste
+from plugins.render.raster_cache import cached_background
 
 from ..atoms import vertical_gradient
 from ..atoms import draw_panel_surface
@@ -39,6 +40,7 @@ class SailingBackground:
     wave_height: int = 46
     wave_length: int = 260
 
+    @cached_background
     def render(self, ctx: RenderContext, size: Size) -> Image.Image:
         canvas = vertical_gradient(size, self.top, self.bottom).convert("RGBA")
         if not self.wave_colors or size.width <= 0 or size.height <= 0:

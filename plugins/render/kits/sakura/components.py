@@ -18,6 +18,7 @@ from plugins.render.layout import Frame
 from plugins.render.sizing import SizeValue
 from plugins.render.spacing import InsetsLike
 from plugins.render.primitives import alpha_composite_paste
+from plugins.render.raster_cache import cached_background
 
 from ..atoms import draw_soft_shadow
 from ..atoms import vertical_gradient
@@ -39,6 +40,7 @@ class SakuraBackground:
     petal_size: int = 18
     random_seed: int = 0
 
+    @cached_background
     def render(self, ctx: RenderContext, size: Size) -> Image.Image:
         canvas = vertical_gradient(size, self.top, self.bottom).convert("RGBA")
         logical_area = ctx.unscale_px(size.width) * ctx.unscale_px(size.height)

@@ -12,11 +12,12 @@ make two kits look alike.
 
 from typing import Literal
 from pathlib import Path
+from functools import lru_cache
 from dataclasses import dataclass
 
 from PIL import Image
-from PIL import ImageChops
 from PIL import ImageDraw
+from PIL import ImageChops
 from PIL import ImageFilter
 
 from plugins.render.core import Rect
@@ -50,6 +51,7 @@ from plugins.render.text_layout import draw_text_line as _draw_text_line
 from plugins.render.text_layout import merge_line_limits as _merge_line_limits
 from plugins.render.text_layout import display_text_width as _display_text_width
 from plugins.render.text_layout import max_lines_for_height as _max_lines_for_height
+from plugins.render.raster_cache import STATIC_RASTERS
 
 
 @dataclass(frozen=True)
@@ -219,7 +221,17 @@ class _TrackedFont:
     def getbbox(self, text: str, *args, **kwargs) -> tuple[int, int, int, int]:
         if not text:
             return self.primary.getbbox(text, *args, **kwargs)
-        boxes = [self.primary.getbbox(char, *args, **kwargs) for char in text]
+        # Wrapping evaluates many overlapping substrings. Reuse each glyph's
+        # exact ink box instead of loading it again for every candidate line.
+        if args or kwargs:
+            boxes = [self.primary.getbbox(char, *args, **kwargs) for char in text]
+        else:
+            try:
+                hash(self.primary)
+            except TypeError:
+                boxes = [self.primary.getbbox(char) for char in text]
+            else:
+                boxes = [_tracked_glyph_box(self.primary, char) for char in text]
         width = sum(box[2] - box[0] for box in boxes)
         width += max(0, len(text) - 1) * self.letter_spacing
         return (0, min(box[1] for box in boxes), width, max(box[3] for box in boxes))
@@ -229,6 +241,11 @@ class _TrackedFont:
         for character in text:
             draw.text((x, y), character, font=self.primary, fill=fill)
             x += _text_width(character, self.primary) + self.letter_spacing
+
+
+@lru_cache(maxsize=8192)
+def _tracked_glyph_box(font, character: str) -> tuple[int, int, int, int]:
+    return font.getbbox(character)
 
 
 def _draw_tracked_font_line(
@@ -465,19 +482,35 @@ def draw_soft_shadow(
     pad = max(1, blur * 3 + spread)
     layer_width = rect.width + spread * 2 + pad * 2
     layer_height = rect.height + spread * 2 + pad * 2
-    layer = Image.new("RGBA", (layer_width, layer_height), (0, 0, 0, 0))
-    ImageDraw.Draw(layer).rounded_rectangle(
-        (pad, pad, layer_width - pad - 1, layer_height - pad - 1),
-        radius=max(0, radius + spread),
-        fill=color,
+    layer = STATIC_RASTERS.get_or_create(
+        ("soft-shadow", rect.width, rect.height, radius, tuple(color), blur, spread),
+        lambda: _soft_shadow_layer(
+            layer_width, layer_height, pad, radius, color, blur, spread
+        ),
     )
-    if blur > 0:
-        layer = layer.filter(ImageFilter.GaussianBlur(blur))
     alpha_composite_paste(
         canvas,
         layer,
         (rect.x - spread - pad + offset[0], rect.y - spread - pad + offset[1]),
     )
+
+
+def _soft_shadow_layer(
+    width: int,
+    height: int,
+    pad: int,
+    radius: int,
+    color: Color,
+    blur: int,
+    spread: int,
+) -> Image.Image:
+    layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).rounded_rectangle(
+        (pad, pad, width - pad - 1, height - pad - 1),
+        radius=max(0, radius + spread),
+        fill=color,
+    )
+    return layer.filter(ImageFilter.GaussianBlur(blur)) if blur > 0 else layer
 
 
 def vertical_gradient(size: Size, top: Color, bottom: Color) -> Image.Image:

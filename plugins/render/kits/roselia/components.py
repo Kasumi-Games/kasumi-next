@@ -29,6 +29,7 @@ from plugins.render.sizing import SizeValue
 from plugins.render.spacing import InsetsLike
 from plugins.render.primitives import load_font
 from plugins.render.primitives import alpha_composite_paste
+from plugins.render.raster_cache import cached_background
 
 from ..atoms import KitText
 from ..atoms import load_image
@@ -253,6 +254,7 @@ class RoseliaBackground:
     shard_density: float = 0.000018
     random_seed: int = 617
 
+    @cached_background
     def render(self, ctx: RenderContext, size: Size) -> Image.Image:
         canvas = vertical_gradient(size, self.top, self.bottom).convert("RGBA")
         if size.width <= 0 or size.height <= 0:
