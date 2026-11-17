@@ -1432,6 +1432,334 @@
           "ArmR3"
         ]
       }
+    },
+    {
+      "item_id": "theme_winter_ensemble",
+      "category": "cosmetic",
+      "name": "冬日合奏",
+      "description": "雪蓝背景与暖白纸面组成的固定冬日主题。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 175,
+      "cosmetic": {
+        "cosmetic_type": "theme",
+        "rarity": 6
+      },
+      "metadata": {
+        "kit": "winter_ensemble",
+        "aliases": [
+          "冬日",
+          "winter_ensemble"
+        ]
+      }
+    },
+    {
+      "item_id": "frame_winter_character",
+      "category": "cosmetic",
+      "name": "冬日合奏 角色头像框",
+      "description": "第五赛季首次六星附赠。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 350,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_winter_character.png"
+      }
+    },
+    {
+      "item_id": "frame_winter_champion",
+      "category": "cosmetic",
+      "name": "冬日合奏 冠军头像框",
+      "description": "第五赛季排名冠军限定奖励。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 351,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_winter_champion.png"
+      }
+    },
+    {
+      "item_id": "frame_winter_podium",
+      "category": "cosmetic",
+      "name": "冬日合奏 前三头像框",
+      "description": "第五赛季排名前三限定奖励。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 352,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_winter_podium.png"
+      }
+    },
+    {
+      "item_id": "frame_winter_top10",
+      "category": "cosmetic",
+      "name": "冬日合奏 前十头像框",
+      "description": "第五赛季排名前十限定奖励。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 353,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_winter_top10.png"
+      }
+    },
+    {
+      "item_id": "frame_winter_top50",
+      "category": "cosmetic",
+      "name": "冬日合奏 前五十头像框",
+      "description": "第五赛季排名前五十限定奖励。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 354,
+      "cosmetic": {
+        "cosmetic_type": "avatar_frame",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/avatar_frames/frame_winter_top50.png"
+      }
+    },
+    {
+      "item_id": "standing_art_winter_kasumi",
+      "category": "cosmetic",
+      "name": "户山香澄 商店街的欢呼声",
+      "description": "第五赛季冬装限定立绘；本项目6星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 360,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/kasumi.png",
+        "bestdori_card_id": 556,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 1
+      }
+    },
+    {
+      "item_id": "standing_art_winter_tomori",
+      "category": "cosmetic",
+      "name": "高松灯 一颗迷茫的星星",
+      "description": "第五赛季冬装限定立绘；本项目6星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 361,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 6
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/tomori.png",
+        "bestdori_card_id": 2123,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 36
+      }
+    },
+    {
+      "item_id": "standing_art_winter_aya",
+      "category": "cosmetic",
+      "name": "丸山彩 丸山要入场了！",
+      "description": "第五赛季冬装限定立绘；本项目5星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 362,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/aya.png",
+        "bestdori_card_id": 387,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 16
+      }
+    },
+    {
+      "item_id": "standing_art_winter_kokoro",
+      "category": "cosmetic",
+      "name": "弦卷心 洞悉真实之眼",
+      "description": "第五赛季冬装限定立绘；本项目5星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 363,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/kokoro.png",
+        "bestdori_card_id": 1397,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 11
+      }
+    },
+    {
+      "item_id": "standing_art_winter_mashiro",
+      "category": "cosmetic",
+      "name": "仓田真白 讲究的配料",
+      "description": "第五赛季冬装限定立绘；本项目5星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 364,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/mashiro.png",
+        "bestdori_card_id": 1682,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 26
+      }
+    },
+    {
+      "item_id": "standing_art_winter_rokka",
+      "category": "cosmetic",
+      "name": "朝日六花 Lock on！",
+      "description": "第五赛季冬装限定立绘；本项目5星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 365,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 5
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/rokka.png",
+        "bestdori_card_id": 1120,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 32
+      }
+    },
+    {
+      "item_id": "standing_art_winter_ran",
+      "category": "cosmetic",
+      "name": "美竹兰 GOGO WEGO！",
+      "description": "第五赛季冬装限定立绘；本项目4星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 366,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/ran.png",
+        "bestdori_card_id": 563,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 6
+      }
+    },
+    {
+      "item_id": "standing_art_winter_lisa",
+      "category": "cosmetic",
+      "name": "今井莉莎 这首曲子结束之后",
+      "description": "第五赛季冬装限定立绘；本项目4星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 367,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/lisa.png",
+        "bestdori_card_id": 1691,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 23
+      }
+    },
+    {
+      "item_id": "standing_art_winter_arisa",
+      "category": "cosmetic",
+      "name": "市谷有咲 甜蜜又苦涩的时间",
+      "description": "第五赛季冬装限定立绘；本项目4星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 368,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/arisa.png",
+        "bestdori_card_id": 1111,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 5
+      }
+    },
+    {
+      "item_id": "standing_art_winter_saaya",
+      "category": "cosmetic",
+      "name": "山吹沙绫 被温暖的雪包围",
+      "description": "第五赛季冬装限定立绘；本项目4星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 369,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/saaya.png",
+        "bestdori_card_id": 2360,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 4
+      }
+    },
+    {
+      "item_id": "standing_art_winter_anon",
+      "category": "cosmetic",
+      "name": "千早爱音 要去找吗？",
+      "description": "第五赛季冬装限定立绘；本项目4星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 370,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/anon.png",
+        "bestdori_card_id": 2160,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 37
+      }
+    },
+    {
+      "item_id": "standing_art_winter_yukina",
+      "category": "cosmetic",
+      "name": "凑友希那 圣夜的礼物",
+      "description": "第五赛季冬装限定立绘；本项目4星档位。",
+      "stackable": false,
+      "visible": true,
+      "sort_order": 371,
+      "cosmetic": {
+        "cosmetic_type": "standing_art",
+        "rarity": 4
+      },
+      "metadata": {
+        "art": "plugins/inventory/resources/items/standing_art/winter/yukina.png",
+        "bestdori_card_id": 1358,
+        "bestdori_variant": "normal",
+        "bestdori_character_id": 21
+      }
     }
   ]
 }

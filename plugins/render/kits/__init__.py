@@ -11,9 +11,11 @@ from .endfield import EndfieldKit
 from .manosaba import ManosabaKit
 from .midnight import MidnightKit
 from .bangdream import BanGDreamKit
+from .winter_ensemble import WinterEnsembleKit
 
 #: Every kit keyed by the short name used in configuration and tooling.
 KITS = {
+    "winter_ensemble": WinterEnsembleKit,
     "bangdream": BanGDreamKit,
     "minimal": MinimalKit,
     "midnight": MidnightKit,
@@ -33,6 +35,7 @@ KITS = {
 #: should match its kit's entry here so the name a player reads off an image is
 #: the name they can type back.
 KIT_DISPLAY_NAMES = {
+    "winter_ensemble": "冬日合奏",
     "bangdream": "BanG Dream!",
     "minimal": "极简",
     "midnight": "午夜",
@@ -49,6 +52,7 @@ KIT_DISPLAY_NAMES = {
 }
 
 __all__ = [
+    "WinterEnsembleKit",
     "KITS",
     "KIT_DISPLAY_NAMES",
     "BanGDreamKit",

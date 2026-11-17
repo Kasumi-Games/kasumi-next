@@ -401,7 +401,7 @@ class StarbeatRealConfigTest(unittest.TestCase):
         # 扬帆起航 was scrapped before launch; 星之鼓动 is the real season 1.
         self.assertEqual(
             [season.season_key for season in seasons],
-            ["2026-s01", "2026-s02", "2026-s03", "2026-s04"],
+            ["2026-s01", "2026-s02", "2026-s03", "2026-s04", "2026-s05"],
         )
 
     def test_scrapped_planned_season_is_pruned_from_the_database(self) -> None:

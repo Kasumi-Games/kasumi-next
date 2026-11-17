@@ -116,6 +116,7 @@ class BannerPageData:
     hard_pity: int
     frame_art: Path | None = None
     featured_items: tuple[BannerFeaturedArt, ...] = ()
+    pool_entries: tuple[tuple[str, int], ...] = ()
 
 
 def banner_page_data(
@@ -162,6 +163,7 @@ def banner_page_data(
         if rarity in shown
     }
     return BannerPageData(
+        pool_entries=tuple((entry.name, entry.rarity) for entry in banner.entries),
         banner_name=banner.name,
         season_name=banner.season_name,
         featured_name=(names.get(featured.item_id, featured.name) if featured else ""),
@@ -230,6 +232,11 @@ def banner_page(data: BannerPageData, kit: BaseKit | None = None) -> AutoPage:
     """
 
     kit = kit or BanGDreamKit()
+
+    from plugins.render.kits.winter_ensemble.layouts import page_for as winter_page
+
+    if (themed := winter_page(kit, "gacha.banner", data)) is not None:
+        return themed
 
     from plugins.render.kits.manosaba.layouts import page_for
 

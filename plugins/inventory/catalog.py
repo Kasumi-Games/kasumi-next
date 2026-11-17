@@ -3,15 +3,15 @@
 import json
 from pathlib import Path
 
-from nonebot.log import logger
 import nonebot_plugin_localstore as store
+from nonebot.log import logger
 
 from .models import Item
+from .models import UserItem
 from .models import CosmeticItem
 from .models import CurrencyItem
 from .models import EquippedItem
 from .models import ItemTransaction
-from .models import UserItem
 from .database import get_session
 
 CATALOG_PATH = Path(__file__).with_name("items.json")
@@ -38,7 +38,8 @@ def sync_catalog() -> None:
         item.visible = bool(entry.get("visible", True))
         item.sort_order = int(entry.get("sort_order", 0))
         metadata = dict(entry.get("metadata", {}))
-        if card_id := metadata.get("bestdori_card_id"):
+        # Bundled seasonal art must work without the runtime Bestdori cache.
+        if (card_id := metadata.get("bestdori_card_id")) and not metadata.get("art"):
             variant = metadata.get("bestdori_variant", "after_training")
             metadata["art"] = str(
                 store.get_data_dir("gacha")

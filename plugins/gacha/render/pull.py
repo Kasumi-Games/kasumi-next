@@ -203,6 +203,11 @@ def pull_page(data: PullPageData, kit: BaseKit | None = None) -> AutoPage:
 
     kit = kit or BanGDreamKit()
 
+    from plugins.render.kits.winter_ensemble.layouts import page_for as winter_page
+
+    if (themed := winter_page(kit, "gacha.pull", data)) is not None:
+        return themed
+
     from plugins.render.kits.manosaba.layouts import page_for
 
     if (themed := page_for(kit, "gacha.pull", data)) is not None:

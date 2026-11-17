@@ -22,6 +22,7 @@ from plugins.render.kits.atoms import vertical_gradient
 
 #: Kits added on top of the original bangdream/minimal pair.
 NEW_KIT_NAMES = (
+    "winter_ensemble",
     "midnight",
     "sailing",
     "sakura",

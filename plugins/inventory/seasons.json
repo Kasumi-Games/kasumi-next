@@ -1358,6 +1358,223 @@
           ]
         }
       ]
+    },
+    {
+      "season_key": "2026-s05",
+      "number": 5,
+      "name": "冬日合奏",
+      "starts_at": "2026-11-24T00:00:00+08:00",
+      "ends_at": "2027-01-01T00:00:00+08:00",
+      "starting_points": 100,
+      "snapshot_interval_minutes": 5,
+      "snapshot_ranks": [
+        10,
+        50
+      ],
+      "featured_characters": [
+        {
+          "character_id": "kasumi",
+          "name": "户山香澄",
+          "standing_art_item_id": "standing_art_winter_kasumi",
+          "rarity": 6
+        },
+        {
+          "character_id": "tomori",
+          "name": "高松灯",
+          "standing_art_item_id": "standing_art_winter_tomori",
+          "rarity": 6
+        }
+      ],
+      "gacha_character_frame_item_id": "frame_winter_character",
+      "gacha_theme_item_id": "theme_winter_ensemble",
+      "gacha_banner": {
+        "banner_key": "2026-s05-limited",
+        "name": "冬日合奏 限定卡池",
+        "single_cost": 120,
+        "ten_cost": 1200,
+        "soft_pity_start": 70,
+        "hard_pity": 90,
+        "rates": [
+          {
+            "rarity": 6,
+            "rate": 0.01
+          },
+          {
+            "rarity": 5,
+            "rate": 0.2
+          },
+          {
+            "rarity": 4,
+            "rate": 0.79
+          }
+        ],
+        "entries": [
+          {
+            "item_id": "standing_art_winter_kasumi",
+            "character_id": "kasumi",
+            "name": "户山香澄 商店街的欢呼声",
+            "rarity": 6,
+            "weight": 1,
+            "featured": true
+          },
+          {
+            "item_id": "standing_art_winter_tomori",
+            "character_id": "tomori",
+            "name": "高松灯 一颗迷茫的星星",
+            "rarity": 6,
+            "weight": 1,
+            "featured": true
+          },
+          {
+            "item_id": "standing_art_winter_aya",
+            "character_id": "aya",
+            "name": "丸山彩 丸山要入场了！",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_kokoro",
+            "character_id": "kokoro",
+            "name": "弦卷心 洞悉真实之眼",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_mashiro",
+            "character_id": "mashiro",
+            "name": "仓田真白 讲究的配料",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_rokka",
+            "character_id": "rokka",
+            "name": "朝日六花 Lock on！",
+            "rarity": 5,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_ran",
+            "character_id": "ran",
+            "name": "美竹兰 GOGO WEGO！",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_lisa",
+            "character_id": "lisa",
+            "name": "今井莉莎 这首曲子结束之后",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_arisa",
+            "character_id": "arisa",
+            "name": "市谷有咲 甜蜜又苦涩的时间",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_saaya",
+            "character_id": "saaya",
+            "name": "山吹沙绫 被温暖的雪包围",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_anon",
+            "character_id": "anon",
+            "name": "千早爱音 要去找吗？",
+            "rarity": 4,
+            "weight": 1
+          },
+          {
+            "item_id": "standing_art_winter_yukina",
+            "character_id": "yukina",
+            "name": "凑友希那 圣夜的礼物",
+            "rarity": 4,
+            "weight": 1
+          }
+        ]
+      },
+      "reward_tiers": [
+        {
+          "tier_key": "rank_1",
+          "from_rank": 1,
+          "to_rank": 1,
+          "title": "赛季冠军奖励",
+          "items": [
+            {
+              "item_id": "star_sticker",
+              "quantity": 2400
+            },
+            {
+              "item_id": "frame_winter_champion",
+              "quantity": 1
+            },
+            {
+              "item_id": "theme_winter_ensemble",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "tier_key": "rank_2_3",
+          "from_rank": 2,
+          "to_rank": 3,
+          "title": "赛季前三奖励",
+          "items": [
+            {
+              "item_id": "star_sticker",
+              "quantity": 1200
+            },
+            {
+              "item_id": "frame_winter_podium",
+              "quantity": 1
+            },
+            {
+              "item_id": "theme_winter_ensemble",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "tier_key": "rank_4_10",
+          "from_rank": 4,
+          "to_rank": 10,
+          "title": "赛季前十奖励",
+          "items": [
+            {
+              "item_id": "star_sticker",
+              "quantity": 600
+            },
+            {
+              "item_id": "frame_winter_top10",
+              "quantity": 1
+            },
+            {
+              "item_id": "theme_winter_ensemble",
+              "quantity": 1
+            }
+          ]
+        },
+        {
+          "tier_key": "rank_11_50",
+          "from_rank": 11,
+          "to_rank": 50,
+          "title": "赛季前五十奖励",
+          "items": [
+            {
+              "item_id": "star_sticker",
+              "quantity": 300
+            },
+            {
+              "item_id": "frame_winter_top50",
+              "quantity": 1
+            }
+          ]
+        }
+      ]
     }
   ]
 }
